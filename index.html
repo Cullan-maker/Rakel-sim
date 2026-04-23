@@ -3,176 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sepura SC20 Rakel-simulator</title>
+    <title>Sepura SC20 - Realistisk Simulator</title>
     <style>
         body {
             display: flex; justify-content: center; align-items: center;
-            height: 100vh; background-color: #c8d6e5; font-family: 'Arial', sans-serif; margin: 0;
+            height: 100vh; background-color: #92a4b8; font-family: 'Arial', sans-serif; margin: 0;
             overflow: hidden; 
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
         }
 
-        /* Behållare för att skala rubrik, radio och footer tillsammans */
-        #scale-wrapper {
-            display: flex; flex-direction: column; align-items: center;
-            transform-origin: center center;
-        }
+        #scale-wrapper { display: flex; flex-direction: column; align-items: center; transform-origin: center center; }
 
         .main-title {
             color: #002855; font-family: 'Arial Black', sans-serif; text-transform: uppercase; 
-            margin-bottom: 120px; font-size: 24px; text-align: center; text-shadow: 1px 1px 3px rgba(255,255,255,0.7);
-            letter-spacing: 1px;
+            margin-bottom: 120px; font-size: 24px; text-align: center; text-shadow: 1px 1px 3px rgba(255,255,255,0.7); letter-spacing: 1px;
         }
 
-        .footer-info {
-            margin-top: 25px; font-size: 13px; color: #555; text-align: center; font-weight: bold;
-        }
-        .footer-info a { color: #005bb5; text-decoration: none; cursor: pointer; font-weight: normal; }
+        .footer-info { margin-top: 25px; font-size: 13px; color: #555; text-align: center; font-weight: bold; text-shadow: 0px 1px 1px rgba(255,255,255,0.5); }
+        .footer-info a { color: #004488; text-decoration: none; cursor: pointer; font-weight: normal; }
         .footer-info a:hover { text-decoration: underline; }
 
-        /* --- MODALER (Lathund & Versionshistorik) --- */
+        /* --- MODALER --- */
         .lathund-toggle {
-            position: fixed; top: 20px; right: 20px; background-color: #005bb5; color: white;
+            position: fixed; top: 20px; right: 20px; background: linear-gradient(to bottom, #005bb5, #003f80); color: white;
             padding: 10px 20px; border-radius: 30px; font-weight: bold; font-size: 14px;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000; border: 2px solid #fff;
-            transition: background-color 0.2s;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000; border: 1px solid #002855;
         }
-        .lathund-toggle:active { background-color: #003f80; }
+        .lathund-toggle:active { background: #002855; }
 
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.7); z-index: 2000;
-            display: none; justify-content: center; align-items: center;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); z-index: 2000;
+            display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px);
         }
         .modal-content {
-            background-color: #fff; width: 90%; max-width: 400px; max-height: 80vh;
-            border-radius: 15px; padding: 25px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            font-family: sans-serif; color: #333; position: relative; text-align: left;
+            background-color: #f4f7f6; width: 90%; max-width: 400px; max-height: 80vh;
+            border-radius: 12px; padding: 25px; overflow-y: auto; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            font-family: sans-serif; color: #333; position: relative; text-align: left; border: 1px solid #ccc;
         }
         .modal-content h2 { color: #002855; margin-top: 0; border-bottom: 2px solid #005bb5; padding-bottom: 10px; }
         .modal-content h3 { color: #005bb5; margin-bottom: 5px; font-size: 16px; margin-top: 15px; }
         .modal-content p, .modal-content li { font-size: 14px; line-height: 1.5; margin: 5px 0; }
         .modal-content ul { padding-left: 20px; }
         .modal-close {
-            position: absolute; top: 15px; right: 20px; background: #e74c3c; color: white;
-            border: none; border-radius: 5px; padding: 8px 15px; font-weight: bold; cursor: pointer;
+            position: absolute; top: 15px; right: 20px; background: linear-gradient(to bottom, #e74c3c, #c0392b); color: white;
+            border: 1px solid #900; border-radius: 5px; padding: 8px 15px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        .modal-close:active { background: #c0392b; }
-        .version-date { font-weight: bold; color: #555; font-size: 12px; display: block; margin-top: 10px; }
+        .modal-close:active { background: #900; }
 
-        /* --- RADIOSKALET --- */
+        /* =========================================
+           RADIOSKALET (REALISTISK DESIGN)
+           ========================================= */
         .radio-body {
-            background-color: #2b2e33; width: 350px; height: 760px;
-            border-radius: 25px 25px 35px 35px; padding: 20px 15px; 
-            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.5), inset 5px 5px 15px rgba(255,255,255,0.1), 10px 15px 30px rgba(0,0,0,0.6);
-            position: relative; display: flex; flex-direction: column; align-items: center; border: 2px solid #1a1a1a;
+            /* Mörk, texturerad plastkänsla */
+            background: linear-gradient(135deg, #2b2e33 0%, #1a1c1e 100%);
+            width: 360px; height: 800px;
+            border-radius: 20px 20px 40px 40px; padding: 25px 20px; 
+            /* Multipla skuggor för djup och volym */
+            box-shadow: 
+                inset 2px 2px 5px rgba(255,255,255,0.1), 
+                inset -5px -5px 20px rgba(0,0,0,0.8), 
+                15px 20px 40px rgba(0,0,0,0.7),
+                -5px 5px 20px rgba(0,0,0,0.4);
+            position: relative; display: flex; flex-direction: column; align-items: center; 
+            border: 1px solid #0a0a0a; border-right: 2px solid #000; border-bottom: 3px solid #000;
         }
 
         /* --- FYSISKA DETALJER --- */
-        .antenna {
-            width: 24px; height: 120px; background-color: #1a1a1a; position: absolute;
-            top: -110px; right: 40px; border-radius: 12px 12px 0 0;
-            box-shadow: inset -4px 0 8px rgba(255,255,255,0.15); border: 1px solid #000;
+        .antenna { 
+            width: 26px; height: 130px; 
+            background: linear-gradient(to right, #111, #333 30%, #111 70%, #000); 
+            position: absolute; top: -120px; right: 45px; border-radius: 13px 13px 0 0; 
+            box-shadow: inset -2px 0 5px rgba(0,0,0,0.8), 5px 5px 10px rgba(0,0,0,0.4); border: 1px solid #000; 
         }
-        .vol-knob {
-            width: 45px; height: 35px; background-color: #222; position: absolute;
-            top: -30px; left: 60px; border-radius: 8px 8px 0 0;
-            box-shadow: inset 0 2px 4px rgba(255,255,255,0.2); border: 1px solid #000;
-            display: flex; overflow: hidden; 
-            background: repeating-linear-gradient(90deg, #111, #111 2px, #333 2px, #333 4px);
+        .vol-knob { 
+            width: 50px; height: 35px; 
+            background: repeating-linear-gradient(90deg, #111, #222 2px, #000 3px, #000 4px); 
+            position: absolute; top: -35px; left: 65px; border-radius: 6px 6px 0 0; 
+            box-shadow: inset 0 3px 5px rgba(255,255,255,0.3), 0 5px 10px rgba(0,0,0,0.6); 
+            border: 1px solid #000; display: flex; overflow: hidden; border-top: 2px solid #555;
         }
         .knob-half { flex: 1; height: 100%; cursor: pointer; touch-action: none; }
-        .emergency-btn {
-            width: 45px; height: 22px; background-color: #c0392b; position: absolute;
-            top: -15px; left: 130px; border-radius: 8px 8px 0 0; cursor: pointer;
-            border: 1px solid #600; box-shadow: inset 0 3px 5px rgba(255,255,255,0.4); touch-action: none;
+        
+        .emergency-btn { 
+            width: 50px; height: 22px; 
+            background: linear-gradient(to bottom, #e74c3c, #900); 
+            position: absolute; top: -15px; left: 140px; border-radius: 8px 8px 0 0; cursor: pointer; 
+            border: 1px solid #400; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), 0 3px 6px rgba(0,0,0,0.5); 
+            touch-action: none; 
         }
-        .ptt-btn {
-            position: absolute; left: -12px; top: 130px; width: 12px; height: 110px;
-            background-color: #ff8c00; border: 1px solid #000; border-radius: 8px 0 0 8px; 
-            cursor: pointer; box-shadow: inset 2px 0 5px rgba(255,255,255,0.3); touch-action: none;
-        }
-        .side-btn {
-            position: absolute; left: -10px; width: 10px; height: 35px;
-            background-color: #1a1a1a; border: 1px solid #000; border-radius: 4px 0 0 4px;
-            cursor: pointer; box-shadow: inset 2px 0 4px rgba(255,255,255,0.1);
-            color: #aaa; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 0; touch-action: none;
-        }
-        .side-btn-a { top: 260px; } .side-btn-b { top: 305px; } .side-btn-c { top: 350px; }
-        .brand { color: #ddd; font-weight: 900; font-size: 16px; letter-spacing: 1px; margin-bottom: 8px; text-transform: lowercase; font-family: 'Arial Black', sans-serif; }
+        .emergency-btn:active { background: #900; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
 
-        /* --- SKÄRMEN --- */
-        .screen-bezel {
-            background-color: #111; padding: 12px 12px 8px 12px; border-radius: 8px; width: 85%;
-            box-shadow: inset 0 5px 10px rgba(0,0,0,0.8), 0 2px 3px rgba(255,255,255,0.1); margin-bottom: 12px; pointer-events: none;
+        /* Sidoknappar (Gummistruktur) */
+        .ptt-btn { 
+            position: absolute; left: -14px; top: 140px; width: 14px; height: 120px; 
+            background: linear-gradient(to right, #e67e22, #cc5500); 
+            border: 1px solid #000; border-radius: 8px 0 0 8px; cursor: pointer; 
+            box-shadow: inset 3px 0 5px rgba(255,255,255,0.3), inset -2px 0 5px rgba(0,0,0,0.5), -3px 5px 10px rgba(0,0,0,0.4); 
+            touch-action: none; 
         }
-        .screen {
-            background-color: #ffffff; height: 175px; border-radius: 2px; box-sizing: border-box; color: #000000; 
+        .ptt-btn:active { background: #994000; box-shadow: inset 3px 0 8px rgba(0,0,0,0.8); }
+        
+        .side-btn { 
+            position: absolute; left: -12px; width: 12px; height: 40px; 
+            background: linear-gradient(to right, #444, #111); border: 1px solid #000; border-radius: 5px 0 0 5px; 
+            cursor: pointer; box-shadow: inset 2px 0 4px rgba(255,255,255,0.2), -2px 2px 5px rgba(0,0,0,0.5); 
+            color: #888; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 0; touch-action: none; 
+        }
+        .side-btn:active { background: #111; box-shadow: inset 2px 0 5px rgba(0,0,0,0.8); }
+        .side-btn-a { top: 280px; } .side-btn-b { top: 330px; } .side-btn-c { top: 380px; }
+
+        /* Högtalargaller högst upp */
+        .speaker-grill {
+            width: 140px; height: 35px; border-radius: 20px; background-color: #050505;
+            background-image: radial-gradient(#333 15%, transparent 16%), radial-gradient(#333 15%, transparent 16%);
+            background-size: 6px 6px; background-position: 0 0, 3px 3px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8), 0 1px 1px rgba(255,255,255,0.1); margin-bottom: 10px;
+        }
+
+        .brand { color: #ccc; font-weight: 900; font-size: 14px; letter-spacing: 3px; margin-bottom: 15px; font-family: 'Arial', sans-serif; text-shadow: -1px -1px 0 #000; }
+
+        /* --- SKÄRMEN OCH BEZEL --- */
+        .screen-bezel { 
+            background: linear-gradient(to bottom, #111, #000); padding: 15px 15px 10px 15px; border-radius: 10px; width: 90%; 
+            box-shadow: inset 0 5px 15px rgba(0,0,0,1), 0 2px 3px rgba(255,255,255,0.1); margin-bottom: 15px; position: relative;
+        }
+        /* Glasblänk över skärmen */
+        .screen-bezel::after {
+            content: ''; position: absolute; top: 15px; left: 15px; right: 15px; height: 45%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            border-radius: 2px 2px 0 0; pointer-events: none; z-index: 10;
+        }
+
+        .screen { 
+            background-color: #ffffff; height: 185px; border-radius: 2px; box-sizing: border-box; color: #000000; 
             font-family: 'Arial', sans-serif; font-weight: bold; display: flex; flex-direction: column; justify-content: space-between; 
             transition: background-color 0.2s, color 0.2s; overflow: hidden; position: relative;
         }
-        .screen-header { background-color: #002855; color: #ffffff; display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 3px 6px; font-weight: normal; }
-        .screen-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 18px; text-align: center; line-height: 1.2; padding: 4px; position: relative; }
-        .screen-footer { background-color: #002855; color: #ffffff; display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 0; font-weight: normal; height: 20px; }
+
+        .screen-header { background-color: #002855; color: #ffffff; display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 4px 6px; font-weight: normal; }
+        .screen-content { flex-grow: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 18px; text-align: center; line-height: 1.2; padding: 4px; position: relative; z-index: 5; }
+        .screen-footer { background-color: #002855; color: #ffffff; display: flex; justify-content: space-between; align-items: center; font-size: 11px; padding: 0; font-weight: normal; height: 22px; }
         
-        .soft-slot { flex: 1; text-align: center; line-height: 20px; }
-        .soft-center-slot { border-left: 1px solid rgba(255,255,255,0.3); border-right: 1px solid rgba(255,255,255,0.3); font-weight: bold; }
+        .soft-slot { flex: 1; text-align: center; line-height: 22px; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); }
+        .soft-center-slot { border-left: 1px solid rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.2); font-weight: bold; }
         
         .ui-text-small { font-size: 11px; color: #555; font-weight: normal; }
         .ui-text-large { font-size: 16px; font-weight: bold; }
-        .ui-title { font-size: 12px; background-color: #e6e6e6; color: #000; width: 100%; text-align: left; padding: 3px 6px; box-sizing: border-box; border-bottom: 1px solid #ccc; margin-bottom: auto; }
-        .ui-highlight { background-color: #005bb5; color: #ffffff; padding: 3px 10px; border-radius: 3px; display: inline-block; width: 90%; margin-top: 2px; }
+        .ui-title { font-size: 12px; background: linear-gradient(to bottom, #f0f0f0, #d0d0d0); color: #000; width: 100%; text-align: left; padding: 4px 6px; box-sizing: border-box; border-bottom: 1px solid #999; margin-bottom: auto; z-index: 5; position: relative;}
+        .ui-highlight { background-color: #005bb5; color: #ffffff; padding: 4px 10px; border-radius: 4px; display: inline-block; width: 90%; margin-top: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);}
 
-        .volume-overlay {
-            position: absolute; right: 5px; top: 15%; height: 70%; width: 25px;
-            background-color: rgba(255,255,255,0.9); border: 2px solid #002855; border-radius: 4px;
-            display: flex; flex-direction: column-reverse; padding: 2px; box-sizing: border-box;
-            z-index: 100; opacity: 0; transition: opacity 0.2s; pointer-events: none;
-        }
+        .call-icon-container { width: 100%; text-align: center; margin-bottom: 5px; }
+        .call-icon-svg { fill: #005bb5; width: 30px; height: 30px; transition: fill 0.2s; }
+        .profile-natt .call-icon-svg { fill: #ff3333; }
+        .profile-span .call-icon-svg { fill: #666; }
+
+        .volume-overlay { position: absolute; right: 5px; top: 15%; height: 70%; width: 25px; background-color: rgba(255,255,255,0.95); border: 2px solid #002855; border-radius: 4px; display: flex; flex-direction: column-reverse; padding: 2px; box-sizing: border-box; z-index: 100; opacity: 0; transition: opacity 0.2s; pointer-events: none; box-shadow: -2px 2px 10px rgba(0,0,0,0.5); }
         .volume-bar { width: 100%; background-color: #2ecc71; transition: height 0.1s, background-color 0.2s; }
-        .volume-icon { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #002855; }
+        .volume-icon { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #002855; }
 
-        /* Profiler / Speciallägen */
-        .screen.off { background-color: #1a1f18 !important; color: #1a1f18 !important; }
+        /* Profiler */
+        .screen.off { background-color: #111 !important; color: #111 !important; }
         .screen.emergency-mode { background-color: #cc0000 !important; color: #ffffff !important; }
-        .screen.emergency-mode .screen-header, .screen.emergency-mode .screen-footer { background-color: #990000 !important; }
+        .screen.emergency-mode .screen-header, .screen.emergency-mode .screen-footer { background-color: #900 !important; }
         .screen.profile-natt { background-color: #2b0000 !important; color: #ff3333 !important; }
         .screen.profile-natt .screen-header, .screen.profile-natt .screen-footer { background-color: #110000 !important; color: #ff3333 !important; border-top-color: #ff3333; border-bottom-color: #ff3333; }
-        .screen.profile-natt .ui-title { background-color: #1a0000 !important; color: #ff3333 !important; border-bottom: 1px solid #ff3333 !important; }
+        .screen.profile-natt .ui-title { background: #1a0000 !important; color: #ff3333 !important; border-bottom: 1px solid #ff3333 !important; }
         .screen.profile-natt .ui-highlight { background-color: #660000 !important; color: #ffffff !important; }
         .screen.profile-natt .ui-text-small { color: #cc3333 !important; }
-        .screen.profile-span { background-color: #080808 !important; color: #444444 !important; }
-        .screen.profile-span .screen-header, .screen.profile-span .screen-footer { background-color: #000000 !important; color: #333333 !important; }
-        .screen.profile-span .ui-title { background-color: #000000 !important; color: #444444 !important; border-bottom: 1px solid #222 !important; }
-        .screen.profile-span .ui-highlight { background-color: #1a1a1a !important; color: #666666 !important; }
-        .screen.profile-span .ui-text-small { color: #333333 !important; }
+        .screen.profile-span { background-color: #050505 !important; color: #444 !important; }
+        .screen.profile-span .screen-header, .screen.profile-span .screen-footer { background-color: #000 !important; color: #333 !important; }
+        .screen.profile-span .ui-title { background: #000 !important; color: #444 !important; border-bottom: 1px solid #222 !important; }
+        .screen.profile-span .ui-highlight { background-color: #111 !important; color: #666 !important; }
+        .screen.profile-span .ui-text-small { color: #333 !important; }
 
         @keyframes flashCall { 0% { background-color: #fff; } 50% { background-color: #2ecc71; color: white; } 100% { background-color: #fff; } }
         .ringing-mode { animation: flashCall 1.5s infinite; }
 
-        /* --- KNAPPSATSEN --- */
-        .keypad-area { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+        /* =========================================
+           KNAPPSATSEN (FASADE REALISTISKA KNAPPAR)
+           ========================================= */
+        .keypad-area { width: 100%; display: flex; flex-direction: column; gap: 12px; padding: 0 5px; box-sizing: border-box;}
         button { font-family: sans-serif; outline: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
         
-        .softkeys-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 0 10px; margin-bottom: 5px; }
-        .softkeys-row button { background-color: #1a1a1a; color: #fff; border: 1px solid #000; border-radius: 6px; padding: 8px 0; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1); cursor:pointer; }
-        .softkeys-row button:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); background-color: #333; }
-        .soft-center-btn { border-radius: 12px !important; border-bottom: 2px solid #555 !important; }
+        /* Mjukknappar */
+        .softkeys-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+        .softkeys-row button { 
+            background: linear-gradient(to bottom, #444, #222); color: #fff; border: 1px solid #000; border-radius: 6px; 
+            padding: 10px 0; font-size: 12px; font-weight: bold; 
+            box-shadow: 0 3px 5px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.2); cursor:pointer; 
+            border-bottom: 2px solid #111;
+        }
+        .softkeys-row button:active { background: #111; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); transform: translateY(1px); border-bottom: 1px solid #000;}
+        .soft-center-btn { border-radius: 12px !important; border-bottom: 3px solid #005bb5 !important; } /* Tydligare markering för OK/Meny */
 
-        .nav-cluster { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 8px; align-items: center; }
+        /* Mittensektionen (Lurar & D-pad) */
+        .nav-cluster { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 10px; align-items: center; margin-bottom: 8px;}
         .side-action-keys { display: flex; flex-direction: column; gap: 12px; align-items: center; }
-        .action-btn { background-color: #1a1a1a; border: 1px solid #000; border-radius: 5px; padding: 10px 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; cursor:pointer;}
-        .action-btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); }
+        .action-btn { 
+            background: linear-gradient(to bottom, #333, #111); border: 1px solid #000; border-radius: 8px; 
+            width: 100%; height: 45px; box-shadow: 0 3px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2); 
+            display: flex; justify-content: center; align-items: center; cursor:pointer; border-bottom: 2px solid #000;
+        }
+        .action-btn:active { background: #0a0a0a; box-shadow: inset 0 3px 8px rgba(0,0,0,0.8); transform: translateY(2px); border-bottom: 0; }
 
-        .d-pad { display: grid; grid-template-columns: 32px 32px 32px; grid-template-rows: 32px 32px 32px; gap: 2px; justify-content: center; background-color: #111; padding: 5px; border-radius: 50%; border: 2px solid #000; box-shadow: 0 3px 6px rgba(0,0,0,0.5); margin: 0 auto; }
-        .d-pad button { background-color: #222; border: 1px solid #111; color: white; font-size: 12px; box-shadow: inset 0 1px 2px rgba(255,255,255,0.1); cursor:pointer;}
-        .d-pad button:active { background-color: #000; }
-        .d-up { grid-column: 2; border-radius: 8px 8px 2px 2px; } .d-down { grid-column: 2; grid-row: 3; border-radius: 2px 2px 8px 8px; } .d-left { grid-column: 1; grid-row: 2; border-radius: 8px 2px 2px 8px; } .d-right { grid-column: 3; grid-row: 2; border-radius: 2px 8px 8px 2px; } .d-center { grid-column: 2; grid-row: 2; border-radius: 50%; background-color: #333 !important; font-weight: bold;} .d-center:active { background-color: #111 !important; }
+        /* D-Pad (Navigering) */
+        .d-pad { 
+            display: grid; grid-template-columns: 35px 35px 35px; grid-template-rows: 35px 35px 35px; gap: 3px; 
+            justify-content: center; background: linear-gradient(135deg, #111, #000); padding: 8px; border-radius: 50%; 
+            border: 1px solid #333; box-shadow: inset 0 0 10px rgba(0,0,0,1), 0 5px 10px rgba(0,0,0,0.5); margin: 0 auto; 
+        }
+        .d-pad button { 
+            background: linear-gradient(to bottom, #3a3d42, #1a1c1e); border: 1px solid #000; color: #ddd; 
+            font-size: 14px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 3px rgba(0,0,0,0.8); cursor:pointer; 
+        }
+        .d-pad button:active { background: #000; box-shadow: inset 0 2px 5px rgba(0,0,0,0.9); }
+        .d-up { grid-column: 2; border-radius: 10px 10px 3px 3px; border-top: 1px solid #555 !important;} 
+        .d-down { grid-column: 2; grid-row: 3; border-radius: 3px 3px 10px 10px; border-bottom: 1px solid #000 !important;} 
+        .d-left { grid-column: 1; grid-row: 2; border-radius: 10px 3px 3px 10px; border-left: 1px solid #555 !important;} 
+        .d-right { grid-column: 3; grid-row: 2; border-radius: 3px 10px 10px 3px; border-right: 1px solid #555 !important;} 
+        .d-center { 
+            grid-column: 2; grid-row: 2; border-radius: 50%; 
+            background: radial-gradient(circle, #555, #222) !important; font-weight: bold; border: 2px solid #000 !important;
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.6) !important; color: white !important;
+        }
+        .d-center:active { background: #111 !important; box-shadow: inset 0 2px 5px rgba(0,0,0,0.9) !important; }
 
-        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 10px; margin-top: 2px;}
-        .numpad button { background-color: #1a1a1a; color: #fff; border: 1px solid #000; border-radius: 8px; padding: 10px; font-size: 18px; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 3px 5px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.15); cursor:pointer;}
-        .numpad button:active { box-shadow: inset 0 3px 5px rgba(0,0,0,0.8); transform: translateY(1px); }
-        .numpad span { font-size: 9px; color: #888; margin-top: 2px; letter-spacing: 1px;}
+        /* Sifferplatta */
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0; margin-top: 5px;}
+        .numpad button { 
+            background: linear-gradient(to bottom, #333, #1a1a1a); color: #fff; border: 1px solid #000; 
+            border-radius: 8px; padding: 12px 0; font-size: 20px; font-weight: bold; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.15); cursor:pointer; 
+            border-bottom: 2px solid #0a0a0a; text-shadow: 1px 1px 2px #000;
+        }
+        .numpad button:active { background: #111; box-shadow: inset 0 3px 6px rgba(0,0,0,0.8); transform: translateY(2px); border-bottom: 0;}
+        .numpad span { font-size: 10px; color: #999; margin-top: 3px; letter-spacing: 1px; font-weight: normal; text-shadow: none;}
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -184,26 +250,27 @@
         <h2>Rakel Lathund</h2>
         <h3>Grundfunktioner</h3>
         <ul><li><b>På / Av:</b> Håll in Röda luren.</li><li><b>Volym:</b> Vrid på toppvredet.</li><li><b>Knapplås:</b> Håll in <b>*</b>-knappen.</li></ul>
-        <h3>Talgrupper & Index</h3>
-        <ul><li><b>Bläddra:</b> Tryck Mittval (--) under displayen. Använd pil Vän/Hög för mapp, och Upp/Ner för att bläddra. Tryck Välj (Grön).</li><li><b>Byt via Index:</b> Tryck Mittval ➔ slå indexnr ➔ tryck Välj.<br><i>Ex: 722 = Insats 22 MPU. 7014 = IGV PO4.</i></li></ul>
-        <h3>Långa Tryck (Direktval)</h3>
-        <ul><li><b>1:</b> Skanning</li><li><b>2 / A:</b> Anropsbegäran RLC</li><li><b>3, 4, 5:</b> Insats 1, 21, 22</li><li><b>6:</b> Föregående talgrupp</li><li><b>7:</b> SAMV Pol</li><li><b>8:</b> Byt nät (TMO / DMO)</li><li><b>9:</b> RAPS</li><li><b>#:</b> Smartmeny</li></ul>
-        <h3>RLC & Individanrop</h3>
+        
+        <h3>Ringa Individanrop</h3>
         <ul>
-            <li><b>Simulera Larm från RLC:</b> 
-                <br>1. Håll in <b>2</b> eller tryck <b>A</b>. 
-                <br>2. Vänta 5 sek, svara sen med Grön lur.
-                <br>3. Tryck PTT för att svara RLC (ex. "97-3220 kom").
-                <br>4. RLC delar nu ut ett slumpmässigt uppdrag!
-                <br>5. Tryck PTT och kvittera. RLC avslutar.
-            </li>
-            <li><b>Ringa:</b> Slå nummer från grundläget.</li>
-            <li><b>Duplex:</b> Tryck Grön lur. Avsluta med Röd lur.</li>
-            <li><b>Semiduplex:</b> Tryck PTT direkt efter inslaget nummer.</li>
-            <li><b>Genväg ditt ISSI:</b> Slå *477</li>
+            <li>Slå nummer, välj <b>Stående ikon</b> med pilarna för ISSI (Ring med PTT).</li>
+            <li>Välj <b>Liggande ikon</b> för MSISDN (Ring med Grön lur).</li>
+            <li><b>Test ISSI:</b> 973221, 973222</li>
+            <li><b>Test MSISDN:</b> 0701234567, 11414</li>
         </ul>
-        <h3>Status & Profiler</h3>
-        <ul><li><b>Påbörjat uppdrag:</b> Tryck Pil Vänster/Höger.</li><li><b>Klar, ledig:</b> Dubbelklicka Mittvalsknappen.</li><li><b>Byt Profil:</b> Trippelklicka Mittvalsknappen, alt. B/C.</li></ul>
+
+        <h3>Spontana RLC-larm</h3>
+        <ul>
+            <li>Är statusen <b>Fri</b> ropar RLC upp. Svara/Kvittera med PTT. Dubbelklicka Mittval för "Klar, ledig" för att få nya larm.</li>
+        </ul>
+
+        <h3>Direktval & Status</h3>
+        <ul>
+            <li><b>Klar, ledig:</b> Dubbelklicka Mittvalsknappen.</li>
+            <li><b>Se ditt ISSI:</b> Slå *477</li>
+            <li><b>Mappar:</b> Pil Vänster/Höger. Upp/Ner för bläddring. Tryck OK (Mitt).</li>
+            <li><b>Larm:</b> Tryck på Röd larmknapp (Toppen).</li>
+        </ul>
     </div>
 </div>
 
@@ -212,22 +279,11 @@
         <button class="modal-close" onclick="toggleVersion()">Stäng</button>
         <h2>Versionshistorik</h2>
         <span class="version-date">Senaste uppdateringen</span>
-        <h3>v3.2 - Realistiska Anropssignaler</h3>
-        <p>Anpassade simulatorn efter specifika användaruppgifter. Terminalens ISSI är nu programmerad till 97-3220. RLC har bytt namn från det generiska 'RLC Syd' till 'RLC 9-7' på displayen. Talsyntesen använder nu också korrekta anropsnummer när den pratar med patrullen (ex. "97 32 20, kom").</p>
-        
+        <h3>v5.0 - Fotorealistiskt Gränssnitt</h3>
+        <p>En totalrenovering av CSS-koden för att visuellt efterlikna Sepura SC20 in i minsta detalj. Lade till avancerade 3D-skuggor, linjära och radiella gradienter för textur, fasetterade knappar, en separat volymratt med räfflor, högtalargaller och glasblänk över skärmen. Tog bort tidigare Polman-kod för att enbart fokusera på portabel enhet.</p>
         <span class="version-date">Tidigare uppdateringar</span>
-        <h3>v3.1 - Slumpmässiga AI-uppdrag (RLC)</h3>
-        <p>Gjorde anropssimulatorn interaktiv i tre steg! RLC ropar nu inte bara upp, utan delar även ut slumpmässiga fiktiva uppdrag (slagsmål, inbrott, rattfylleri m.m.) från en inbyggd databas när patrullen svarar via PTT-knappen.</p>
-        <h3>v3.0 - AI RLC-Svar & Final Polish</h3>
-        <p>Byggde in en motor med Talsyntes (Web Speech API). Vid anropsbegäran (2/A) simuleras ett inkommande samtal från RLC. Lade till copyright, rubrik och denna historik.</p>
-        <h3>v2.4 - Interaktiv Lathund & SVG-Ikoner</h3>
-        <p>Lade till inbyggd Lathund. Skapade skräddarsydda SVG-vektorer för grön/röd lur för exakt färgåtergivning.</p>
-        <h3>v2.3 - Profiler & Autentiska Ljud</h3>
-        <p>Integrerade 4 unika ljud/skärm-profiler. Skapade syntetisk Web Audio-motor för PTT Grant-tone och ringsignaler.</p>
-        <h3>v2.1 - Autentiskt UI & Mappstruktur (MPU)</h3>
-        <p>Byggde om skärmen till modern färgskärm. Implementerade komplett regional mappstruktur (MPU) samt indexering.</p>
-        <h3>v1.0 - Grundläggande Mobilanpassning</h3>
-        <p>Skapade radio-kroppen. Konverterade till touch-optimerade händelser. Lade till roterbart volymvred och auto-skalning.</p>
+        <h3>v4.0 - Dynamik & AI</h3>
+        <p>Inbyggd telefonbok med TTS. Spontana RLC-larm och krav på MSISDN/ISSI-logik.</p>
     </div>
 </div>
 
@@ -247,6 +303,7 @@
         <button class="side-btn side-btn-b" onpointerdown="pressABC('B')">B</button>
         <button class="side-btn side-btn-c" onpointerdown="pressABC('C')">C</button>
 
+        <div class="speaker-grill"></div>
         <div class="brand">SEPURA</div>
         
         <div class="screen-bezel">
@@ -320,7 +377,7 @@
 </div>
 
 <script>
-    // --- INIT ---
+    // --- INIT & LOGIC ---
     let speechInited = false;
     document.addEventListener('pointerdown', () => {
         if(!speechInited && 'speechSynthesis' in window) {
@@ -328,14 +385,8 @@
         }
     }, {once:true});
 
-    function toggleLathund() {
-        const modal = document.getElementById('lathundModal');
-        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
-    }
-    function toggleVersion() {
-        const modal = document.getElementById('versionModal');
-        modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
-    }
+    function toggleLathund() { const m = document.getElementById('lathundModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
+    function toggleVersion() { const m = document.getElementById('versionModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
 
     function resizeRadio() {
         const wrapper = document.getElementById('scale-wrapper');
@@ -346,23 +397,18 @@
     }
     window.addEventListener('resize', resizeRadio); resizeRadio();
 
-    // --- LJUD & RÖST ---
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContext();
-    let emergencyInterval = null; let ringingInterval = null; let rlcCallTimeout = null;
+    let emergencyInterval = null, ringingInterval = null, rlcCallTimeout = null;
     let volumeLevel = 5; 
 
     function playTone(freq, type, duration, baseVol) {
         if(powerState === 'OFF' || powerState === 'BOOT') return;
         if((currentProfile === "Normal tyst" || currentProfile === "Span") && type !== 'square') return;
         if(audioCtx.state === 'suspended') audioCtx.resume();
-        
         const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        
-        let actualVol = baseVol * (volumeLevel / 5);
-        if(volumeLevel === 0 && type !== 'square') actualVol = 0; 
-
+        let actualVol = baseVol * (volumeLevel / 5); if(volumeLevel === 0 && type !== 'square') actualVol = 0; 
         gain.gain.setValueAtTime(actualVol, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
         osc.connect(gain); gain.connect(audioCtx.destination);
@@ -380,259 +426,126 @@
 
     function speakSwedish(text, callback) {
         if ('speechSynthesis' in window && volumeLevel > 0 && currentProfile !== "Normal tyst" && currentProfile !== "Span") {
-            let msg = new SpeechSynthesisUtterance(text);
-            msg.lang = 'sv-SE';
-            let voices = window.speechSynthesis.getVoices();
-            let svVoice = voices.find(v => v.lang === 'sv-SE' || v.lang === 'sv_SE');
-            if(svVoice) msg.voice = svVoice;
-            msg.rate = 0.95; 
-            
+            let msg = new SpeechSynthesisUtterance(text); msg.lang = 'sv-SE';
+            let voices = window.speechSynthesis.getVoices(); let svVoice = voices.find(v => v.lang === 'sv-SE' || v.lang === 'sv_SE'); if(svVoice) msg.voice = svVoice; msg.rate = 0.95; 
             msg.onstart = () => { isReceiving = true; updateScreenDisplay(); };
             msg.onend = () => { isReceiving = false; updateScreenDisplay(); if(callback) callback(); };
             msg.onerror = () => { isReceiving = false; updateScreenDisplay(); if(callback) callback(); };
-            
             window.speechSynthesis.speak(msg);
         } else {
-            isReceiving = true; updateScreenDisplay();
-            setTimeout(() => { isReceiving = false; updateScreenDisplay(); if(callback) callback(); }, 2500);
+            isReceiving = true; updateScreenDisplay(); setTimeout(() => { isReceiving = false; updateScreenDisplay(); if(callback) callback(); }, 2500);
         }
     }
 
-    // --- DOM ---
-    const display = document.getElementById('display'); const screenContainer = document.getElementById('screen-container');
-    const headerStatus = document.getElementById('header-status'); const headerIcons = document.getElementById('header-icons');
-    const softLeft = document.getElementById('soft-left'); const softRight = document.getElementById('soft-right'); const softCenterText = document.getElementById('soft-center');
-    const volOverlay = document.getElementById('volume-overlay'); const volBar = document.getElementById('volume-bar');
+    const display = document.getElementById('display'), screenContainer = document.getElementById('screen-container'), headerStatus = document.getElementById('header-status'), headerIcons = document.getElementById('header-icons');
+    const softLeft = document.getElementById('soft-left'), softRight = document.getElementById('soft-right'), softCenterText = document.getElementById('soft-center');
+    const volOverlay = document.getElementById('volume-overlay'), volBar = document.getElementById('volume-bar');
     let volumeUI_Timeout;
 
-    // --- SYSTEM DATA ---
     const MY_ISSI = "97-3220"; 
-    let powerState = 'OFF'; 
-    let isLocked = false; let txInhibit = false; let scanning = false; 
-    let isPttActive = false; let isEmergency = false; let isReceiving = false;
-    let returnToIdleTimeout;
+    let powerState = 'OFF', isLocked = false, txInhibit = false, scanning = false, isPttActive = false, isEmergency = false, isReceiving = false, returnToIdleTimeout;
+    let currentMode = "TMO", currentProfile = "Normal ljud", pinInput = "", dialInput = "", activeCallNumber = "", callDialMode = "ISSI", radioStatus = "FRI", rlcInteractions = 0; 
 
-    let currentMode = "TMO"; let currentProfile = "Normal ljud"; 
-    let pinInput = ""; let dialInput = ""; let activeCallNumber = ""; 
-    let rlcInteractions = 0; 
-
+    const knownContacts = {
+        "973221": { type: "ISSI", name: "Kollega (97-3221)", reply: "Ja, 97 32 21 lyssnar." },
+        "973222": { type: "ISSI", name: "Hundförare (97-3222)", reply: "Hundföraren kom. Vi är strax framme." },
+        "0701234567": { type: "MSISDN", name: "Yttre Befäl", reply: "Yttre befäl Södra, vad har du?" },
+        "11414": { type: "MSISDN", name: "Växeln", reply: "Polisens växel, god dag." }
+    };
+    const iconISSI = `<svg class="call-icon-svg" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M10 2v2h4V2z"/><path d="M12 8v2" stroke="currentColor" stroke-width="2"/></svg>`;
+    const iconMSISDN = `<svg class="call-icon-svg" viewBox="0 0 24 24"><path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57-.35-.11-.74-.03-1.02.25l-2.2 2.2c-2.83-1.44-5.15-3.75-6.59-6.59l2.2-2.21c.28-.26.36-.65.25-1C8.7 6.45 8.5 5.25 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z"/></svg>`;
     const folderSystem = [
-        { name: "REG MPU", tgs: [{name:"LKC MPU",index:"700"},{name:"VAKTB MPU",index:"799"},{name:"LKC Län",index:"600"},{name:"Insats 1 MPU",index:"701"},{name:"Insats 2 MPU",index:"702"},{name:"Insats 21 MPU",index:"721"},{name:"Insats 22 MPU",index:"722"}] },
-        { name: "PO 1 MPU", tgs: [{name:"IGV PO1 MPU",index:"7011"},{name:"LPO Centrum",index:"7101"},{name:"LPO Sorgenfri",index:"7102"}] },
-        { name: "PO 2 MPU", tgs: [{name:"IGV PO2 MPU",index:"7012"},{name:"LPO Lindängen",index:"7201"},{name:"LPO Oxie",index:"7202"}] },
-        { name: "PO 3 MPU", tgs: [{name:"IGV PO3 MPU",index:"7013"},{name:"LPO Kirseberg",index:"7301"},{name:"LPO V Hamnen",index:"7302"}] },
-        { name: "PO 4 MPU", tgs: [{name:"IGV PO4 MPU",index:"7014"},{name:"LPO Rosengård",index:"7401"},{name:"LPO Husie",index:"7402"}] },
-        { name: "PO 5 MPU", tgs: [{name:"IGV PO5",index:"7015"},{name:"LPO Limhamn",index:"7501"},{name:"LPO Slotts",index:"7502"}] },
-        { name: "TRAFIK", tgs: [{name:"Trafik 1 MPU",index:"7601"},{name:"Trafik 2 MPU",index:"7602"},{name:"Trafik 3 MPU",index:"7603"},{name:"Gräns 1 MPU",index:"7611"},{name:"Gräns 2 MPU",index:"7612"},{name:"MC MPU",index:"7621"}] },
-        { name: "POLKON PU", tgs: [{name:"Polkon 1 MPU",index:"7701"},{name:"Polkon 2 MPU",index:"7702"},{name:"Polkon 3 MPU",index:"7703"},{name:"Polkon 4 MPU",index:"7704"}] },
-        { name: "SKAN MPU", tgs: [{name:"SKAN IGV PO1 MPU",index:"7801"},{name:"SKAN LPO CENTRUM",index:"7802"},{name:"SKAN IGV PO2 MPU",index:"7803"}] },
-        { name: "DMO", tgs: [{name:"Pol 1 DMO",index:"101"},{name:"Pol 2 DMO",index:"102"},{name:"Pol 3 DMO",index:"103"}] }
+        { name: "REG MPU", tgs: [{name:"LKC MPU",index:"700"},{name:"VAKTB MPU",index:"799"},{name:"Insats 1 MPU",index:"701"},{name:"Insats 21 MPU",index:"721"},{name:"Insats 22 MPU",index:"722"}] },
+        { name: "PO 1 MPU", tgs: [{name:"IGV PO1 MPU",index:"7011"},{name:"LPO Centrum",index:"7101"}] }
     ];
-
-    let navFolderIndex = 1; let navTgIndex = 0;
-    let currentTalkgroupObj = folderSystem[navFolderIndex].tgs[navTgIndex];
-    let currentFolder = folderSystem[navFolderIndex].name;
-    let previousTalkgroupObj = currentTalkgroupObj; let previousFolder = currentFolder;
+    let navFolderIndex = 1, navTgIndex = 0, currentTalkgroupObj = folderSystem[navFolderIndex].tgs[navTgIndex], currentFolder = folderSystem[navFolderIndex].name, previousTalkgroupObj = currentTalkgroupObj, previousFolder = currentFolder;
 
     function getTime() { const d = new Date(); return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`; }
-    function updateSoftkeys(left, center, right) { softLeft.innerHTML = left; softCenterText.innerHTML = center; softRight.innerHTML = right; }
-
-    function applyProfileVisuals() {
-        screenContainer.classList.remove('profile-natt', 'profile-span', 'ringing-mode');
-        if (currentProfile === "Natt") screenContainer.classList.add('profile-natt');
-        if (currentProfile === "Span") screenContainer.classList.add('profile-span');
-        if (powerState === 'RINGING_RLC') screenContainer.classList.add('ringing-mode'); 
-    }
-
-    function changeProfile(newProf) {
-        currentProfile = newProf; applyProfileVisuals();
-        showTempMsg(`<div class='ui-text-small'>Profil vald:</div><div class='ui-text-large text-accent' style='margin-top:5px;'>${currentProfile}</div>`);
-    }
-    function toggleProfile() {
-        if(currentProfile === "Normal ljud") changeProfile("Normal tyst");
-        else if(currentProfile === "Normal tyst") changeProfile("Natt");
-        else if(currentProfile === "Natt") changeProfile("Span");
-        else changeProfile("Normal ljud");
-    }
+    function updateSoftkeys(l, c, r) { softLeft.innerHTML = l; softCenterText.innerHTML = c; softRight.innerHTML = r; }
+    function applyProfileVisuals() { screenContainer.classList.remove('profile-natt', 'profile-span', 'ringing-mode'); if(currentProfile==="Natt")screenContainer.classList.add('profile-natt'); if(currentProfile==="Span")screenContainer.classList.add('profile-span'); if(powerState==='RINGING_RLC')screenContainer.classList.add('ringing-mode'); }
+    function changeProfile(newProf) { currentProfile = newProf; applyProfileVisuals(); showTempMsg(`<div class='ui-text-small'>Profil vald:</div><div class='ui-text-large text-accent' style='margin-top:5px;'>${currentProfile}</div>`); }
+    function toggleProfile() { if(currentProfile==="Normal ljud")changeProfile("Normal tyst"); else if(currentProfile==="Normal tyst")changeProfile("Natt"); else if(currentProfile==="Natt")changeProfile("Span"); else changeProfile("Normal ljud"); }
 
     function updateScreenDisplay() {
         if (powerState === 'OFF') { screenContainer.classList.add("off"); display.innerHTML = ""; headerStatus.innerHTML = ""; headerIcons.innerHTML = ""; updateSoftkeys("", "", ""); volOverlay.style.opacity = '0'; return; }
         screenContainer.classList.remove("off"); applyProfileVisuals();
+        if(isEmergency) { screenContainer.classList.add("emergency-mode"); screenContainer.classList.remove('profile-natt', 'profile-span'); } else screenContainer.classList.remove("emergency-mode");
+        headerStatus.innerHTML = `📶 Rakel`; headerIcons.innerHTML = `${scanning?'📻':''}${txInhibit?'🚫':''}${isLocked?'🔒':''} ${getTime()} 🔋`;
 
-        if(isEmergency) { screenContainer.classList.add("emergency-mode"); screenContainer.classList.remove('profile-natt', 'profile-span'); } 
-        else { screenContainer.classList.remove("emergency-mode"); }
-        
-        let lockIcon = isLocked ? "🔒" : ""; let txIcon = txInhibit ? "🚫" : ""; let scanIcon = scanning ? "📻" : "";
-        headerStatus.innerHTML = `📶 Rakel`; headerIcons.innerHTML = `${scanIcon}${txIcon}${lockIcon} ${getTime()} 🔋`;
-
-        if (powerState === 'PIN') {
-            display.innerHTML = `<div class="ui-text-large" style="margin-top:10px;">Polisen</div><br><div class="ui-text-small">Ange PIN:</div><div class="ui-text-large" style="margin-top:5px; letter-spacing:2px;">${pinInput.replace(/./g, '*')}</div>`; updateSoftkeys("OK", "", "Rensa");
-        } else if (powerState === 'DIALING') {
-            display.innerHTML = `<div class="ui-title">Uppringning/Index</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;"><div class="ui-text-small">Sök index/Nummer:</div><div class="ui-text-large" style="letter-spacing:2px; margin-top:5px;">${dialInput}</div></div>`; updateSoftkeys("Välj", "", "Rensa");
-        } else if (powerState === 'CALL_ACTIVE') {
-            display.innerHTML = `<div class="ui-title">Aktivt Samtal</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;"><div class="ui-text-small text-accent">Samtal anslutet</div><div class="ui-text-large" style="margin-top:10px;">📞 ${activeCallNumber}</div></div>`; updateSoftkeys("", "", "Avsluta");
-        } else if (powerState === 'RINGING_RLC') {
-            display.innerHTML = `<div class="ui-title">Inkommande samtal</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;"><div class="ui-text-small">Svarar du?</div><div class="ui-text-large" style="margin-top:10px;">📞 RLC (9-7)</div></div>`; updateSoftkeys("Svara", "", "Avvisa");
-        } else if (powerState === 'RLC_CONNECTED') {
-            let statusText = isPttActive ? `SÄNDER...<br>🎤` : (isReceiving ? `MOTTAR...<br>🔊` : `Samtal anslutet`);
-            display.innerHTML = `<div class="ui-title">Individsamtal</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;"><div class="ui-text-small text-accent">${statusText}</div><div class="ui-text-large" style="margin-top:10px;">RLC (9-7)</div></div>`; updateSoftkeys("", "", "Avsluta");
-        } else if (powerState === 'SMARTMENU') {
-            display.innerHTML = `<div class="ui-title">Smartmeny</div><div style="font-size:14px; text-align:left; width:100%; margin-top:5px; padding-left:10px; box-sizing:border-box;">1 Ljus&nbsp;&nbsp;&nbsp;&nbsp;6 Skan<br>2 Nät&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;7 Info<br>3 Fri&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8 16<br>4 Spärr&nbsp;&nbsp;&nbsp;9 Utgår</div>`; updateSoftkeys("Välj", "", "Avbryt");
-        } else if (powerState === 'FOLDERS') {
-            let folder = folderSystem[navFolderIndex]; let tg = folder.tgs[navTgIndex];
-            display.innerHTML = `<div class="ui-title">Välj talgrupp</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; width:100%; align-items:center;"><div class="ui-text-small" style="margin-bottom:5px;">◄ ${folder.name} ►</div><div style="font-size:10px;">▲</div><div class="ui-highlight">${tg.name}</div><div style="font-size:10px; margin-top:1px;">▼</div><div class="ui-text-small" style="margin-top:5px; font-weight:bold; color:#002855;">Index: ${tg.index}</div></div>`; updateSoftkeys("Välj", "Status", "Avbryt");
-        } else if (powerState === 'IDLE') {
-            let tgDisplay = isPttActive ? `SÄNDER...<br>🎤<br>${currentTalkgroupObj.name}` : currentTalkgroupObj.name;
-            display.innerHTML = `<div style="width:100%; text-align:left; padding-top:2px;" class="ui-text-small">${currentMode}</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;"><div class="ui-text-small" style="margin-bottom:5px;">◄ ${currentFolder} ►</div><div class="ui-text-large">${tgDisplay}</div></div>`; updateSoftkeys("Meny", "Mappar", "Kont.");
-        }
+        if (powerState === 'PIN') { display.innerHTML = `<div class="ui-text-large" style="margin-top:10px;">Polisen</div><br><div class="ui-text-small">Ange PIN:</div><div class="ui-text-large" style="margin-top:5px; letter-spacing:2px;">${pinInput.replace(/./g, '*')}</div>`; updateSoftkeys("OK", "", "Rensa"); } 
+        else if (powerState === 'DIALING') { let activeIcon = callDialMode === "ISSI" ? iconISSI : iconMSISDN; let callType = callDialMode === "ISSI" ? "Radio (ISSI) - Anv. PTT" : "Telefon (MSISDN) - Anv. Grön lur"; display.innerHTML = `<div class="ui-title">Uppringning/Index</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;"><div class="call-icon-container">▲ ${activeIcon} ▼</div><div class="ui-text-small">${callType}</div><div class="ui-text-large" style="letter-spacing:2px; margin-top:5px;">${dialInput}</div></div>`; updateSoftkeys("Välj", "", "Rensa"); } 
+        else if (powerState === 'CALL_ACTIVE') { let displayName = activeCallNumber; if(knownContacts[activeCallNumber]) displayName = knownContacts[activeCallNumber].name; display.innerHTML = `<div class="ui-title">Aktivt Samtal</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;"><div class="ui-text-small text-accent">Samtal anslutet</div><div class="ui-text-large" style="margin-top:10px;">📞 ${displayName}</div></div>`; updateSoftkeys("", "", "Avsluta"); } 
+        else if (powerState === 'RINGING_RLC') { display.innerHTML = `<div class="ui-title">Inkommande samtal</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;"><div class="ui-text-small">Svarar du?</div><div class="ui-text-large" style="margin-top:10px;">📞 RLC 9-7</div></div>`; updateSoftkeys("Svara", "", "Avvisa"); } 
+        else if (powerState === 'RLC_CONNECTED') { let statusText = isPttActive ? `SÄNDER...<br>🎤` : (isReceiving ? `MOTTAR...<br>🔊` : `Samtal anslutet`); display.innerHTML = `<div class="ui-title">Individsamtal</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;"><div class="ui-text-small text-accent">${statusText}</div><div class="ui-text-large" style="margin-top:10px;">RLC 9-7</div></div>`; updateSoftkeys("", "", "Avsluta"); } 
+        else if (powerState === 'SMARTMENU') { display.innerHTML = `<div class="ui-title">Smartmeny</div><div style="font-size:14px; text-align:left; width:100%; margin-top:5px; padding-left:10px; box-sizing:border-box;">1 Ljus&nbsp;&nbsp;&nbsp;&nbsp;6 Skan<br>2 Nät&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;7 Info<br>3 Fri&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;8 16<br>4 Spärr&nbsp;&nbsp;&nbsp;9 Utgår</div>`; updateSoftkeys("Välj", "", "Avbryt"); } 
+        else if (powerState === 'FOLDERS') { let folder = folderSystem[navFolderIndex]; let tg = folder.tgs[navTgIndex]; display.innerHTML = `<div class="ui-title">Välj talgrupp</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; width:100%; align-items:center;"><div class="ui-text-small" style="margin-bottom:5px;">◄ ${folder.name} ►</div><div style="font-size:10px;">▲</div><div class="ui-highlight">${tg.name}</div><div style="font-size:10px; margin-top:1px;">▼</div><div class="ui-text-small" style="margin-top:5px; font-weight:bold;">Index: ${tg.index}</div></div>`; updateSoftkeys("Välj", "Status", "Avbryt"); } 
+        else if (powerState === 'IDLE') { let tgDisplay = isPttActive ? `SÄNDER...<br>🎤<br>${currentTalkgroupObj.name}` : currentTalkgroupObj.name; display.innerHTML = `<div style="width:100%; text-align:left; padding-top:2px;" class="ui-text-small">${currentMode} | Stat: ${radioStatus}</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;"><div class="ui-text-small" style="margin-bottom:5px;">◄ ${currentFolder} ►</div><div class="ui-text-large">${tgDisplay}</div></div>`; updateSoftkeys("Meny", "Mappar", "Kont."); }
     }
 
-    function showTempMsg(text, delay = 2000) {
-        if (powerState === 'OFF' || powerState === 'PIN' || powerState === 'BOOT') return;
-        display.innerHTML = `<div style="flex-grow:1; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px; flex-direction:column;">${text}</div>`; updateSoftkeys("", "", ""); clearTimeout(returnToIdleTimeout);
-        returnToIdleTimeout = setTimeout(() => { if (powerState !== 'OFF') updateScreenDisplay(); }, delay);
-    }
-
-    function setTalkgroup(newTgObj, newFolder) {
-        if (currentTalkgroupObj.name !== newTgObj.name) { previousTalkgroupObj = currentTalkgroupObj; previousFolder = currentFolder; currentTalkgroupObj = newTgObj; currentFolder = newFolder; }
-        powerState = 'IDLE'; updateScreenDisplay(); soundKeypress();
-        showTempMsg(`<div class="ui-text-small">Byter till:</div><div class="ui-text-large text-accent" style="margin-top:5px;">${currentTalkgroupObj.name}</div>`);
-    }
-
+    function showTempMsg(text, delay=2000) { if (powerState === 'OFF' || powerState === 'PIN' || powerState === 'BOOT') return; display.innerHTML = `<div style="flex-grow:1; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px; flex-direction:column;">${text}</div>`; updateSoftkeys("", "", ""); clearTimeout(returnToIdleTimeout); returnToIdleTimeout = setTimeout(() => { if (powerState !== 'OFF') updateScreenDisplay(); }, delay); }
+    function setTalkgroup(newTgObj, newFolder) { if (currentTalkgroupObj.name !== newTgObj.name) { previousTalkgroupObj = currentTalkgroupObj; previousFolder = currentFolder; currentTalkgroupObj = newTgObj; currentFolder = newFolder; } powerState = 'IDLE'; updateScreenDisplay(); soundKeypress(); showTempMsg(`<div class="ui-text-small">Byter till:</div><div class="ui-text-large text-accent" style="margin-top:5px;">${currentTalkgroupObj.name}</div>`); }
     function getTgByIndex(idxStr) { for(let f of folderSystem) { for(let t of f.tgs) { if(t.index === idxStr) return { tg: t, folder: f.name }; } } return null; }
     function getTgByName(nameStr) { for(let f of folderSystem) { for(let t of f.tgs) { if(t.name === nameStr) return { tg: t, folder: f.name }; } } return { tg: {name: nameStr, index: "----"}, folder: "Okänd" }; }
 
-    function showVolumeUI() {
-        if(currentProfile === "Span") return; 
-        volOverlay.style.opacity = '1'; volBar.style.height = `${volumeLevel * 10}%`; 
-        if(volumeLevel === 0) volBar.style.backgroundColor = '#e74c3c'; else volBar.style.backgroundColor = '#2ecc71';
-        clearTimeout(volumeUI_Timeout); volumeUI_Timeout = setTimeout(() => { volOverlay.style.opacity = '0'; }, 1500);
-    }
-
+    function showVolumeUI() { if(currentProfile === "Span") return; volOverlay.style.opacity = '1'; volBar.style.height = `${volumeLevel * 10}%`; if(volumeLevel === 0) volBar.style.backgroundColor = '#e74c3c'; else volBar.style.backgroundColor = '#2ecc71'; clearTimeout(volumeUI_Timeout); volumeUI_Timeout = setTimeout(() => { volOverlay.style.opacity = '0'; }, 1500); }
     function handleKnobScroll(e) { if(e.deltaY < 0) turnKnob('right'); else turnKnob('left'); }
-    function turnKnob(direction) {
-        if (powerState === 'OFF' || isLocked) { if(isLocked) soundError(); return; }
-        if (powerState === 'FOLDERS') {
-            soundKeypress(); let folder = folderSystem[navFolderIndex];
-            if (direction === 'right') navTgIndex = (navTgIndex - 1 + folder.tgs.length) % folder.tgs.length;
-            if (direction === 'left') navTgIndex = (navTgIndex + 1) % folder.tgs.length;
-            updateScreenDisplay();
-        } else if (powerState === 'IDLE' || powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED') {
-            if (direction === 'right' && volumeLevel < 10) volumeLevel++;
-            if (direction === 'left' && volumeLevel > 0) volumeLevel--;
-            if(volumeLevel > 0) soundKeypress();
-            showVolumeUI();
-        }
-    }
-
+    function turnKnob(direction) { if (powerState === 'OFF' || isLocked) { if(isLocked) soundError(); return; } if (powerState === 'FOLDERS') { soundKeypress(); let folder = folderSystem[navFolderIndex]; if (direction === 'right') navTgIndex = (navTgIndex - 1 + folder.tgs.length) % folder.tgs.length; if (direction === 'left') navTgIndex = (navTgIndex + 1) % folder.tgs.length; updateScreenDisplay(); } else if (powerState === 'IDLE' || powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED') { if (direction === 'right' && volumeLevel < 10) volumeLevel++; if (direction === 'left' && volumeLevel > 0) volumeLevel--; if(volumeLevel > 0) soundKeypress(); showVolumeUI(); } }
+    
     function pressArrow(dir) {
         if (powerState === 'OFF') return; if (isLocked) { soundError(); return showTempMsg("🔒 Låst"); } soundKeypress();
-        if (powerState === 'FOLDERS') {
-            if (dir === 'vänster') { navFolderIndex = (navFolderIndex - 1 + folderSystem.length) % folderSystem.length; navTgIndex = 0; } 
-            else if (dir === 'höger') { navFolderIndex = (navFolderIndex + 1) % folderSystem.length; navTgIndex = 0; } 
-            else if (dir === 'upp') { turnKnob('right'); return; } else if (dir === 'ner') { turnKnob('left'); return; }
-            updateScreenDisplay();
-        } else if (powerState === 'IDLE') {
-            if (dir === 'vänster' || dir === 'höger') showTempMsg("<div class='ui-text-small'>Status skickad:</div><div class='ui-text-large'>Påbörjat uppdrag</div>", 3000); 
-            else { powerState = 'FOLDERS'; updateScreenDisplay(); } 
-        }
+        if (powerState === 'DIALING') { if (dir === 'upp' || dir === 'ner') { callDialMode = callDialMode === "ISSI" ? "MSISDN" : "ISSI"; updateScreenDisplay(); } }
+        else if (powerState === 'FOLDERS') { if (dir === 'vänster') { navFolderIndex = (navFolderIndex - 1 + folderSystem.length) % folderSystem.length; navTgIndex = 0; } else if (dir === 'höger') { navFolderIndex = (navFolderIndex + 1) % folderSystem.length; navTgIndex = 0; } else if (dir === 'upp') { turnKnob('right'); return; } else if (dir === 'ner') { turnKnob('left'); return; } updateScreenDisplay(); } 
+        else if (powerState === 'IDLE') { if (dir === 'vänster' || dir === 'höger') { radioStatus = "UPPTAGEN"; showTempMsg("<div class='ui-text-small'>Status skickad:</div><div class='ui-text-large'>Påbörjat uppdrag</div>", 3000); } else { powerState = 'FOLDERS'; updateScreenDisplay(); } }
     }
 
     function pressCenter() {
         if (powerState === 'OFF' || isLocked) { if(isLocked) soundError(); return; } soundKeypress();
         if (powerState === 'FOLDERS') { setTalkgroup(folderSystem[navFolderIndex].tgs[navTgIndex], folderSystem[navFolderIndex].name); } 
-        else if (powerState === 'DIALING') { initiateCall(); } 
+        else if (powerState === 'DIALING') { if (dialInput.length <= 4) initiateCall(); else if (callDialMode === "MSISDN") initiateCall(); else { soundError(); showTempMsg("<div class='ui-text-small'>Felaktigt:</div><div class='ui-text-large' style='color:#cc0000'>ISSI kräver PTT</div>", 3000); } } 
         else if (powerState === 'IDLE') { powerState = 'FOLDERS'; updateScreenDisplay(); }
     }
 
     let centerSoftClickCount = 0; let centerSoftClickTimer;
     function pressCenterSoft() {
         if (powerState !== 'IDLE' && powerState !== 'FOLDERS') return; if (isLocked) { soundError(); return showTempMsg("🔒 Låst"); } soundKeypress();
-        if (powerState === 'FOLDERS') { showTempMsg("Status skickad", 1500); powerState = 'IDLE'; updateScreenDisplay(); return; }
-        
+        if (powerState === 'FOLDERS') { radioStatus = "UPPTAGEN"; showTempMsg("Status skickad", 1500); powerState = 'IDLE'; updateScreenDisplay(); return; }
         centerSoftClickCount++; clearTimeout(centerSoftClickTimer);
         centerSoftClickTimer = setTimeout(() => {
             if(centerSoftClickCount === 1) { powerState = 'FOLDERS'; updateScreenDisplay(); } 
-            else if(centerSoftClickCount === 2) showTempMsg("<div class='ui-text-small'>Status skickad:</div><div class='ui-text-large'>Klar, ledig</div>", 2500); 
+            else if(centerSoftClickCount === 2) { radioStatus = "FRI"; showTempMsg("<div class='ui-text-small'>Status skickad:</div><div class='ui-text-large'>Klar, ledig</div>", 2500); }
             else if(centerSoftClickCount >= 3) { toggleProfile(); }
             centerSoftClickCount = 0;
         }, 400); 
     }
 
-    // --- RLC ANROPSMOTOR ---
-    function triggerRlcCall() {
-        showTempMsg("<div class='ui-text-small'>Anropsbegäran</div><div class='ui-text-large'>Skickad till RLC</div>", 3000);
-        clearTimeout(rlcCallTimeout);
-        rlcCallTimeout = setTimeout(() => {
-            if (powerState === 'IDLE' || powerState === 'FOLDERS') {
-                powerState = 'RINGING_RLC'; updateScreenDisplay();
-                soundRingIncoming(); ringingInterval = setInterval(soundRingIncoming, 2000);
-            }
-        }, 5000);
-    }
+    function tryRandomRlcCall() { if (powerState === 'IDLE' && radioStatus === "FRI" && !isLocked) { if (Math.random() < 0.3) { powerState = 'RINGING_RLC'; updateScreenDisplay(); soundRingIncoming(); ringingInterval = setInterval(soundRingIncoming, 2000); } } }
+    setInterval(tryRandomRlcCall, 15000);
+
+    function triggerRlcCall() { showTempMsg("<div class='ui-text-small'>Anropsbegäran</div><div class='ui-text-large'>Skickad till RLC</div>", 3000); clearTimeout(rlcCallTimeout); rlcCallTimeout = setTimeout(() => { if (powerState === 'IDLE' || powerState === 'FOLDERS') { powerState = 'RINGING_RLC'; updateScreenDisplay(); soundRingIncoming(); ringingInterval = setInterval(soundRingIncoming, 2000); } }, 5000); }
 
     let redTimer; let redFired = false;
     function startRed() { if(powerState !== 'OFF') soundKeypress(); redFired = false; redTimer = setTimeout(() => { redFired = true; togglePower(); }, 1500); }
-    function stopRed() {
-        clearTimeout(redTimer);
-        if(!redFired && powerState !== 'OFF') {
-            if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') { 
-                powerState = 'IDLE'; clearInterval(ringingInterval); clearTimeout(rlcCallTimeout); soundPttRelease(); updateScreenDisplay(); showTempMsg("Samtal avslutades", 1500); 
-            }
-            else if (powerState === 'DIALING' || powerState === 'FOLDERS') { dialInput = ""; powerState = 'IDLE'; updateScreenDisplay(); } 
-            else if (powerState !== 'IDLE' && powerState !== 'PIN') { powerState = 'IDLE'; updateScreenDisplay(); } 
-            else if (powerState === 'IDLE') {
-                if(isEmergency) { isEmergency = false; stopEmergencySound(); updateScreenDisplay(); showTempMsg("Larm återställt", 2000); }
-                else { showTempMsg("Återgår...", 500); }
-            }
-        }
-    }
+    function stopRed() { clearTimeout(redTimer); if(!redFired && powerState !== 'OFF') { if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') { powerState = 'IDLE'; clearInterval(ringingInterval); clearTimeout(rlcCallTimeout); soundPttRelease(); updateScreenDisplay(); showTempMsg("Samtal avslutades", 1500); } else if (powerState === 'DIALING' || powerState === 'FOLDERS') { dialInput = ""; callDialMode = "ISSI"; powerState = 'IDLE'; updateScreenDisplay(); } else if (powerState !== 'IDLE' && powerState !== 'PIN') { powerState = 'IDLE'; updateScreenDisplay(); } else if (powerState === 'IDLE') { if(isEmergency) { isEmergency = false; stopEmergencySound(); updateScreenDisplay(); showTempMsg("Larm återställt", 2000); } else { showTempMsg("Återgår...", 500); } } } }
     function cancelRed() { clearTimeout(redTimer); }
 
-    function togglePower() {
-        if (powerState !== 'OFF') { 
-            powerState = 'OFF'; isLocked = false; txInhibit = false; isPttActive = false; isEmergency = false; isReceiving = false; stopEmergencySound(); clearInterval(ringingInterval); clearTimeout(rlcCallTimeout); updateScreenDisplay(); 
-        } else { 
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            powerState = 'BOOT'; screenContainer.classList.remove("off"); display.innerHTML = "<div class='ui-text-large' style='margin:auto'>Startar Sepura...</div>";
-            setTimeout(() => { powerState = 'PIN'; pinInput = ""; updateScreenDisplay(); }, 2000); 
-        }
-    }
+    function togglePower() { if (powerState !== 'OFF') { powerState = 'OFF'; isLocked = false; txInhibit = false; isPttActive = false; isEmergency = false; isReceiving = false; stopEmergencySound(); clearInterval(ringingInterval); clearTimeout(rlcCallTimeout); updateScreenDisplay(); } else { if(audioCtx.state === 'suspended') audioCtx.resume(); powerState = 'BOOT'; screenContainer.classList.remove("off"); display.innerHTML = "<div class='ui-text-large' style='margin:auto'>Startar Sepura...</div>"; setTimeout(() => { powerState = 'PIN'; pinInput = ""; updateScreenDisplay(); }, 2000); } }
 
     function pressGreen() {
-        if (powerState === 'OFF' || powerState === 'PIN') return;
-        if (isLocked) { soundError(); return; }
-        soundKeypress();
-
-        if (powerState === 'RINGING_RLC') {
-            clearInterval(ringingInterval);
-            powerState = 'RLC_CONNECTED'; rlcInteractions = 0;
-            updateScreenDisplay();
-            setTimeout(() => {
-                soundPttRelease(); // Radio-klick
-                // TTS: Tilltalar rätt ISSI-nummer
-                setTimeout(() => { speakSwedish("97 32 20, kom."); }, 500);
-            }, 800);
-        }
-        else if (powerState === 'DIALING') initiateCall(); 
-        else if (powerState === 'FOLDERS') pressCenter(); 
-        else if (powerState === 'IDLE') showTempMsg("Anropshistorik", 1500);
+        if (powerState === 'OFF' || powerState === 'PIN') return; if (isLocked) { soundError(); return; } soundKeypress();
+        if (powerState === 'RINGING_RLC') { clearInterval(ringingInterval); powerState = 'RLC_CONNECTED'; rlcInteractions = 0; updateScreenDisplay(); setTimeout(() => { soundPttRelease(); setTimeout(() => { speakSwedish("97 32 20, kom."); }, 500); }, 800); }
+        else if (powerState === 'DIALING') pressCenter(); else if (powerState === 'FOLDERS') pressCenter(); else if (powerState === 'IDLE') showTempMsg("Anropshistorik", 1500);
     }
 
     function initiateCall() {
         if (dialInput === "") return;
-        if (dialInput === "112") { showTempMsg("<div class='ui-text-large' style='color:#cc0000'>Ringer SOS Alarm...</div>", 3000); dialInput = ""; powerState = 'IDLE'; return; }
-        
-        if (dialInput.length <= 4) {
-            let result = getTgByIndex(dialInput);
-            if(result) { setTalkgroup(result.tg, result.folder); } else { soundError(); showTempMsg(`<div class='ui-text-small'>Felaktigt:</div><div class='ui-text-large' style='color:#cc0000'>Ogiltigt Index</div>`); }
-            dialInput = ""; 
-        } else {
-            activeCallNumber = dialInput; powerState = 'CALL_ACTIVE'; dialInput = "";
-            display.innerHTML = `<div class="ui-title">Uppringning</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;"><div class="ui-text-small">Ringer upp...</div><div class="ui-text-large" style="margin-top:10px;">📞 ${activeCallNumber}</div></div>`;
-            updateSoftkeys("", "", "Avbryt");
-            soundRingback(); ringingInterval = setInterval(soundRingback, 1500);
-            clearTimeout(returnToIdleTimeout); returnToIdleTimeout = setTimeout(() => { if (powerState === 'CALL_ACTIVE') { clearInterval(ringingInterval); soundPttGrant(); updateScreenDisplay(); } }, 4500);
+        if (dialInput === "112") { showTempMsg("<div class='ui-text-large' style='color:#cc0000'>Ringer SOS Alarm...</div>", 3000); dialInput = ""; callDialMode = "ISSI"; powerState = 'IDLE'; return; }
+        if (dialInput.length <= 4) { let result = getTgByIndex(dialInput); if(result) { setTalkgroup(result.tg, result.folder); } else { soundError(); showTempMsg(`<div class='ui-text-small'>Felaktigt:</div><div class='ui-text-large' style='color:#cc0000'>Ogiltigt Index</div>`); } dialInput = ""; callDialMode = "ISSI"; } 
+        else {
+            activeCallNumber = dialInput; powerState = 'CALL_ACTIVE'; dialInput = ""; 
+            let displayName = activeCallNumber; if(knownContacts[activeCallNumber]) displayName = knownContacts[activeCallNumber].name;
+            display.innerHTML = `<div class="ui-title">Uppringning</div><div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;"><div class="ui-text-small">Ringer upp...</div><div class="ui-text-large" style="margin-top:10px;">📞 ${displayName}</div></div>`;
+            updateSoftkeys("", "", "Avbryt"); soundRingback(); ringingInterval = setInterval(soundRingback, 1500);
+            clearTimeout(returnToIdleTimeout); returnToIdleTimeout = setTimeout(() => { if (powerState === 'CALL_ACTIVE') { clearInterval(ringingInterval); soundPttGrant(); updateScreenDisplay(); if(knownContacts[activeCallNumber] && knownContacts[activeCallNumber].type === "MSISDN" && callDialMode === "MSISDN") { setTimeout(() => { speakSwedish(knownContacts[activeCallNumber].reply); }, 800); } } }, 4500);
         }
     }
 
@@ -640,20 +553,8 @@
     function startSoft(side) { if (powerState === 'OFF') return; soundKeypress(); softFired = false; softTimer = setTimeout(() => { softFired = true; showTempMsg(`Prog Mjuk ${side}...`, 1500); }, 1000); }
     function stopSoft(side) { clearTimeout(softTimer); if (!softFired) { if (side === 'V') triggerLeftSoft(); if (side === 'H') triggerRightSoft(); } }
     function cancelSoft() { clearTimeout(softTimer); }
-
-    function triggerLeftSoft() {
-        if (powerState === 'PIN') { if (pinInput.length > 0) { powerState = 'IDLE'; showTempMsg("Inloggad", 1000); } } 
-        else if (powerState === 'RINGING_RLC') pressGreen(); // Svara
-        else if (powerState === 'DIALING' || powerState === 'FOLDERS') pressCenter(); 
-        else if (powerState === 'IDLE') showTempMsg("Huvudmeny", 1000);
-    }
-    function triggerRightSoft() {
-        if (powerState === 'PIN') { pinInput = pinInput.slice(0, -1); updateScreenDisplay(); } 
-        else if (powerState === 'DIALING') { dialInput = dialInput.slice(0, -1); if (dialInput === "") powerState = 'IDLE'; updateScreenDisplay(); } 
-        else if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') { stopRed(); } 
-        else if (powerState === 'SMARTMENU' || powerState === 'FOLDERS') { powerState = 'IDLE'; updateScreenDisplay(); } 
-        else if (powerState === 'IDLE') showTempMsg("Kontakter", 1000);
-    }
+    function triggerLeftSoft() { if (powerState === 'PIN') { if (pinInput.length > 0) { powerState = 'IDLE'; showTempMsg("Inloggad", 1000); } } else if (powerState === 'RINGING_RLC') pressGreen(); else if (powerState === 'DIALING' || powerState === 'FOLDERS') pressCenter(); else if (powerState === 'IDLE') showTempMsg("Huvudmeny", 1000); }
+    function triggerRightSoft() { if (powerState === 'PIN') { pinInput = pinInput.slice(0, -1); updateScreenDisplay(); } else if (powerState === 'DIALING') { dialInput = dialInput.slice(0, -1); if (dialInput === "") { powerState = 'IDLE'; callDialMode = "ISSI"; } updateScreenDisplay(); } else if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') { stopRed(); } else if (powerState === 'SMARTMENU' || powerState === 'FOLDERS') { powerState = 'IDLE'; updateScreenDisplay(); } else if (powerState === 'IDLE') showTempMsg("Kontakter", 1000); }
 
     let keypadTimer; let isLongPress = false;
     function onKeypadDown(key) { if (powerState === 'OFF' || powerState === 'BOOT') return; soundKeypress(); isLongPress = false; keypadTimer = setTimeout(() => { isLongPress = true; handleLongPress(key); }, 800); }
@@ -662,24 +563,18 @@
 
     function handleShortPress(key) {
         if (isLocked && key !== '*') { soundError(); return showTempMsg("🔒 Låst"); }
-        if (powerState === 'IDLE' || powerState === 'DIALING' || powerState === 'FOLDERS') { 
-            powerState = 'DIALING'; dialInput += key; 
-            if (dialInput === "*477") { showTempMsg(`<div class='ui-text-small'>Information:</div><div class='ui-text-large'>ISSI: ${MY_ISSI}</div>`, 4000); dialInput = ""; powerState = 'IDLE'; } 
-            else { updateScreenDisplay(); }
-        } 
-        else if (powerState === 'PIN') { if (pinInput.length < 8) pinInput += key; updateScreenDisplay(); } 
-        else if (powerState === 'SMARTMENU') handleSmartMenuChoice(key);
+        if (powerState === 'IDLE' || powerState === 'DIALING' || powerState === 'FOLDERS') { powerState = 'DIALING'; dialInput += key; if (dialInput === "*477") { showTempMsg(`<div class='ui-text-small'>Information:</div><div class='ui-text-large'>ISSI: ${MY_ISSI}</div>`, 4000); dialInput = ""; callDialMode = "ISSI"; powerState = 'IDLE'; } else { updateScreenDisplay(); } } 
+        else if (powerState === 'PIN') { if (pinInput.length < 8) pinInput += key; updateScreenDisplay(); } else if (powerState === 'SMARTMENU') handleSmartMenuChoice(key);
     }
 
     function handleLongPress(key) {
         if (key === '*') { isLocked = !isLocked; soundPttGrant(); return showTempMsg(isLocked ? "Lås PÅ" : "Lås AV"); }
         if (isLocked) { soundError(); return showTempMsg("🔒 Låst"); }
-
         if (powerState === 'IDLE' || powerState === 'DIALING' || powerState === 'FOLDERS') {
-            dialInput = ""; powerState = 'IDLE';
+            dialInput = ""; callDialMode = "ISSI"; powerState = 'IDLE';
             switch(key) {
                 case '1': scanning = true; let skn = getTgByName("SKAN IGV PO1 MPU"); setTalkgroup(skn.tg, skn.folder); showTempMsg("Skanning<br>AKTIVERAD"); break;
-                case '2': triggerRlcCall(); break; // RLC ANROP
+                case '2': triggerRlcCall(); break; 
                 case '3': let r1 = getTgByName("Insats 1 MPU"); setTalkgroup(r1.tg, r1.folder); break; 
                 case '4': let r2 = getTgByName("Insats 21 MPU"); setTalkgroup(r2.tg, r2.folder); break;
                 case '5': let r3 = getTgByName("Insats 22 MPU"); setTalkgroup(r3.tg, r3.folder); break;
@@ -692,81 +587,37 @@
         }
     }
 
-    function handleSmartMenuChoice(key) {
-        powerState = 'IDLE';
-        switch(key) {
-            case '1': showTempMsg("Ljus"); break; case '2': currentMode = (currentMode === "TMO") ? "DMO" : "TMO"; showTempMsg(`Nät: ${currentMode}`); break;
-            case '3': showTempMsg("Fri status"); break; case '4': txInhibit = !txInhibit; showTempMsg(txInhibit ? "Spärr PÅ" : "Spärr AV"); break;
-            case '7': showTempMsg(`<div class='ui-text-small'>Information:</div><div class='ui-text-large'>ISSI: ${MY_ISSI}</div>`, 4000); break;
-            case '8': showTempMsg("16 Biträde", 2500); break; case '9': showTempMsg("Patrull utgår", 2500); break;
-            default: powerState = 'SMARTMENU'; updateScreenDisplay(); 
-        }
-    }
+    function handleSmartMenuChoice(key) { powerState = 'IDLE'; switch(key) { case '1': showTempMsg("Ljus"); break; case '2': currentMode = (currentMode === "TMO") ? "DMO" : "TMO"; showTempMsg(`Nät: ${currentMode}`); break; case '3': radioStatus = "FRI"; showTempMsg("Fri status skickad"); break; case '4': txInhibit = !txInhibit; showTempMsg(txInhibit ? "Spärr PÅ" : "Spärr AV"); break; case '7': showTempMsg(`<div class='ui-text-small'>Information:</div><div class='ui-text-large'>ISSI: ${MY_ISSI}</div>`, 4000); break; case '8': showTempMsg("16 Biträde", 2500); break; case '9': radioStatus = "UPPTAGEN"; showTempMsg("Patrull utgår", 2500); break; default: powerState = 'SMARTMENU'; updateScreenDisplay(); } }
 
-    function pressABC(btn) {
-        if (powerState !== 'IDLE') return; 
-        if (isLocked) { soundError(); return showTempMsg("🔒 Låst"); }
-        soundKeypress();
-        if(btn === 'A') triggerRlcCall(); // RLC ANROP
-        if(btn === 'B') changeProfile("Normal ljud");
-        if(btn === 'C') changeProfile("Natt");
-    }
-
-    function triggerEmergency() {
-        if (powerState === 'OFF' || powerState === 'BOOT') return; isLocked = false; txInhibit = false; isEmergency = true;
-        startEmergencySound(); clearTimeout(returnToIdleTimeout); updateScreenDisplay();
-        display.innerHTML = "<div class='ui-text-large'>!!! LARM !!!</div>"; updateSoftkeys("","","");
-        setTimeout(() => { if(isEmergency) { powerState = 'IDLE'; updateScreenDisplay(); } }, 4000);
-    }
+    function pressABC(btn) { if (powerState !== 'IDLE') return; if (isLocked) { soundError(); return showTempMsg("🔒 Låst"); } soundKeypress(); if(btn === 'A') triggerRlcCall(); if(btn === 'B') changeProfile("Normal ljud"); if(btn === 'C') changeProfile("Natt"); }
+    function triggerEmergency() { if (powerState === 'OFF' || powerState === 'BOOT') return; isLocked = false; txInhibit = false; isEmergency = true; startEmergencySound(); clearTimeout(returnToIdleTimeout); updateScreenDisplay(); display.innerHTML = "<div class='ui-text-large'>!!! LARM !!!</div>"; updateSoftkeys("","",""); setTimeout(() => { if(isEmergency) { powerState = 'IDLE'; updateScreenDisplay(); } }, 4000); }
 
     function startPtt() {
         if (powerState !== 'IDLE' && powerState !== 'DIALING' && powerState !== 'FOLDERS' && powerState !== 'CALL_ACTIVE' && powerState !== 'RLC_CONNECTED') return; 
         if (isLocked) { soundError(); return showTempMsg("🔒 Låst"); } if (txInhibit) { soundError(); return showTempMsg("🚫 Spärr aktiv"); }
-        
-        isPttActive = true; 
-        soundPttGrant(); 
-
-        if(powerState === 'DIALING') { activeCallNumber = dialInput; powerState = 'CALL_ACTIVE'; dialInput = ""; } 
+        if (powerState === 'DIALING' && callDialMode === "MSISDN" && dialInput.length > 4) { soundError(); showTempMsg("<div class='ui-text-small'>Felaktigt:</div><div class='ui-text-large' style='color:#cc0000'>MSISDN kräver lur</div>", 3000); return; }
+        isPttActive = true; soundPttGrant(); 
+        if(powerState === 'DIALING') { activeCallNumber = dialInput; powerState = 'CALL_ACTIVE'; dialInput = ""; callDialMode = "ISSI"; } 
         updateScreenDisplay(); 
     }
     
     function stopPtt() { 
         if(isPttActive) { 
             isPttActive = false; soundPttRelease(); 
-            if (powerState === 'DIALING') { dialInput = ""; } 
+            if (powerState === 'DIALING') { dialInput = ""; callDialMode = "ISSI"; } 
             updateScreenDisplay(); 
-
-            // Automatiskt svar från RLC (Slumpmässiga uppdrag)
             if (powerState === 'RLC_CONNECTED') {
                 if (rlcInteractions === 0) {
                     rlcInteractions++;
-                    const dispatches = [
-                        "Vi har ett bekräftat inbrottslarm på en elektronikbutik i centrum. Väktare är på plats och ser en krossad ruta. Ni kan köra fram.",
-                        "Trafikolycka på inre ringvägen. Två bilar inblandade, blockerar ett körfält. Räddningstjänsten är larmade men vi behöver en patrull för trafikdirigering.",
-                        "Vi har fått in larm om ett pågående slagsmål med flera inblandade utanför centralstationen. Möjligen tillhyggen. Skynda fram.",
-                        "En inringare ser två obehöriga personer inne på en inhägnad byggarbetsplats. De lyser med ficklampor och verkar bära på gods. Åk fram och kontrollera.",
-                        "Stökig och aggressiv person på en stadsbuss. Föraren har stannat bussen och vägrar köra vidare innan personen är avvisad. Vi behöver er på plats.",
-                        "Misstänkt rattfylleri. En mörk personbil kör mycket vingligt och kör upp på trottoarer. Inringaren ligger bakom med varningsblinkers. Försök genskjuta.",
-                        "Pågående butiksstöld. Personalen har envarsgripit en person som nu är utåtagerande. De behöver assistans omedelbart.",
-                        "Samtal om en misstänkt väska som lämnats kvar på en parkbänk vid torget. Många människor i rörelse. Åk fram och gör en första bedömning."
-                    ];
+                    const dispatches = ["Vi har ett inbrottslarm på en elektronikbutik.", "Trafikolycka på inre ringvägen.", "Slagsmål utanför stationen.", "Obehöriga på en byggarbetsplats.", "Stökig person på en stadsbuss.", "Misstänkt rattfylleri. Kör vingligt.", "Pågående butiksstöld.", "Misstänkt övergiven väska på torget.", "Larm om bråk i en lägenhet.", "Misstänkt person smyger runt.", "Föremål på vägbanan utgör trafikfara.", "Ungdomsgäng stör ordningen vid köpcentrum.", "Person i vattnet vid hamnen.", "Pågående cykelstöld vid stationen.", "Misstänkt brand i industrilokal."];
                     let randomMission = dispatches[Math.floor(Math.random() * dispatches.length)];
-                    setTimeout(() => {
-                        soundPttRelease(); 
-                        setTimeout(() => { speakSwedish(randomMission); }, 400);
-                    }, 1000);
+                    setTimeout(() => { soundPttRelease(); setTimeout(() => { speakSwedish(randomMission); }, 400); }, 1000);
                 } else if (rlcInteractions === 1) {
-                    rlcInteractions++;
-                    setTimeout(() => {
-                        soundPttRelease(); 
-                        // TTS svarar med rätt ISSI-nummer
-                        setTimeout(() => { 
-                            speakSwedish("Uppfattat 97 32 20, vi noterar status. Klart slut.", () => {
-                                setTimeout(() => { stopRed(); }, 1500); 
-                            }); 
-                        }, 400);
-                    }, 1000);
+                    rlcInteractions++; radioStatus = "UPPTAGEN"; 
+                    setTimeout(() => { soundPttRelease(); setTimeout(() => { speakSwedish("Uppfattat 97 32 20, vi noterar status. Klart slut.", () => { setTimeout(() => { stopRed(); }, 1500); }); }, 400); }, 1000);
                 }
+            } else if (powerState === 'CALL_ACTIVE') {
+                if(knownContacts[activeCallNumber] && knownContacts[activeCallNumber].type === "ISSI" && callDialMode === "ISSI") { setTimeout(() => { soundPttRelease(); setTimeout(() => { speakSwedish(knownContacts[activeCallNumber].reply); }, 400); }, 1000); }
             }
         } 
     }
