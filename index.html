@@ -120,10 +120,9 @@
 </head>
 <body oncontextmenu="return false;">
 
-<!-- DATABAS & AI INTEGRATION (DINA NYCKLAR ÄR INLAGDA HÄR) -->
+<!-- DATABAS & AI INTEGRATION -->
 <script type="module">
     // 1. DIN GEMINI AI NYCKEL FÖR RLC-OPERATÖREN
-    // Klistra in din nyckel här (behåll citattecknen):
     window.GEMINI_API_KEY = "DIN_GEMINI_API_NYCKEL_HÄR"; 
 
     // 2. DIN FIREBASE DATABAS FÖR MULTIPLAYER LJUDSÄNDNING
@@ -131,7 +130,7 @@
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Din exakta Firebase Konfiguration
+    // Din Firebase Konfiguration
     const firebaseConfig = {
       apiKey: "AIzaSyDGBbYre7i6qd63k0aeds2dOdV106vlXoA",
       authDomain: "rakel-68321.firebaseapp.com",
@@ -156,13 +155,12 @@
         
         const sessionStartTime = Date.now();
         
-        // Lyssna på ljud (Transmissions) från dina vänner
+        // Lyssna på ljud från kompisar
         const qAudio = query(collection(db, 'transmissions'));
         onSnapshot(qAudio, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const data = change.doc.data();
-                    // Spela bara upp om det är rätt talgrupp, nytt meddelande, och inte skickat av oss själva
                     if (data.tg === window.getCurrentTalkgroupName() && data.timestamp > sessionStartTime && data.senderId !== auth.currentUser.uid) {
                         window.enqueueMultiplayerAudio(data.audioData);
                     }
@@ -170,7 +168,7 @@
             });
         });
 
-        // Lyssna på SDS textmeddelanden
+        // Lyssna på textmeddelanden
         const qSds = query(collection(db, 'sds'));
         onSnapshot(qSds, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
@@ -183,7 +181,7 @@
             });
         });
 
-        // Hjärtslag för att synas som Online i radions meny
+        // Synas som Online
         setInterval(async () => {
             if(auth.currentUser) {
                 await setDoc(doc(db, 'presence', auth.currentUser.uid), {
@@ -216,7 +214,7 @@
             });
         }
 
-        // Funktionen som faktiskt skickar ljudet från din mikrofon upp till databasen
+        // Skicka ljud till databasen
         window.dbSendAudio = async function(base64Data, tgName) {
             await addDoc(collection(db, 'transmissions'), {
                 senderId: auth.currentUser.uid,
@@ -227,12 +225,11 @@
         }
 
     } catch (e) { 
-        console.warn("Firebase Multiplayer är avstängt på grund av domän/rättigheter:", e.message);
-        console.info("TIPS: Lägg till 'scf.usercontent.goog' i Firebase under Authentication -> Settings -> Authorized domains för att testa i förhandsgranskningen!");
+        console.warn("Firebase Offline (Kör lokalt eller saknar domänrättigheter)", e.message);
     }
 </script>
 
-<!-- Resten av radions gränssnitt -->
+<!-- Gränssnitt -->
 <button class="lathund-toggle" onclick="toggleLathund()">❓ Hjälp / Lathund</button>
 <div class="modal-overlay" id="lathundModal">
     <div class="modal-content">
@@ -243,7 +240,7 @@
             <h3 style="margin-top:0; color:#005bb5;">🌐 Live Multiplayer!</h3>
             <p>1. Dela länken till den här sidan med en vän.<br>
                2. Välj <b>samma talgrupp</b> (t.ex. Insats 1 MPU).<br>
-               3. Håll in PTT (orangea knappen till vänster) och prata i din mikrofon. Släpp för att sända!</p>
+               3. Håll in PTT (orangea knappen) och prata i din mikrofon. Släpp för att sända!</p>
         </div>
 
         <h3>Individanrop & AI-RLC</h3>
@@ -357,10 +354,17 @@
 <script>
     window.MY_ISSI = "97-" + Math.floor(1000 + Math.random() * 9000);
 
+    // --- IOS LJUDFIX ---
+    const silentAudioUnlock = new Audio("data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
+    
     let speechInited = false;
     document.addEventListener('pointerdown', () => {
-        if(!speechInited && 'speechSynthesis' in window) {
-            let u = new SpeechSynthesisUtterance(""); u.volume = 0; window.speechSynthesis.speak(u); speechInited = true;
+        if(!speechInited) {
+            if('speechSynthesis' in window) {
+                let u = new SpeechSynthesisUtterance(""); u.volume = 0; window.speechSynthesis.speak(u);
+            }
+            silentAudioUnlock.play().catch(e => console.warn("Ljud blockerat", e));
+            speechInited = true;
         }
     }, {once:true});
 
@@ -459,20 +463,30 @@
 
     let mediaRecorder; let audioChunks = []; let isRecordingReal = false; let isReceivingReal = false; let audioQueue = []; let isPlayingQueue = false;
 
+    // --- IOS MIKROFON FIX ---
     async function ensureMicAccess() {
         if(mediaRecorder) return true;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+            
             mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const audioType = mediaRecorder.mimeType || 'audio/webm';
+                const audioBlob = new Blob(audioChunks, { type: audioType });
                 audioChunks = [];
-                const reader = new FileReader(); reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => { if(window.dbSendAudio) window.dbSendAudio(reader.result, currentTalkgroupObj.name); }
+                
+                const reader = new FileReader(); 
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => { 
+                    if(window.dbSendAudio) window.dbSendAudio(reader.result, currentTalkgroupObj.name); 
+                }
             };
             return true;
-        } catch(err) { return false; }
+        } catch(err) { 
+            console.error("Mikrofonåtkomst nekad", err);
+            return false; 
+        }
     }
 
     window.getCurrentTalkgroupName = function() { return currentTalkgroupObj.name; };
