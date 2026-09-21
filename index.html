@@ -122,7 +122,7 @@
 
 <script type="module">
     // 1. DIN GEMINI AI NYCKEL
-    window.GEMINI_API_KEY = "DIN_GEMINI_API_NYCKEL_HÄR"; 
+    window.GEMINI_API_KEY = ""; // KLISTRA IN DIN NYCKEL HÄR INNANFÖR CITATTECKNEN OM DU KÖR UTANFÖR CANVAS!
 
     // 2. DIN FIREBASE KONFIGURATION
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -243,7 +243,7 @@
 
         <h3>Individanrop & AI-RLC</h3>
         <ul>
-            <li>För att ropa upp <b>AI RLC-operatören</b>: Håll in <b>2</b> eller tryck på genväg <b>A</b> (sidan av radion). Håll in PTT och prata, AI:n svarar!</li>
+            <li>För att ropa upp <b>AI RLC-operatören</b>: Håll in <b>2</b> eller tryck på genväg <b>A</b> (sidan av radion). Svara med grön lur. Håll in PTT och prata, AI:n svarar!</li>
             <li>Ring ISSI: Slå t.ex. 973221 och håll in PTT.</li>
             <li>Ditt eget ISSI-nummer hittar du via Menyn -> Information, eller genom att knappa `*477`.</li>
         </ul>
@@ -365,6 +365,9 @@
     let emergencyInterval = null, ringingInterval = null, rlcCallTimeout = null;
     let volumeLevel = 5; 
 
+    // Skapa ett helt tyst (tomt) ljud för att låsa upp iOS Safari
+    const silentAudioUnlock = new Audio("data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
+
     // iOS Ljud-upplåsning
     let speechInited = false;
     document.addEventListener('pointerdown', async () => {
@@ -375,6 +378,7 @@
             if(audioCtx.state === 'suspended') {
                 await audioCtx.resume();
             }
+            silentAudioUnlock.play().catch(e => console.warn("Ljud blockerat", e));
             speechInited = true;
         }
     }, {once:true});
@@ -423,13 +427,27 @@
         recognition.onresult = function(event) { transcriptBuffer = event.results[0][0].transcript; };
         recognition.onend = function() {
             isRecognizing = false;
-            if(transcriptBuffer && powerState === 'RLC_CONNECTED') { processAiResponse(transcriptBuffer); }
+            if(powerState === 'RLC_CONNECTED') { 
+                if(transcriptBuffer) {
+                    processAiResponse(transcriptBuffer); 
+                } else {
+                    // Fallback om mikrofonen inte hörde något (Vanligt på Android Chrome om processen blockeras)
+                    setTimeout(() => {
+                        let userText = prompt("Varning: Webbläsaren uppfattade ingen röst. Skriv in ditt svar till RLC manuellt:");
+                        if (userText) {
+                            processAiResponse(userText);
+                        } else {
+                            setTimeout(() => { soundPttRelease(); speakSwedish("Inget hörbart, vi stänger ner. Klart slut.", () => setTimeout(stopRed, 1500)); }, 400);
+                        }
+                    }, 500);
+                }
+            }
             transcriptBuffer = "";
         };
     }
 
     let aiChatHistory = [
-        { role: "user", parts: [{ text: `Du är RLC-operatör (Regionledningscentralen Polis). Vi är polispatrull ${window.MY_ISSI}. Agera hyper-realistisk svensk polisledningscentral. Svara mycket kortfattat, kallt och professionellt. Använd korrekt radiodisciplin (ex. "uppfattat", "framkom", "åberopar", "HR"). Avsluta inlägg med "kom" om du förväntar dig svar, annars MÅSTE du avsluta med "klart slut" om ärendet är helt över. Ger jag bara min anropssignal, skicka mig på ett random pågående uppdrag.` }]},
+        { role: "user", parts: [{ text: `Du är RLC-operatör (Regionledningscentralen Polis, anrop 9-7). Vi är polispatrull ${window.MY_ISSI}. Agera hyper-realistisk svensk polisledningscentral. Svara mycket kortfattat, kallt och professionellt. Använd korrekt radiodisciplin (ex. "uppfattat", "framkom", "åberopar", "HR"). Avsluta inlägg med "kom" om du förväntar dig svar, annars MÅSTE du avsluta med "klart slut" om ärendet är helt över. Ger jag bara min anropssignal, skicka mig på ett random pågående uppdrag.` }]},
         { role: "model", parts: [{ text: "Uppfattat."}]}
     ];
 
@@ -437,12 +455,9 @@
         showTempMsg("RLC tänker...", 3000);
         aiChatHistory.push({ role: "user", parts: [{ text: userText }] });
         
-        if (!window.GEMINI_API_KEY || window.GEMINI_API_KEY === "DIN_GEMINI_API_NYCKEL_HÄR") {
-            setTimeout(() => { soundPttRelease(); setTimeout(() => speakSwedish("Uppfattat. Gemini API-nyckel saknas. Klart slut.", () => setTimeout(stopRed, 1500)), 400); }, 500);
-            return;
-        }
-
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${window.GEMINI_API_KEY}`;
+        // Hämta API nyckel (om den lagts in för lokal körning) annars tom för automatisk inloggning i Canvas miljö.
+        const apiKey = window.GEMINI_API_KEY || ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
         
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({contents: aiChatHistory}) });
@@ -453,6 +468,8 @@
                 setTimeout(() => { soundPttRelease(); setTimeout(() => speakSwedish(replyText, () => {
                     if(replyText.toLowerCase().includes("klart slut")) { setTimeout(stopRed, 1500); }
                 }), 400); }, 500);
+            } else {
+                setTimeout(() => { soundPttRelease(); setTimeout(() => speakSwedish("Uppfattat. Ett kommunikationsfel uppstod. Klart slut.", () => setTimeout(stopRed, 1500)), 400); }, 500);
             }
         } catch (e) {
             setTimeout(() => { soundPttRelease(); setTimeout(() => speakSwedish("Uppfattat. Nätverksfel hos RLC. Klart slut.", () => setTimeout(stopRed, 1500)), 400); }, 500);
@@ -480,7 +497,8 @@
             mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
             
             mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                const audioType = mediaRecorder.mimeType || 'audio/webm';
+                const audioBlob = new Blob(audioChunks, { type: audioType });
                 audioChunks = [];
                 
                 const reader = new FileReader(); 
@@ -507,10 +525,9 @@
         playBase64Audio(base64Data);
     }
 
-    // NY FUNKTION: Spela upp ljud direkt i hårdvaran istället för <audio>-taggar (Löser iOS blockeringarna helt!)
+    // Spela upp ljud direkt i hårdvaran istället för <audio>-taggar (Löser iOS blockeringarna helt!)
     async function playBase64Audio(base64Data) {
         try {
-            // Extrahera den rena Base64-koden från Data-URI:n
             const base64String = base64Data.split(',')[1] || base64Data;
             const binaryString = atob(base64String);
             const len = binaryString.length;
@@ -519,15 +536,12 @@
                 bytes[i] = binaryString.charCodeAt(i);
             }
             
-            // Säkerställ att ljudmotorn är vaken
             if(audioCtx.state === 'suspended') await audioCtx.resume();
             
-            // Koda av Androids WebM eller iPhones MP4 direkt i ljudchippet
             const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
             
-            // Ställ in radions fysiska volymnivå
             const gainNode = audioCtx.createGain();
             gainNode.gain.value = volumeLevel / 10;
             
@@ -538,13 +552,12 @@
                 isPlayingQueue = false;
                 isReceivingReal = false;
                 updateScreenDisplay();
-                processAudioQueue(); // Kolla om fler meddelanden ligger i kön
+                processAudioQueue();
             };
             
             source.start(0);
         } catch (error) {
-            console.error("Audio playback error (Troligen okänt format från annan plattform):", error);
-            // Gå vidare till nästa
+            console.error("Audio playback error:", error);
             isPlayingQueue = false;
             isReceivingReal = false;
             updateScreenDisplay();
@@ -706,7 +719,7 @@
             else if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') { 
                 powerState = 'IDLE'; clearInterval(ringingInterval); clearTimeout(rlcCallTimeout); soundPttRelease(); updateScreenDisplay(); showTempMsg("Samtal avslutades", 1500); 
                 aiChatHistory = [
-                    { role: "user", parts: [{ text: `Du är RLC-operatör (Regionledningscentralen Polis). Vi är polispatrull ${window.MY_ISSI}. Agera hyper-realistisk svensk polisledningscentral. Svara mycket kortfattat, kallt och professionellt. Använd korrekt radiodisciplin (ex. "uppfattat", "framkom", "åberopar", "HR"). Avsluta inlägg med "kom" om du förväntar dig svar, annars MÅSTE du avsluta med "klart slut" om ärendet är helt över. Ger jag bara min anropssignal, skicka mig på ett random pågående uppdrag.` }]},
+                    { role: "user", parts: [{ text: `Du är RLC-operatör (Regionledningscentralen Polis, anrop 9-7). Vi är polispatrull ${window.MY_ISSI}. Agera hyper-realistisk svensk polisledningscentral. Svara mycket kortfattat, kallt och professionellt. Använd korrekt radiodisciplin (ex. "uppfattat", "framkom", "åberopar", "HR"). Avsluta inlägg med "kom" om du förväntar dig svar, annars MÅSTE du avsluta med "klart slut" om ärendet är helt över. Ger jag bara min anropssignal, skicka mig på ett random pågående uppdrag.` }]},
                     { role: "model", parts: [{ text: "Uppfattat."}]}
                 ];
             }
@@ -721,7 +734,15 @@
 
     function pressGreen() {
         if (powerState === 'OFF' || powerState === 'PIN') return; if (isLocked) { soundError(); return; } soundKeypress();
-        if (powerState === 'RINGING_RLC') { clearInterval(ringingInterval); powerState = 'RLC_CONNECTED'; updateScreenDisplay(); setTimeout(() => { soundPttRelease(); setTimeout(() => { speakSwedish("Södra, kom."); }, 500); }, 800); }
+        if (powerState === 'RINGING_RLC') { 
+            clearInterval(ringingInterval); 
+            powerState = 'RLC_CONNECTED'; 
+            updateScreenDisplay(); 
+            setTimeout(() => { 
+                soundPttRelease(); 
+                setTimeout(() => { speakSwedish("9 7, kom."); }, 500); 
+            }, 800); 
+        }
         else if (powerState === 'DIALING') pressCenter(); else if (powerState === 'FOLDERS') pressCenter(); else if (powerState === 'IDLE') showTempMsg("Anropshistorik", 1500);
     }
 
@@ -830,8 +851,19 @@
         if(isPttActive) { 
             isPttActive = false; soundPttRelease(); 
             
-            if (powerState === 'RLC_CONNECTED' && recognition && isRecognizing) {
-                recognition.stop();
+            if (powerState === 'RLC_CONNECTED') {
+                if (recognition && isRecognizing) {
+                    recognition.stop();
+                } else if (!recognition) {
+                    setTimeout(() => {
+                        let userText = prompt("Varning: Webbläsaren uppfattade ingen röst. Skriv in ditt svar till RLC manuellt:");
+                        if (userText) {
+                            processAiResponse(userText);
+                        } else {
+                            setTimeout(() => { soundPttRelease(); speakSwedish("Inget hörbart, vi stänger ner. Klart slut.", () => setTimeout(stopRed, 1500)); }, 400);
+                        }
+                    }, 500);
+                }
             }
             else if(isRecordingReal && mediaRecorder && mediaRecorder.state !== 'inactive') { 
                 mediaRecorder.stop(); isRecordingReal = false; 
