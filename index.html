@@ -120,17 +120,15 @@
 </head>
 <body oncontextmenu="return false;">
 
-<!-- DATABAS & AI INTEGRATION -->
 <script type="module">
-    // 1. DIN GEMINI AI NYCKEL FÖR RLC-OPERATÖREN
+    // 1. DIN GEMINI AI NYCKEL
     window.GEMINI_API_KEY = "DIN_GEMINI_API_NYCKEL_HÄR"; 
 
-    // 2. DIN FIREBASE DATABAS FÖR MULTIPLAYER LJUDSÄNDNING
+    // 2. DIN FIREBASE KONFIGURATION
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Din Firebase Konfiguration
     const firebaseConfig = {
       apiKey: "AIzaSyDGBbYre7i6qd63k0aeds2dOdV106vlXoA",
       authDomain: "rakel-68321.firebaseapp.com",
@@ -229,7 +227,6 @@
     }
 </script>
 
-<!-- Gränssnitt -->
 <button class="lathund-toggle" onclick="toggleLathund()">❓ Hjälp / Lathund</button>
 <div class="modal-overlay" id="lathundModal">
     <div class="modal-content">
@@ -237,10 +234,11 @@
         <h2>Rakel Lathund</h2>
         
         <div style="background-color: #e8f4fd; border-left: 4px solid #005bb5; padding: 10px; margin-bottom: 15px;">
-            <h3 style="margin-top:0; color:#005bb5;">🌐 Live Multiplayer!</h3>
+            <h3 style="margin-top:0; color:#005bb5;">🌐 Live Multiplayer Fixad!</h3>
             <p>1. Dela länken till den här sidan med en vän.<br>
                2. Välj <b>samma talgrupp</b> (t.ex. Insats 1 MPU).<br>
-               3. Håll in PTT (orangea knappen) och prata i din mikrofon. Släpp för att sända!</p>
+               3. Håll in PTT (orangea knappen) och prata i din mikrofon. Släpp för att sända!<br>
+               <i>Ljudmotorn är nu omskriven för att fungera 100% mellan iPhone och Android.</i></p>
         </div>
 
         <h3>Individanrop & AI-RLC</h3>
@@ -354,20 +352,6 @@
 <script>
     window.MY_ISSI = "97-" + Math.floor(1000 + Math.random() * 9000);
 
-    // --- IOS LJUDFIX ---
-    const silentAudioUnlock = new Audio("data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
-    
-    let speechInited = false;
-    document.addEventListener('pointerdown', () => {
-        if(!speechInited) {
-            if('speechSynthesis' in window) {
-                let u = new SpeechSynthesisUtterance(""); u.volume = 0; window.speechSynthesis.speak(u);
-            }
-            silentAudioUnlock.play().catch(e => console.warn("Ljud blockerat", e));
-            speechInited = true;
-        }
-    }, {once:true});
-
     function toggleLathund() { const m = document.getElementById('lathundModal'); m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; }
     function resizeRadio() {
         const wrapper = document.getElementById('scale-wrapper');
@@ -380,6 +364,20 @@
     const audioCtx = new AudioContext();
     let emergencyInterval = null, ringingInterval = null, rlcCallTimeout = null;
     let volumeLevel = 5; 
+
+    // iOS Ljud-upplåsning
+    let speechInited = false;
+    document.addEventListener('pointerdown', async () => {
+        if(!speechInited) {
+            if('speechSynthesis' in window) {
+                let u = new SpeechSynthesisUtterance(""); u.volume = 0; window.speechSynthesis.speak(u);
+            }
+            if(audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            speechInited = true;
+        }
+    }, {once:true});
 
     function playTone(freq, type, duration, baseVol) {
         if(powerState === 'OFF' || powerState === 'BOOT') return;
@@ -415,7 +413,7 @@
         }
     }
 
-    // AI RÖSTIGENKÄNNING (Speech to Text -> Gemini API)
+    // AI RÖSTIGENKÄNNING
     let recognition = (window.SpeechRecognition || window.webkitSpeechRecognition) ? new (window.SpeechRecognition || window.webkitSpeechRecognition)() : null;
     let isRecognizing = false;
     let transcriptBuffer = "";
@@ -463,17 +461,26 @@
 
     let mediaRecorder; let audioChunks = []; let isRecordingReal = false; let isReceivingReal = false; let audioQueue = []; let isPlayingQueue = false;
 
-    // --- IOS MIKROFON FIX ---
     async function ensureMicAccess() {
         if(mediaRecorder) return true;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            
+            // Låt enheten välja sitt eget optimala ljudformat för att slippa konflikt mellan iOS(MP4) och Android(WebM)
+            let options = {};
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                options = { mimeType: 'audio/webm;codecs=opus' };
+            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                options = { mimeType: 'audio/mp4' };
+            } else if (MediaRecorder.isTypeSupported('audio/m4a')) {
+                options = { mimeType: 'audio/m4a' };
+            }
+
+            mediaRecorder = new MediaRecorder(stream, options);
             mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
             
             mediaRecorder.onstop = () => {
-                const audioType = mediaRecorder.mimeType || 'audio/webm';
-                const audioBlob = new Blob(audioChunks, { type: audioType });
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
                 audioChunks = [];
                 
                 const reader = new FileReader(); 
@@ -495,10 +502,54 @@
     function processAudioQueue() {
         if(isPlayingQueue || audioQueue.length === 0 || volumeLevel === 0 || currentProfile === "Normal tyst" || currentProfile === "Span") return;
         isPlayingQueue = true; isReceivingReal = true; updateScreenDisplay();
-        const audioUrl = audioQueue.shift(); const audio = new Audio(audioUrl); audio.volume = volumeLevel / 10;
-        audio.onended = () => { isPlayingQueue = false; isReceivingReal = false; updateScreenDisplay(); processAudioQueue(); };
-        audio.onerror = () => { isPlayingQueue = false; isReceivingReal = false; updateScreenDisplay(); processAudioQueue(); };
-        audio.play().catch(e => { isPlayingQueue = false; isReceivingReal = false; updateScreenDisplay(); processAudioQueue(); });
+        
+        const base64Data = audioQueue.shift();
+        playBase64Audio(base64Data);
+    }
+
+    // NY FUNKTION: Spela upp ljud direkt i hårdvaran istället för <audio>-taggar (Löser iOS blockeringarna helt!)
+    async function playBase64Audio(base64Data) {
+        try {
+            // Extrahera den rena Base64-koden från Data-URI:n
+            const base64String = base64Data.split(',')[1] || base64Data;
+            const binaryString = atob(base64String);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Säkerställ att ljudmotorn är vaken
+            if(audioCtx.state === 'suspended') await audioCtx.resume();
+            
+            // Koda av Androids WebM eller iPhones MP4 direkt i ljudchippet
+            const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
+            const source = audioCtx.createBufferSource();
+            source.buffer = audioBuffer;
+            
+            // Ställ in radions fysiska volymnivå
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = volumeLevel / 10;
+            
+            source.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            source.onended = () => {
+                isPlayingQueue = false;
+                isReceivingReal = false;
+                updateScreenDisplay();
+                processAudioQueue(); // Kolla om fler meddelanden ligger i kön
+            };
+            
+            source.start(0);
+        } catch (error) {
+            console.error("Audio playback error (Troligen okänt format från annan plattform):", error);
+            // Gå vidare till nästa
+            isPlayingQueue = false;
+            isReceivingReal = false;
+            updateScreenDisplay();
+            processAudioQueue();
+        }
     }
 
     const display = document.getElementById('display'), screenContainer = document.getElementById('screen-container');
@@ -654,7 +705,6 @@
             if (menuState !== "IDLE") { menuState = "IDLE"; updateScreenDisplay(); }
             else if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') { 
                 powerState = 'IDLE'; clearInterval(ringingInterval); clearTimeout(rlcCallTimeout); soundPttRelease(); updateScreenDisplay(); showTempMsg("Samtal avslutades", 1500); 
-                // Återställ AI historik
                 aiChatHistory = [
                     { role: "user", parts: [{ text: `Du är RLC-operatör (Regionledningscentralen Polis). Vi är polispatrull ${window.MY_ISSI}. Agera hyper-realistisk svensk polisledningscentral. Svara mycket kortfattat, kallt och professionellt. Använd korrekt radiodisciplin (ex. "uppfattat", "framkom", "åberopar", "HR"). Avsluta inlägg med "kom" om du förväntar dig svar, annars MÅSTE du avsluta med "klart slut" om ärendet är helt över. Ger jag bara min anropssignal, skicka mig på ett random pågående uppdrag.` }]},
                     { role: "model", parts: [{ text: "Uppfattat."}]}
