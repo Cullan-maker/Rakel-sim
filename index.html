@@ -16,36 +16,41 @@
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
-            display: flex; justify-content: center; align-items: center;
+            display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
             height: 100dvh; width: 100vw;
             background: radial-gradient(circle at center, #3a4b5c, #16202a); 
             font-family: 'Arial', sans-serif; margin: 0; overflow: hidden; 
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
         }
 
-        /* Top Bar Controls */
+        /* Kompakt Top Bar som aldrig täcker radions vred/ratt */
         .top-bar {
-            position: fixed; top: max(10px, env(safe-area-inset-top)); left: 10px; right: 10px;
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
-            pointer-events: none;
+            position: fixed; top: max(6px, env(safe-area-inset-top)); left: 8px; right: 8px;
+            display: flex; justify-content: space-between; align-items: center; gap: 4px; z-index: 1000;
+            pointer-events: none; flex-wrap: nowrap;
         }
         .top-bar > * { pointer-events: auto; }
+        .top-bar-group {
+            display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+        }
         .top-btn {
             background: linear-gradient(to bottom, #005bb5, #003f80); color: white;
-            padding: 8px 14px; border-radius: 20px; font-weight: bold; font-size: 12px;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.4); border: 1px solid #66a3ff;
-            display: inline-flex; align-items: center; gap: 6px; transition: transform 0.1s;
+            padding: 5px 9px; border-radius: 16px; font-weight: bold; font-size: 11px;
+            cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.4); border: 1px solid #66a3ff;
+            display: inline-flex; align-items: center; gap: 4px; transition: transform 0.1s;
+            white-space: nowrap; line-height: 1.1;
         }
         .top-btn:active { transform: scale(0.95); }
         .top-btn.active-gw { background: linear-gradient(to bottom, #27ae60, #1e8449); border-color: #82e0aa; }
         .device-badge {
-            background: rgba(0,0,0,0.6); color: #aad4ff; font-size: 11px; padding: 5px 10px;
-            border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.55); color: #aad4ff; font-size: 10px; padding: 4px 7px;
+            border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(4px);
+            white-space: nowrap;
         }
 
         #scale-wrapper { 
             display: flex; flex-direction: column; align-items: center; 
-            transform-origin: center center; transition: transform 0.15s ease-out;
+            transform-origin: top center; transition: transform 0.15s ease-out;
         }
 
         /* Fordonsterminal (SRG3900 / Polman Gateway Panel) */
@@ -93,7 +98,7 @@
             width: 336px; height: 740px; border-radius: 24px 24px 38px 38px; padding: 18px 15px; 
             box-shadow: inset 2px 2px 6px rgba(255,255,255,0.15), inset -5px -5px 15px rgba(0,0,0,0.8), 15px 20px 40px rgba(0,0,0,0.8);
             position: relative; display: flex; flex-direction: column; align-items: center; border: 1px solid #111; border-right: 2px solid #000; border-bottom: 3px solid #000;
-            margin-top: 75px;
+            margin-top: 98px;
         }
         .radio-body::before { content: ''; position: absolute; top: 5px; left: 8px; right: 8px; bottom: 5px; border: 1px solid rgba(255,255,255,0.06); border-radius: 19px 19px 32px 32px; pointer-events: none; }
 
@@ -225,6 +230,7 @@
         .screen.profile-natt .menu-row.selected { background-color: #660000 !important; color: #fff !important; }
         .screen.emergency-mode .screen-header { background-color: #cc0000 !important; }
 
+        .keypad-area { width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 0 4px; }
         .softkeys-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 2px; }
         .softkeys-row button { background: linear-gradient(to bottom, #4a4d52, #1e2023); color: #fff; border: 1px solid #000; border-radius: 5px; padding: 7px 0; font-size: 12px; font-weight: bold; box-shadow: 0 3px 5px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.15); cursor:pointer; border-bottom: 2px solid #0a0a0a; display: flex; align-items: center; justify-content: center; }
         .softkeys-row button:active { background: #111; transform: translateY(1px); }
@@ -356,16 +362,16 @@
     }
 </script>
 
-<div class="top-bar">
-    <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+<div class="top-bar" id="topBar">
+    <div class="top-bar-group">
         <button class="top-btn" id="gwPanelBtn" onclick="toggleVehiclePanel()">🚓 Gateway</button>
-        <button class="top-btn" id="spontanBtn" onclick="toggleSpontaneousMode()" title="Slå på/av spontana utlarmningar när du är Klar, ledig">🚨 Spontanlarm: PÅ</button>
+        <button class="top-btn active-gw" id="spontanBtn" onclick="toggleSpontaneousMode()" title="Slå på/av spontana utlarmningar när du är Klar, ledig">🚨 Spontan: PÅ</button>
         <button class="top-btn" onclick="triggerSpontaneousDispatch(true)" title="Tvinga RLC att ropa ut ett larm direkt">⚡ Larma nu</button>
-        <span class="device-badge" id="deviceBadge">Läser enhet...</span>
     </div>
-    <div style="display:flex; gap:5px; align-items:center;">
+    <div class="top-bar-group" style="justify-content:flex-end;">
+        <span class="device-badge" id="deviceBadge">📱</span>
         <button class="top-btn" id="apiKeyBtn" onclick="promptApiKey()" title="Ställ in Gemini API-nyckel för GitHub/Mobil">🔑 API</button>
-        <button class="top-btn" onclick="toggleLathund()">📘 Kunskapsbank</button>
+        <button class="top-btn" onclick="toggleLathund()">📘 Guide</button>
     </div>
 </div>
 
@@ -417,7 +423,7 @@
 <!-- Kunskapsbanken Modal -->
 <div class="modal-overlay" id="lathundModal">
     <div class="modal-content">
-        <button class=" modal-close" onclick="toggleLathund()">Stäng</button>
+        <button class="modal-close" onclick="toggleLathund()">Stäng</button>
         <h2>Kunskapsbanken SC21 & Samband T3</h2>
         <div class="tab-bar">
             <button class="tab-btn active" onclick="switchKbTab('kb-nav', this)">Mappar & Skanning</button>
@@ -455,9 +461,9 @@
             <h3>Sidoknappar & Direktval</h3>
             <ul>
                 <li><b>A (Ovanför PTT):</b> Anropsbegäran till eget RLC (håll in 1 sek).</li>
-                <li><b>B (Ovanför PTT, under A):</b> Profil Normal ljud.</li>
+                <li><b>B (Ovanför PTT, under A):</b> Profil Normal ljud (5).</li>
                 <li><b>PTT:</b> Sänd / Bekräfta.</li>
-                <li><b>C (Under PTT):</b> Profil Natt.</li>
+                <li><b>C (Under PTT):</b> Profil Natt (2).</li>
             </ul>
         </div>
     </div>
@@ -570,21 +576,25 @@
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     window.IS_IOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     window.IS_ANDROID = /android/i.test(ua);
-    window.PLATFORM_NAME = window.IS_IOS ? "iPhone / iOS" : (window.IS_ANDROID ? "Android" : "Dator / Webb");
+    window.PLATFORM_NAME = window.IS_IOS ? "iOS" : (window.IS_ANDROID ? "Android" : "Webb");
     document.getElementById('deviceBadge').innerText = `📱 ${window.PLATFORM_NAME}`;
 
     function resizeRadio() {
         const wrapper = document.getElementById('scale-wrapper');
+        const topBar = document.getElementById('topBar');
+        const topOffset = topBar ? (topBar.offsetHeight + topBar.offsetTop + 6) : 50;
         const availW = window.innerWidth - 16;
-        const availH = window.innerHeight - 55;
+        const availH = window.innerHeight - topOffset - 8;
+        const totalRadioHeight = 842; // 740px kropp + 98px antenn/vred marginal
         const scaleX = availW / 365;
-        const scaleY = availH / 835;
-        const scale = Math.min(scaleX, scaleY, 1.08);
+        const scaleY = availH / totalRadioHeight;
+        const scale = Math.min(scaleX, scaleY, 1.05);
+        wrapper.style.marginTop = `${topOffset}px`;
         wrapper.style.transform = `scale(${scale})`;
     }
     window.addEventListener('resize', resizeRadio);
     window.addEventListener('orientationchange', () => setTimeout(resizeRadio, 100));
-    resizeRadio();
+    setTimeout(resizeRadio, 50);
 
     const randFour = Math.floor(1000 + Math.random() * 8999);
     window.MY_ISSI = "17" + randFour;               
@@ -806,14 +816,14 @@
     ];
 
     /* =========================================================================
-       TILLSTÅND & VARIABLER
+       TILLSTÅND & VARIABLER (Standardprofil: 5 Normal ljud)
        ========================================================================= */
     let powerState = 'IDLE';
     let isLocked = false, txInhibit = false, scanning = true, speakerMuted = false;
     let displayFlipped = false, largeTextMode = false, backlightOn = true;
     let isPttActive = false, isEmergency = false, isReceivingReal = false, receivingTgName = "", receivingSender = "";
     let currentMode = "TMO";
-    let currentProfile = "Normal tyst";
+    let currentProfile = "Normal ljud"; // 5 Normal ljud som standard vid start
     let radioStatus = "Klar, ledig";
     let activeRlcCode = "9-7";
 
@@ -843,7 +853,7 @@
     // Menysystem & Flikar (Enligt Kunskapsbanken s. 47-68)
     let menuTabIdx = 0;
     let menuRowIdx = 0;
-    let subViewIndex = 0;
+    let subViewIndex = 4;
     let editingScanList = null;
     let scanPopupOpen = false;
     let scanPopupIdx = 0;
@@ -939,7 +949,7 @@
             btn.innerText = "Koppla ner Gateway i Fordonsterminalen";
             btn.classList.add('on');
             topBtn.classList.add('active-gw');
-            topBtn.innerText = "🚓 Gateway AKTIV";
+            topBtn.innerText = "🚓 GW AKTIV";
         } else {
             document.getElementById('vpModeText').innerText = "Redo: Nätläge (TMO)";
             document.getElementById('vpIcons').innerText = "🔒 👤5";
@@ -947,7 +957,7 @@
             btn.innerText = "2. Starta Gateway i Fordonsterminalen (DV 8)";
             btn.classList.remove('on');
             topBtn.classList.remove('active-gw');
-            topBtn.innerText = "🚓 Fordon / Gateway";
+            topBtn.innerText = "🚓 Gateway";
         }
         updateScreenDisplay();
     }
@@ -1152,9 +1162,9 @@
         setTimeout(() => { if (powerState === 'RINGING_RLC') playTone(850, 'sine', 0.35, 0.12); }, 500);
     }
 
-    function speakSwedish(text, callback, senderLabel) {
+    function speakSwedish(text, callback, senderLabel, customTgLabel) {
         receivingSender = senderLabel || `RLC ${activeRlcCode}`;
-        receivingTgName = window.getActiveTxTalkgroupName();
+        receivingTgName = customTgLabel || window.getActiveTxTalkgroupName();
         if ('speechSynthesis' in window && volumeLevel > 0 && currentProfile !== "Tyst") {
             let msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'sv-SE';
@@ -1287,11 +1297,11 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
         spontaneousDispatchEnabled = !spontaneousDispatchEnabled;
         const btn = document.getElementById('spontanBtn');
         if (spontaneousDispatchEnabled) {
-            btn.innerText = "🚨 Spontanlarm: PÅ";
+            btn.innerText = "🚨 Spontan: PÅ";
             btn.classList.add('active-gw');
             showTempMsg("Spontana larm: <b>PÅ</b><br><span style='font-size:11px;font-weight:normal;'>RLC ropar upp när status är 'Klar, ledig'</span>", 1800);
         } else {
-            btn.innerText = "🚨 Spontanlarm: AV";
+            btn.innerText = "🚨 Spontan: AV";
             btn.classList.remove('active-gw');
             showTempMsg("Spontana larm: <b>AV</b>", 1400);
         }
@@ -1307,9 +1317,9 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
                     btn.classList.add('active-gw');
                     showTempMsg("✔ Gemini API-nyckel aktiv!", 1500);
                 } else {
-                    btn.innerText = "🔑 API (Canvas)";
+                    btn.innerText = "🔑 API";
                     btn.classList.remove('active-gw');
-                    showTempMsg("Använder inbyggd Canvas-AI", 1500);
+                    showTempMsg("Använder inbyggd Canvas-AI / Reserv-RLC", 1500);
                 }
             }
         });
@@ -1366,12 +1376,11 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
         aiChatHistory.push({ role: "model", parts: [{ text: dispatchText }] });
 
         soundPttGrant();
-        receivingTgName = orderTg;
         speakSwedish(dispatchText, () => {
             // Efter utropet på Ordertalgruppen öppnas samtalet mot RLC så patrullen kan svara direkt med PTT
             powerState = 'RLC_CONNECTED';
             updateScreenDisplay();
-        }, `RLC ${activeRlcCode} (${orderTg})`);
+        }, `RLC ${activeRlcCode}`, orderTg);
     };
 
     // Kontrollera var 35:e sekund om ett spontant larm ska skickas när patrullen är "Klar, ledig"
@@ -1468,7 +1477,7 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
     }
 
     function getProfileBadge() {
-        let num = 1;
+        let num = 5;
         switch(currentProfile) {
             case "Normal tyst": num = 1; break;
             case "Natt": num = 2; break;
@@ -1779,7 +1788,7 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
                         <b>6:</b> Föregående TG &nbsp;|&nbsp; <b>7:</b> SAMV POL 1<br>
                         <b>8:</b> Driftsätt &nbsp;|&nbsp; <b>9:</b> RAPS-01<br>
                         <b>*:</b> Knapplås &nbsp;|&nbsp; <b>#:</b> Smartmeny<br>
-                        <b>B:</b> Normal ljud &nbsp;|&nbsp; <b>C:</b> Profil Natt
+                        <b>B:</b> Normal ljud (5) &nbsp;|&nbsp; <b>C:</b> Profil Natt (2)
                     </div>
                 </div>`;
             updateSoftkeys("", "", "Åter");
@@ -2251,7 +2260,8 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
             } else if (c >= 3) {
                 clearTimeout(groupNavAutoTimer);
                 powerState = 'PROFILE_QUICK';
-                subViewIndex = 0;
+                const profs = ["Normal tyst", "Natt", "Span", "Tyst", "Normal ljud"];
+                subViewIndex = Math.max(0, profs.indexOf(currentProfile));
                 updateScreenDisplay();
             }
         }, 320);
@@ -2429,7 +2439,6 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
        ========================================================================= */
     function openMainMenuSelection() {
         const tabName = mainTabs[menuTabIdx].name;
-        const item = mainTabs[menuTabIdx].items[menuRowIdx];
 
         if (tabName === "Kontakter") {
             if (menuRowIdx === 0 || menuRowIdx === 1) {
@@ -3038,6 +3047,7 @@ Avsluta med "kom" om samtalet fortsätter, eller "klart slut" om ärendet är f�
     window.addEventListener('DOMContentLoaded', () => {
         powerState = 'IDLE';
         updateScreenDisplay();
+        resizeRadio();
     });
 </script>
 
