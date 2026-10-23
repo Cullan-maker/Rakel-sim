@@ -313,11 +313,21 @@
         .rlc-tg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
         .rlc-tg-chip {
             background: #16202e; border: 1px solid #2b3c54; border-radius: 6px;
-            padding: 6px 8px; font-size: 11px; cursor: pointer; display: flex;
+            padding: 5px 7px; font-size: 11px; display: flex;
             justify-content: space-between; align-items: center; color: #cbd5e1;
+            transition: all 0.15s;
         }
+        .rlc-tg-chip.monitored { border-left: 3px solid #2ecc71; }
+        .rlc-tg-chip.muted { opacity: 0.55; border-left: 3px solid #64748b; background: #0c121a; }
         .rlc-tg-chip.selected-tx { background: #003f80; border-color: #66a3ff; color: #fff; font-weight: bold; }
         .rlc-tg-chip.rx-active { background: #1e8449 !important; border-color: #2ecc71 !important; color: #fff !important; font-weight: bold; box-shadow: 0 0 10px rgba(46,204,113,0.5); }
+        .rlc-tg-name { cursor: pointer; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rlc-mon-btn {
+            background: #223247; border: 1px solid #3b5270; color: #94a3b8;
+            border-radius: 4px; padding: 2px 5px; font-size: 10px; cursor: pointer;
+            margin-left: 4px; font-weight: bold; line-height: 1.1;
+        }
+        .rlc-mon-btn.active { background: #145a32; border-color: #2ecc71; color: #82e0aa; }
         .rlc-ptt-box {
             background: linear-gradient(135deg, #d35400, #a04000); color: #fff;
             border: 2px solid #f39c12; border-radius: 8px; padding: 12px;
@@ -587,11 +597,26 @@
             <span id="rlcTxIndicator" style="color:#2ecc71;font-size:11px;">● MEDLYSSNAR ALLA</span>
         </div>
         <div class="rlc-panel-body">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:11px;font-weight:bold;color:#94a3b8;">1. VÄLJ TALGRUPP FÖR SÄNDNING (HÖR ALLA):</span>
-                <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()" title="Klicka för att testa och låsa upp ljudutgång">🔊 Testa ljud</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
+                <span style="font-size:11px;font-weight:bold;color:#94a3b8;">1. FLERKANALSPASSNING & SÄNDNING:</span>
+                <div style="display:flex;gap:4px;">
+                    <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(true)" title="Passa alla talgrupper samtidigt">👂 Alla</button>
+                    <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(false)" title="Passa enbart vald sändningskanal">🎯 Endast TX</button>
+                    <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()" title="Klicka för att testa och låsa upp ljudutgång">🔊 Test</button>
+                </div>
             </div>
             <div class="rlc-tg-grid" id="rlcTgSelectorGrid"></div>
+            <div style="display:flex;gap:4px;align-items:center;margin-top:2px;">
+                <select id="rlcAddTgSelect" class="rlc-form-select" style="font-size:11px;padding:5px 7px;">
+                    <option value="">➕ Lägg till talgrupp på radiobordet...</option>
+                    <option value="LPO Sorgenfri">LPO Sorgenfri (7102)</option>
+                    <option value="SAMV Pol">SAMV Pol (801)</option>
+                    <option value="RAPS 1 Syd">RAPS 1 Syd (111)</option>
+                    <option value="RLC POL MPU">RLC POL MPU (970)</option>
+                    <option value="Alla DMO 2">Alla DMO 2 (9042)</option>
+                </select>
+                <button class="rlc-btn-sm" onclick="rlcAddChannelToBoard()">Lägg till</button>
+            </div>
 
             <div class="rlc-ptt-box" id="rlcPttBtn" onpointerdown="startRlcConsolePtt(event)" onpointerup="stopRlcConsolePtt(event)" onpointerleave="stopRlcConsolePtt(event)">
                 🎙️ HÅLL IN FÖR ATT SÄNDA SOM RLC 9-7 (PTT)
@@ -1204,9 +1229,9 @@
             const gw = window.getAnyActiveGateway();
             if (DMO_TG_NAMES.has(incomingTg)) {
                 if (gw.active && incomingTg === gw.dmo) return false;
-                return rlcSelectedTxTg === incomingTg;
+                return rlcMonitoredTgsSet.has(incomingTg) || rlcSelectedTxTg === incomingTg;
             }
-            return true;
+            return rlcMonitoredTgsSet.has(incomingTg) || rlcSelectedTxTg === incomingTg;
         }
 
         if (powerState === 'OFF' || powerState === 'BOOT' || powerState === 'PIN') return false;
@@ -3097,7 +3122,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     let rlcHrMarkers = [];
     let selectedHrCoords = { lat: 55.6050, lng: 13.0038 };
     let rlcSelectedTxTg = "IGV PO1 MPU";
-    const rlcMonitoredTgs = [
+    let rlcMonitoredTgs = [
         "IGV PO1 MPU",
         "Order PO1 MPU",
         "Order Reg MPU",
@@ -3107,6 +3132,60 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         "LPO Centrum",
         "Alla DMO 1"
     ];
+    let rlcMonitoredTgsSet = new Set(rlcMonitoredTgs);
+
+    window.rlcSetAllMonitoring = function(enableAll) {
+        if (enableAll) {
+            rlcMonitoredTgs.forEach(tg => rlcMonitoredTgsSet.add(tg));
+            appendRlcLog("👂 RLC: Flerkanalspassning aktiverad för SAMTLIGA talgrupper.");
+        } else {
+            rlcMonitoredTgsSet.clear();
+            rlcMonitoredTgsSet.add(rlcSelectedTxTg);
+            appendRlcLog(`🎯 RLC: Passning begränsad till enbart sändningskanalen (${rlcSelectedTxTg}).`);
+        }
+        updateRlcHeaderIndicator();
+        renderRlcTgGrid();
+    };
+
+    window.rlcToggleMonitorTg = function(tgName, e) {
+        if (e) e.stopPropagation();
+        if (rlcMonitoredTgsSet.has(tgName)) {
+            if (rlcMonitoredTgsSet.size <= 1 && tgName === rlcSelectedTxTg) return;
+            rlcMonitoredTgsSet.delete(tgName);
+            appendRlcLog(`🔇 RLC: Slutade passa talgrupp ${tgName}`);
+        } else {
+            rlcMonitoredTgsSet.add(tgName);
+            appendRlcLog(`👂 RLC: Började passa talgrupp ${tgName}`);
+        }
+        updateRlcHeaderIndicator();
+        renderRlcTgGrid();
+    };
+
+    window.rlcAddChannelToBoard = function() {
+        const sel = document.getElementById('rlcAddTgSelect');
+        if (!sel || !sel.value) return;
+        const newTg = sel.value;
+        if (!rlcMonitoredTgs.includes(newTg)) {
+            rlcMonitoredTgs.push(newTg);
+            rlcMonitoredTgsSet.add(newTg);
+            appendRlcLog(`➕ Talgrupp ${newTg} tillagd på RLC-radiobordet med aktiv passning.`);
+            renderRlcTgGrid();
+            updateRlcHeaderIndicator();
+        }
+        sel.value = "";
+    };
+
+    function updateRlcHeaderIndicator() {
+        const ind = document.getElementById('rlcTxIndicator');
+        if (!ind) return;
+        if (rlcMonitoredTgsSet.size === rlcMonitoredTgs.length) {
+            ind.style.color = '#2ecc71';
+            ind.innerText = `● MEDLYSSNAR ALLA (${rlcMonitoredTgsSet.size} TG)`;
+        } else {
+            ind.style.color = '#7cc4fa';
+            ind.innerText = `● PASSAR ${rlcMonitoredTgsSet.size} AV ${rlcMonitoredTgs.length} TG`;
+        }
+    }
 
     window.toggleRlcViewMode = function() {
         unlockBrowserAudio();
@@ -3282,10 +3361,16 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const gw = window.getAnyActiveGateway();
         grid.innerHTML = rlcMonitoredTgs.map(tg => {
             const isSel = rlcSelectedTxTg === tg;
+            const isMon = rlcMonitoredTgsSet.has(tg);
             const isGwBridged = gw.active && (tg === gw.tmo || tg === gw.dmo);
-            return `<div class="rlc-tg-chip ${isSel ? 'selected-tx' : ''}" id="rlc-chip-${tg.replace(/\s+/g, '_')}" onclick="rlcSelectTxTg('${tg}')">
-                <span>${isSel ? '🎙️ ' : '👂 '}${tg}</span>
-                ${isGwBridged ? '<span style="color:#2ecc71;font-size:10px;">🔄GW</span>' : ''}
+            return `<div class="rlc-tg-chip ${isSel ? 'selected-tx' : ''} ${isMon ? 'monitored' : 'muted'}" id="rlc-chip-${tg.replace(/\s+/g, '_')}">
+                <div class="rlc-tg-name" onclick="rlcSelectTxTg('${tg}')" title="Klicka för att välja som sändningskanal (TX)">
+                    <span>${isSel ? '🎙️ ' : ''}${tg}</span>
+                    ${isGwBridged ? '<span style="color:#2ecc71;font-size:9px;margin-left:2px;">🔄GW</span>' : ''}
+                </div>
+                <button class="rlc-mon-btn ${isMon ? 'active' : ''}" onclick="rlcToggleMonitorTg('${tg}', event)" title="${isMon ? 'Klicka för att stänga av medlyssning' : 'Klicka för att medlyssna'}">
+                    ${isMon ? '👂 På' : '🔇 Av'}
+                </button>
             </div>`;
         }).join('');
     }
@@ -3293,6 +3378,8 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     window.rlcSelectTxTg = function(tgName) {
         unlockBrowserAudio();
         rlcSelectedTxTg = tgName;
+        rlcMonitoredTgsSet.add(tgName); // Sändningskanalen passas alltid automatiskt
+        updateRlcHeaderIndicator();
         renderRlcTgGrid();
     };
 
