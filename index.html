@@ -355,7 +355,7 @@
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGBbYre7i6qd63k0aeds2dOdV106vlXoA",
@@ -369,6 +369,46 @@
 
     let db, auth;
     window.multiplayerEnabled = false;
+    window.localSentTxIds = new Set();
+
+    // Cross-tab echo blocker: Prevents other open tabs on the same PC from playing back your own voice
+    const localTxChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('rakel_local_tx_guard') : null;
+    if (localTxChannel) {
+        localTxChannel.onmessage = (ev) => {
+            if (ev.data && ev.data.txId) {
+                window.localSentTxIds.add(ev.data.txId);
+            }
+            if (ev.data && ev.data.txTime) {
+                window.lastSameMachineTxTime = ev.data.txTime;
+            }
+        };
+    }
+
+    window.markLocalMachineTransmitting = function(txId) {
+        const now = Date.now();
+        window.lastSameMachineTxTime = now;
+        try { localStorage.setItem('rakel_last_machine_tx', String(now)); } catch (e) {}
+        if (txId) window.localSentTxIds.add(txId);
+        if (localTxChannel) {
+            try { localTxChannel.postMessage({ txId: txId || null, txTime: now }); } catch (e) {}
+        }
+    };
+
+    function isEchoFromThisMachine(data) {
+        if (!data) return true;
+        if (auth && auth.currentUser && data.senderId === auth.currentUser.uid) return true;
+        if (data.txId && window.localSentTxIds.has(data.txId)) return true;
+        if (data.fromTactical && data.fromTactical === window.MY_TACTICAL) return true;
+        // If both sender and receiver are RLC 9-7 console, never play back own RLC dispatch
+        if (window.isRlcViewActive && window.isRlcViewActive() && data.fromTactical === "RLC 9-7") return true;
+        let lastLocalTx = window.lastSameMachineTxTime || 0;
+        try {
+            const stored = Number(localStorage.getItem('rakel_last_machine_tx') || 0);
+            if (stored > lastLocalTx) lastLocalTx = stored;
+        } catch (e) {}
+        if (lastLocalTx && Math.abs(Date.now() - lastLocalTx) < 3500) return true;
+        return false;
+    }
 
     try {
         const app = initializeApp(firebaseConfig);
@@ -385,7 +425,7 @@
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const data = change.doc.data();
-                    if (data.timestamp > sessionStartTime && data.senderId !== auth.currentUser.uid) {
+                    if (data.timestamp > sessionStartTime && !isEchoFromThisMachine(data)) {
                         if (window.onRlcAudioMonitor) {
                             window.onRlcAudioMonitor(data);
                         }
@@ -417,46 +457,122 @@
             });
         }, (err) => console.warn("SDS snapshot warning:", err));
 
+        const PRESENCE_TIMEOUT_MS = 22000;
+
+        function filterAndDeduplicateUnits(rawList) {
+            const now = Date.now();
+            const byTactical = new Map();
+            for (const d of rawList) {
+                if (!d || !d.tactical) continue;
+                if (d.status === "Avstängd") continue;
+                if (now - (d.timestamp || 0) >= PRESENCE_TIMEOUT_MS) continue;
+                const existing = byTactical.get(d.tactical);
+                if (!existing || (d.timestamp || 0) > (existing.timestamp || 0)) {
+                    byTactical.set(d.tactical, d);
+                }
+            }
+            return Array.from(byTactical.values());
+        }
+
         const qPresence = query(collection(db, 'presence'));
         onSnapshot(qPresence, (snapshot) => {
             const now = Date.now();
-            let list = [];
+            let raw = [];
             snapshot.forEach((docSnap) => {
                 const d = docSnap.data();
-                if (d.tactical && (now - d.timestamp < 65000)) {
-                    list.push(d);
+                if (!d || !d.tactical || (now - (d.timestamp || 0) >= PRESENCE_TIMEOUT_MS) || d.status === "Avstängd") {
+                    // Automatically delete stale/disconnected ghost units from Firestore
+                    if (now - (d?.timestamp || 0) >= 25000 || d?.status === "Avstängd") {
+                        deleteDoc(doc(db, 'presence', docSnap.id)).catch(() => {});
+                    }
+                } else {
+                    raw.push({ ...d, _docId: docSnap.id });
                 }
             });
-            window.liveConnectedUnits = list;
+            window.liveConnectedUnits = filterAndDeduplicateUnits(raw);
             if (window.updateOnlinePillUI) window.updateOnlinePillUI();
             if (window.refreshRlcDashboard) window.refreshRlcDashboard();
         }, (err) => console.warn("Presence snapshot warning:", err));
 
+        // Local pruning timer every 4 seconds so units disappear automatically even if no new database write occurs
+        setInterval(() => {
+            if (window.liveConnectedUnits && window.liveConnectedUnits.length > 0) {
+                const beforeCount = window.liveConnectedUnits.length;
+                window.liveConnectedUnits = filterAndDeduplicateUnits(window.liveConnectedUnits);
+                if (window.liveConnectedUnits.length !== beforeCount) {
+                    if (window.updateOnlinePillUI) window.updateOnlinePillUI();
+                    if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+                }
+            }
+        }, 4000);
+
+        window.removePresenceNow = async function() {
+            if (auth && auth.currentUser && db) {
+                try {
+                    await deleteDoc(doc(db, 'presence', auth.currentUser.uid));
+                } catch (e) {}
+            }
+        };
+
+        window.purgeAllGhostUnitsNow = async function() {
+            if (!db) return;
+            try {
+                const snap = await getDocs(collection(db, 'presence'));
+                const now = Date.now();
+                const seenTacticals = new Map();
+                for (const s of snap.docs) {
+                    const d = s.data();
+                    const isOld = !d || !d.timestamp || (now - d.timestamp > 15000) || d.status === "Avstängd";
+                    const isOtherRlcDuplicate = d && d.status === "RLC 9-7" && auth?.currentUser && s.id !== auth.currentUser.uid;
+                    if (isOld || isOtherRlcDuplicate) {
+                        await deleteDoc(doc(db, 'presence', s.id));
+                    } else if (d.tactical) {
+                        const prev = seenTacticals.get(d.tactical);
+                        if (prev) {
+                            const dropId = (prev.timestamp < d.timestamp) ? prev.id : s.id;
+                            await deleteDoc(doc(db, 'presence', dropId));
+                        } else {
+                            seenTacticals.set(d.tactical, { id: s.id, timestamp: d.timestamp });
+                        }
+                    }
+                }
+            } catch (e) { console.warn("Purge warning:", e); }
+        };
+
+        // Immediately remove user from presence when closing tab/app
+        window.addEventListener('pagehide', () => { if (window.removePresenceNow) window.removePresenceNow(); });
+        window.addEventListener('beforeunload', () => { if (window.removePresenceNow) window.removePresenceNow(); });
+
         window.syncPresenceNow = async function() {
             const rlcActive = window.isRlcViewActive && window.isRlcViewActive();
-            if(auth && auth.currentUser && window.getActiveTxTalkgroupName && ((window.getPowerState && window.getPowerState() !== 'OFF') || rlcActive)) {
-                await setDoc(doc(db, 'presence', auth.currentUser.uid), {
-                    uid: auth.currentUser.uid,
-                    issi: window.MY_ISSI,
-                    msisdn: window.MY_MSISDN,
-                    tactical: window.MY_TACTICAL,
-                    alias: window.MY_ALIAS || (rlcActive ? "RLC Operatör" : ""),
-                    tg: window.getActiveTxTalkgroupName(),
-                    status: rlcActive ? "RLC 9-7" : (window.getRadioStatus ? window.getRadioStatus() : "Klar, ledig"),
-                    mode: window.getRadioMode ? window.getRadioMode() : "TMO",
-                    gwActive: window.getGatewayState ? window.getGatewayState().active : false,
-                    gwTmo: window.getGatewayState ? window.getGatewayState().tmo : "",
-                    gwDmo: window.getGatewayState ? window.getGatewayState().dmo : "",
-                    lat: window.MY_LAT || 55.6050,
-                    lng: window.MY_LNG || 13.0038,
-                    timestamp: Date.now()
-                });
+            const radioOn = window.getPowerState && window.getPowerState() !== 'OFF' && window.getPowerState() !== 'BOOT' && window.getPowerState() !== 'PIN';
+            if (auth && auth.currentUser && window.getActiveTxTalkgroupName) {
+                if (radioOn || rlcActive) {
+                    await setDoc(doc(db, 'presence', auth.currentUser.uid), {
+                        uid: auth.currentUser.uid,
+                        issi: window.MY_ISSI,
+                        msisdn: window.MY_MSISDN,
+                        tactical: window.MY_TACTICAL,
+                        alias: window.MY_ALIAS || (rlcActive ? "RLC Operatör" : ""),
+                        tg: window.getActiveTxTalkgroupName(),
+                        status: rlcActive ? "RLC 9-7" : (window.getRadioStatus ? window.getRadioStatus() : "Klar, ledig"),
+                        mode: window.getRadioMode ? window.getRadioMode() : "TMO",
+                        gwActive: window.getGatewayState ? window.getGatewayState().active : false,
+                        gwTmo: window.getGatewayState ? window.getGatewayState().tmo : "",
+                        gwDmo: window.getGatewayState ? window.getGatewayState().dmo : "",
+                        lat: window.MY_LAT || 55.6050,
+                        lng: window.MY_LNG || 13.0038,
+                        timestamp: Date.now()
+                    });
+                } else {
+                    await window.removePresenceNow();
+                }
             }
         };
 
         setInterval(() => {
             if (window.syncPresenceNow) window.syncPresenceNow();
-        }, 12000);
+        }, 8000);
 
         window.dbGetOnlineUsers = async function() {
             let online = [];
@@ -464,7 +580,7 @@
             const now = Date.now();
             querySnapshot.forEach((docSnap) => {
                 const data = docSnap.data();
-                if(data.issi !== window.MY_ISSI && (now - data.timestamp < 60000)) {
+                if(data.issi !== window.MY_ISSI && data.status !== "Avstängd" && (now - data.timestamp < PRESENCE_TIMEOUT_MS)) {
                     const aliasStr = data.alias ? ` ${data.alias}` : '';
                     online.push(`${data.tactical || data.issi}${aliasStr} (${data.tg} • ${data.status || 'Aktiv'})`);
                 }
@@ -490,8 +606,12 @@
 
         window.dbSendAudio = async function(base64Data, tgName, senderOverride = null) {
             if(!auth || !auth.currentUser) return;
+            const txId = `${auth.currentUser.uid}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+            window.markLocalMachineTransmitting(txId);
+
             const senderDisplay = senderOverride || (window.MY_ALIAS ? `${window.MY_TACTICAL} (${window.MY_ALIAS})` : window.MY_TACTICAL);
             await addDoc(collection(db, 'transmissions'), {
+                txId: txId,
                 senderId: auth.currentUser.uid,
                 fromMsisdn: senderDisplay,
                 fromTactical: senderOverride || window.MY_TACTICAL,
@@ -505,8 +625,11 @@
             // Automatic Gateway Bridge in Cloud: If Gateway is active between DMO and TMO, bridge the transmission!
             const gw = window.getAnyActiveGateway ? window.getAnyActiveGateway() : null;
             if (gw && gw.active) {
+                const bridgeTxId = `${txId}_gw`;
+                window.markLocalMachineTransmitting(bridgeTxId);
                 if (tgName === gw.dmo) {
                     await addDoc(collection(db, 'transmissions'), {
+                        txId: bridgeTxId,
                         senderId: auth.currentUser.uid,
                         fromMsisdn: `${senderDisplay} [GW]`,
                         fromTactical: senderOverride || window.MY_TACTICAL,
@@ -518,6 +641,7 @@
                     });
                 } else if (tgName === gw.tmo) {
                     await addDoc(collection(db, 'transmissions'), {
+                        txId: bridgeTxId,
                         senderId: auth.currentUser.uid,
                         fromMsisdn: `${senderDisplay} [GW]`,
                         fromTactical: senderOverride || window.MY_TACTICAL,
@@ -565,9 +689,10 @@
                 <div id="rlcGatewayStatusText" style="margin-top:3px;color:#fff;">Ingen aktiv Gateway</div>
             </div>
             <div id="rlcUnitsList" style="display:flex;flex-direction:column;gap:8px;"></div>
-            <div style="margin-top:auto;padding-top:8px;border-top:1px solid #223247;display:flex;gap:6px;">
-                <button class="rlc-btn-sm" style="flex:1;" onclick="addSimulatedDemoPatrol()">➕ Lägg till Övningspatrull</button>
+            <div style="margin-top:auto;padding-top:8px;border-top:1px solid #223247;display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="rlc-btn-sm" style="flex:1;" onclick="addSimulatedDemoPatrol()">➕ Övningspatrull</button>
                 <button class="rlc-btn-sm" onclick="clearSimulatedPatrols()">🗑️ Rensa demo</button>
+                <button class="rlc-btn-sm" onclick="if(window.purgeAllGhostUnitsNow) window.purgeAllGhostUnitsNow()" title="Rensa bort gamla inaktiva sessioner ur listan">🧹 Rensa spöken</button>
             </div>
         </div>
     </div>
@@ -698,7 +823,11 @@
 <div class="modal-overlay" id="onlineUnitsModal">
     <div class="modal-content" style="max-width:400px;">
         <button class="modal-close" onclick="toggleOnlineUnitsModal()">Stäng</button>
-        <h2>👥 Uppkopplade Patruller</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-right:65px;">
+            <h2 style="margin:0;border:none;">👥 Uppkopplade Patruller</h2>
+            <button class="rlc-btn-sm" onclick="if(window.purgeAllGhostUnitsNow) window.purgeAllGhostUnitsNow()">🧹 Rensa</button>
+        </div>
+        <hr style="border:none;border-top:2px solid #005bb5;margin:8px 0 10px 0;">
         <div id="onlineUnitsListContainer" style="display:flex;flex-direction:column;gap:6px;margin-top:10px;"></div>
     </div>
 </div>
@@ -913,8 +1042,17 @@
     const urlParams = new URLSearchParams(window.location.search);
     const customIdParam = urlParams.get('id');
     const customNameParam = urlParams.get('name') || "";
-    const initFour = (customIdParam && /^\d{4}$/.test(customIdParam)) ? customIdParam : String(Math.floor(1000 + Math.random() * 8999));
-    window.MY_ALIAS = customNameParam.trim();
+    let savedFour = null;
+    let savedAlias = "";
+    try {
+        savedFour = localStorage.getItem('rakel_saved_four');
+        savedAlias = localStorage.getItem('rakel_saved_alias') || "";
+    } catch (e) {}
+
+    const initFour = (customIdParam && /^\d{4}$/.test(customIdParam))
+        ? customIdParam
+        : ((savedFour && /^\d{4}$/.test(savedFour)) ? savedFour : String(Math.floor(1000 + Math.random() * 8999)));
+    window.MY_ALIAS = customNameParam.trim() || savedAlias;
 
     function updateBadgeAndToastText() {
         const aliasSuffix = window.MY_ALIAS ? ` • ${window.MY_ALIAS}` : "";
@@ -930,6 +1068,7 @@
         window.MY_ISSI = "17" + fourDigits;
         window.MY_TACTICAL = "97-" + fourDigits;
         window.MY_MSISDN = "197" + fourDigits;
+        try { localStorage.setItem('rakel_saved_four', fourDigits); } catch (e) {}
         updateBadgeAndToastText();
         if (window.syncPresenceNow) window.syncPresenceNow();
     }
@@ -958,6 +1097,7 @@
         const aliasInput = document.getElementById('toastAliasInput');
         if (aliasInput) {
             window.MY_ALIAS = aliasInput.value.trim();
+            try { localStorage.setItem('rakel_saved_alias', window.MY_ALIAS); } catch (e) {}
         }
         updateBadgeAndToastText();
         updateScreenDisplay();
@@ -2380,6 +2520,9 @@
             } else {
                 endActiveCalls();
                 powerState = 'OFF';
+                if (window.removePresenceNow) window.removePresenceNow();
+                if (window.updateOnlinePillUI) window.updateOnlinePillUI();
+                if (window.refreshRlcDashboard) window.refreshRlcDashboard();
                 updateScreenDisplay();
             }
         }, 1200);
@@ -2744,6 +2887,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         }
 
         isPttActive = true;
+        if (window.markLocalMachineTransmitting) window.markLocalMachineTransmitting();
         document.getElementById('pttButton')?.classList.add('active');
         soundPttGrant();
         setLed('left', 'red');
@@ -3051,26 +3195,33 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     function getCombinedUnitsList() {
         let units = [...(window.liveConnectedUnits || [])];
         const rlcActive = window.isRlcViewActive();
-        const myUnitObj = {
-            tactical: window.MY_TACTICAL,
-            alias: window.MY_ALIAS || (rlcActive ? "RLC Operatör" : ""),
-            msisdn: window.MY_MSISDN,
-            issi: window.MY_ISSI,
-            tg: window.getActiveTxTalkgroupName(),
-            status: rlcActive ? "RLC 9-7" : (powerState === 'OFF' ? "Avstängd" : radioStatus),
-            mode: currentMode,
-            gwActive: vehicleGatewayActive,
-            gwTmo: vehicleGwTmoTg.name,
-            gwDmo: vehicleGwDmoTg.name,
-            lat: window.MY_LAT,
-            lng: window.MY_LNG,
-            isLocal: true
-        };
-        const existingIdx = units.findIndex(u => u.tactical === window.MY_TACTICAL);
-        if (existingIdx >= 0) {
-            units[existingIdx] = { ...units[existingIdx], ...myUnitObj };
+        const radioLoggedIn = powerState !== 'OFF' && powerState !== 'BOOT' && powerState !== 'PIN';
+
+        // Only include our own unit in the active list if the radio is turned ON & logged in, or if RLC view is open
+        if (radioLoggedIn || rlcActive) {
+            const myUnitObj = {
+                tactical: window.MY_TACTICAL,
+                alias: window.MY_ALIAS || (rlcActive ? "RLC Operatör" : ""),
+                msisdn: window.MY_MSISDN,
+                issi: window.MY_ISSI,
+                tg: window.getActiveTxTalkgroupName(),
+                status: rlcActive ? "RLC 9-7" : radioStatus,
+                mode: currentMode,
+                gwActive: vehicleGatewayActive,
+                gwTmo: vehicleGwTmoTg.name,
+                gwDmo: vehicleGwDmoTg.name,
+                lat: window.MY_LAT,
+                lng: window.MY_LNG,
+                isLocal: true
+            };
+            const existingIdx = units.findIndex(u => u.tactical === window.MY_TACTICAL);
+            if (existingIdx >= 0) {
+                units[existingIdx] = { ...units[existingIdx], ...myUnitObj };
+            } else {
+                units.unshift(myUnitObj);
+            }
         } else {
-            units.unshift(myUnitObj);
+            units = units.filter(u => u.tactical !== window.MY_TACTICAL);
         }
         return [...units, ...window.simulatedPatrols];
     }
@@ -3088,6 +3239,10 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const container = document.getElementById('onlineUnitsListContainer');
         if (!container) return;
         const units = getCombinedUnitsList();
+        if (units.length === 0) {
+            container.innerHTML = `<div style="padding:14px;text-align:center;color:#666;font-size:12px;">Inga patruller är inloggade just nu.<br><span style="font-size:11px;color:#888;">Starta radion och logga in för att synas i listan.</span></div>`;
+            return;
+        }
         container.innerHTML = units.map(u => {
             const isMe = u.tactical === window.MY_TACTICAL;
             const aliasDisplay = u.alias ? ` <span style="color:#005bb5;font-weight:bold;">• ${u.alias}</span>` : '';
@@ -3195,12 +3350,15 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         if (d.classList.contains('active')) {
             d.classList.remove('active');
             b.innerText = "🖥️ RLC-vy";
+            if (window.syncPresenceNow) window.syncPresenceNow();
+            if (window.updateOnlinePillUI) window.updateOnlinePillUI();
         } else {
             d.classList.add('active');
             b.innerText = "📱 Handterminal";
             initRlcMapIfNeeded();
             window.refreshRlcDashboard();
             if (window.syncPresenceNow) window.syncPresenceNow();
+            if (window.updateOnlinePillUI) window.updateOnlinePillUI();
             setTimeout(() => { if (rlcMap) rlcMap.invalidateSize(); }, 150);
         }
     };
@@ -3449,6 +3607,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         unlockBrowserAudio();
         if (isRlcConsolePtt) return;
         isRlcConsolePtt = true;
+        if (window.markLocalMachineTransmitting) window.markLocalMachineTransmitting();
         document.getElementById('rlcPttBtn')?.classList.add('transmitting');
         const ind = document.getElementById('rlcTxIndicator');
         if (ind) { ind.style.color = '#ff6b6b'; ind.innerText = `● SÄNDER PÅ ${rlcSelectedTxTg}`; }
