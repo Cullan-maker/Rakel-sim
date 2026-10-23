@@ -394,11 +394,12 @@
                     const data = change.doc.data();
                     if (data.timestamp > sessionStartTime) {
                         if (window.onRlcSdsMonitor) window.onRlcSdsMonitor(data);
-                        if (data.to_issi === window.MY_ISSI || data.to_issi === window.MY_MSISDN || data.to_issi === window.MY_TACTICAL || data.to_issi === "ALL") {
+                        const isNotFromMe = !data.senderUid || data.senderUid !== auth.currentUser.uid;
+                        if (isNotFromMe && (data.to_issi === window.MY_ISSI || data.to_issi === window.MY_MSISDN || data.to_issi === window.MY_TACTICAL || data.to_issi === "ALL")) {
                             if (data.type === "RLC_RING") {
                                 if (window.triggerIncomingRlcRingFromConsole) window.triggerIncomingRlcRingFromConsole(data.rlcCode || "9-7");
                             } else {
-                                window.receiveSds(data.from_issi, data.msg);
+                                window.receiveSds(data.from_issi, data.msg, data.ttsText || "", data.tg || "");
                             }
                         }
                     }
@@ -465,10 +466,13 @@
             if(!auth || !auth.currentUser) return;
             const senderLabel = extra.fromOverride || (window.MY_ALIAS ? `${window.MY_TACTICAL} (${window.MY_ALIAS})` : window.MY_TACTICAL);
             await addDoc(collection(db, 'sds'), {
+                senderUid: auth.currentUser.uid,
                 from_issi: senderLabel,
                 to_issi: toIssi,
                 msg: msgText,
                 type: extra.type || "SDS",
+                ttsText: extra.ttsText || "",
+                tg: extra.tg || "",
                 rlcCode: extra.rlcCode || "9-7",
                 timestamp: Date.now()
             });
@@ -585,7 +589,7 @@
         <div class="rlc-panel-body">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:11px;font-weight:bold;color:#94a3b8;">1. VÄLJ TALGRUPP FÖR SÄNDNING (HÖR ALLA):</span>
-                <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()" title="Klicka för att testa och låsa upp datorns ljudutgång">🔊 Testa ljud</button>
+                <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()" title="Klicka för att testa och låsa upp ljudutgång">🔊 Testa ljud</button>
             </div>
             <div class="rlc-tg-grid" id="rlcTgSelectorGrid"></div>
 
@@ -1093,7 +1097,7 @@
     let previousSelection = { ...activeSelection };
 
     let pinInput = "", dialInput = "", activeCallNumber = "", callDialMode = "MSISDN";
-    let volumeLevel = 6, volumeUI_Timeout = null, returnToIdleTimeout = null;
+    let volumeLevel = 7, volumeUI_Timeout = null, returnToIdleTimeout = null;
     let emergencyInterval = null, ringingInterval = null;
 
     // Menu System States
@@ -1196,21 +1200,15 @@
 
     // Controls whether incoming audio from another unit should be played
     window.shouldReceiveTransmission = function(incomingTg, isBridged = false) {
-        // 1. If the computer is in RLC Command Center view, it ALWAYS listens to all network (TMO) talkgroups
-        //    even if the virtual SC21 handset in the background is turned OFF!
         if (window.isRlcViewActive()) {
             const gw = window.getAnyActiveGateway();
             if (DMO_TG_NAMES.has(incomingTg)) {
-                // If Gateway is active for this DMO channel, the cloud already sends the bridged TMO packet,
-                // so ignore the raw DMO packet to avoid playing it twice; if no Gateway is active, only play if RLC selected that DMO chip.
                 if (gw.active && incomingTg === gw.dmo) return false;
                 return rlcSelectedTxTg === incomingTg;
             }
-            // RLC hears all TMO talkgroups (including Gateway-bridged transmissions on Insats/IGV!)
             return true;
         }
 
-        // 2. Standard Handset (SC21) reception logic
         if (powerState === 'OFF' || powerState === 'BOOT' || powerState === 'PIN') return false;
         const myCurrentTg = window.getActiveTxTalkgroupName();
         if (incomingTg === myCurrentTg) return true;
@@ -1226,26 +1224,61 @@
     };
 
     // =========================================================
-    // 5. AUDIO SYNTHESIS & VOICE ENGINE
+    // 5. AUDIO SYNTHESIS, MOBILE AUDIO UNLOCK & UNIVERSAL WAV ENGINE
     // =========================================================
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContextClass();
 
-    const silentAudioUnlock = new Audio("data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq");
+    // Pre-unlocked reusable HTML5 Audio element for iOS/Android fallback
+    const globalAudioPlayer = new Audio();
+    globalAudioPlayer.playsInline = true;
+    const SILENT_WAV_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
     let speechInited = false;
+    let htmlAudioPrimed = false;
+
     function unlockBrowserAudio() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+        // Play a 1-sample silent buffer on audioCtx to ensure iOS WebAudio hardware channel is open
+        try {
+            const buf = audioCtx.createBuffer(1, 1, 22050);
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(audioCtx.destination);
+            src.start(0);
+        } catch (e) {}
+
+        if (!htmlAudioPrimed) {
+            globalAudioPlayer.src = SILENT_WAV_URI;
+            globalAudioPlayer.volume = 0.01;
+            globalAudioPlayer.play().then(() => {
+                htmlAudioPrimed = true;
+                globalAudioPlayer.pause();
+                globalAudioPlayer.volume = 1.0;
+            }).catch(() => {});
+        }
+
         if (!speechInited) {
             if ('speechSynthesis' in window) {
-                let u = new SpeechSynthesisUtterance("");
-                u.volume = 0;
-                window.speechSynthesis.speak(u);
+                try {
+                    let u = new SpeechSynthesisUtterance("");
+                    u.volume = 0;
+                    u.lang = 'sv-SE';
+                    window.speechSynthesis.speak(u);
+                } catch (e) {}
             }
-            silentAudioUnlock.play().catch(() => {});
             speechInited = true;
         }
     }
-    document.addEventListener('pointerdown', unlockBrowserAudio, { once: true });
+
+    // Attach to touchend, click, and pointerdown so mobile browsers continuously keep audioCtx awake
+    ['touchend', 'click', 'pointerdown'].forEach(evtName => {
+        document.addEventListener(evtName, () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+            if (!htmlAudioPrimed || !speechInited) unlockBrowserAudio();
+        }, { passive: true });
+    });
 
     function setLed(side, color) {
         const el = document.getElementById(side === 'left' ? 'ledLeft' : 'ledRight');
@@ -1257,12 +1290,12 @@
         const rlcActive = window.isRlcViewActive();
         if (!rlcActive && (powerState === 'OFF' || powerState === 'BOOT')) return;
         if (!rlcActive && (currentProfile === "Span" || currentProfile === "Tyst") && type !== 'square') return;
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        let effVolLevel = rlcActive ? Math.max(volumeLevel, 7) : volumeLevel;
+        let effVolLevel = rlcActive ? Math.max(volumeLevel, 8) : volumeLevel;
         let actualVol = baseVol * (effVolLevel / 6);
         if (effVolLevel === 0 && type !== 'square') actualVol = 0;
         gain.gain.setValueAtTime(Math.max(0.0001, actualVol), audioCtx.currentTime);
@@ -1278,19 +1311,19 @@
         playTone(1200, 'sine', 0.05, 0.04);
     }
     function soundPttGrant() {
-        playTone(900, 'sine', 0.08, 0.09);
-        setTimeout(() => playTone(1250, 'sine', 0.09, 0.09), 90);
+        playTone(900, 'sine', 0.08, 0.11);
+        setTimeout(() => playTone(1250, 'sine', 0.09, 0.11), 90);
     }
-    function soundPttRelease() { playTone(620, 'sine', 0.12, 0.08); }
-    function soundError() { playTone(260, 'sawtooth', 0.25, 0.1); }
+    function soundPttRelease() { playTone(620, 'sine', 0.12, 0.10); }
+    function soundError() { playTone(260, 'sawtooth', 0.25, 0.12); }
     function soundStatusDelivered() {
-        playTone(1050, 'sine', 0.08, 0.07);
-        setTimeout(() => playTone(1400, 'sine', 0.12, 0.07), 100);
+        playTone(1050, 'sine', 0.10, 0.12);
+        setTimeout(() => playTone(1420, 'sine', 0.14, 0.12), 110);
     }
     function soundRingIncoming() {
         if (powerState !== 'RINGING_RLC') return;
-        playTone(850, 'sine', 0.35, 0.12);
-        setTimeout(() => { if (powerState === 'RINGING_RLC') playTone(850, 'sine', 0.35, 0.12); }, 500);
+        playTone(850, 'sine', 0.35, 0.15);
+        setTimeout(() => { if (powerState === 'RINGING_RLC') playTone(850, 'sine', 0.35, 0.15); }, 500);
     }
 
     window.testRlcSpeakerAudio = function() {
@@ -1304,25 +1337,49 @@
         receivingSender = senderLabel || `RLC ${activeRlcCode}`;
         receivingTgName = customTgLabel || window.getActiveTxTalkgroupName();
         const rlcActive = window.isRlcViewActive();
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+
         if ('speechSynthesis' in window && (rlcActive || (volumeLevel > 0 && currentProfile !== "Tyst"))) {
-            window.speechSynthesis.cancel();
-            let msg = new SpeechSynthesisUtterance(text);
-            msg.lang = 'sv-SE';
-            let voices = window.speechSynthesis.getVoices();
-            let svVoice = voices.find(v => v.lang === 'sv-SE' || v.lang === 'sv_SE');
-            if (svVoice) msg.voice = svVoice;
-            msg.rate = 0.98;
-            msg.onstart = () => { isReceivingReal = true; setLed('right', 'green'); updateScreenDisplay(); };
-            msg.onend = () => { isReceivingReal = false; setLed('right', ''); updateScreenDisplay(); if (callback) callback(); };
-            msg.onerror = () => { isReceivingReal = false; setLed('right', ''); updateScreenDisplay(); if (callback) callback(); };
-            window.speechSynthesis.speak(msg);
-        } else {
-            isReceivingReal = true; setLed('right', 'green'); updateScreenDisplay();
-            setTimeout(() => {
-                isReceivingReal = false; setLed('right', ''); updateScreenDisplay();
-                if (callback) callback();
-            }, 2500);
+            try {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.resume();
+                let msg = new SpeechSynthesisUtterance(text);
+                msg.lang = 'sv-SE';
+                msg.volume = 1.0;
+                let voices = window.speechSynthesis.getVoices();
+                let svVoice = voices.find(v => v.lang && (v.lang.toLowerCase().includes('sv') || v.name.toLowerCase().includes('swed') || v.name.toLowerCase().includes('alva') || v.name.toLowerCase().includes('klara')));
+                if (svVoice) msg.voice = svVoice;
+                msg.rate = 0.98;
+
+                let finished = false;
+                const finishOnce = () => {
+                    if (finished) return;
+                    finished = true;
+                    isReceivingReal = false;
+                    setLed('right', '');
+                    soundPttRelease();
+                    updateScreenDisplay();
+                    if (callback) callback();
+                };
+
+                // Safety timeout in case mobile speechSynthesis hangs
+                const safetyTimer = setTimeout(finishOnce, Math.max(3500, text.length * 110));
+
+                msg.onstart = () => { isReceivingReal = true; setLed('right', 'green'); updateScreenDisplay(); };
+                msg.onend = () => { clearTimeout(safetyTimer); finishOnce(); };
+                msg.onerror = () => { clearTimeout(safetyTimer); finishOnce(); };
+                window.speechSynthesis.speak(msg);
+                return;
+            } catch (e) {
+                console.warn("TTS fallback:", e);
+            }
         }
+
+        isReceivingReal = true; setLed('right', 'green'); updateScreenDisplay();
+        setTimeout(() => {
+            isReceivingReal = false; setLed('right', ''); soundPttRelease(); updateScreenDisplay();
+            if (callback) callback();
+        }, 2500);
     }
 
     // =========================================================
@@ -1417,7 +1474,7 @@
             return;
         }
 
-        // 2. DIALING ("Anropa" window - triggered directly from IDLE digits without folder popups!)
+        // 2. DIALING ("Anropa" window)
         if (powerState === 'DIALING') {
             let symIcon = SEPURA_ICONS.symMsisdn;
             let modeLabel = "MSISDN (PTT / Grön lur)";
@@ -1437,7 +1494,7 @@
             return;
         }
 
-        // 3. FOLDERS & TALKGROUP SELECTION (With Direct Indexing support)
+        // 3. FOLDERS & TALKGROUP SELECTION
         if (powerState === 'FOLDERS') {
             const folder = folderSystem[navFolderIndex];
             const tg = folder.tgs[navTgIndex] || folder.tgs[0];
@@ -1511,7 +1568,7 @@
             return;
         }
 
-        // 7. SUBMENUS (Triggered via Down Arrow or Left Softkey "Meny")
+        // 7. SUBMENUS
         if (menuState !== "IDLE") {
             if (menuState === "MAIN_MENU") {
                 display.innerHTML = `
@@ -1718,6 +1775,7 @@
 
     window.onKeypadDown = function(key, evt) {
         if (evt) evt.preventDefault();
+        unlockBrowserAudio();
         if (powerState === 'OFF' || powerState === 'BOOT') return;
         soundKeypress();
         isLongPress = false;
@@ -1756,6 +1814,7 @@
                     if (pinInput === REQUIRED_PIN) {
                         powerState = 'IDLE';
                         pinInput = "";
+                        unlockBrowserAudio();
                         soundStatusDelivered();
                         updateScreenDisplay();
                         if (window.syncPresenceNow) window.syncPresenceNow();
@@ -1966,7 +2025,6 @@
         }
 
         if (powerState === 'IDLE') {
-            // Both Left and Right arrow send "Påbörjat uppdrag"!
             if (dir === 'vänster' || dir === 'höger') {
                 window.sendStatusToRlc("Påbörjat uppdrag");
             } else if (dir === 'ner') {
@@ -2216,7 +2274,7 @@
         }
     };
 
-    // Green Call Button (Short press = Call / Answer, Long press in RLC folder = Geografisk förflyttning)
+    // Green Call Button
     let greenHoldTimer = null;
     let greenLongFired = false;
     window.pressGreen = function() {
@@ -2274,6 +2332,7 @@
     let redHoldTimer = null;
     let redPowerTriggered = false;
     window.startRed = function() {
+        unlockBrowserAudio();
         redPowerTriggered = false;
         if (powerState !== 'OFF') soundKeypress();
         clearTimeout(redHoldTimer);
@@ -2399,7 +2458,7 @@
     }
 
     // =========================================================
-    // 10. PTT, MICROPHONE RECORDING & CROSS-PLATFORM AUDIO PLAYBACK
+    // 10. PTT, UNIVERSAL PCM WAV RECORDER & CROSS-PLATFORM PLAYBACK
     // =========================================================
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = SpeechRecognition ? new SpeechRecognition() : null;
@@ -2516,46 +2575,136 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         }, 350);
     }
 
-    let mediaRecorder = null;
-    let audioChunks = [];
+    // UNIVERSAL WEB-AUDIO PCM WAV RECORDER (100% compatible across PC, Android, and iOS!)
+    let micStream = null;
+    let pcmRecorderNode = null;
+    let pcmSourceNode = null;
+    let pcmZeroGain = null;
+    let pcmChunks = [];
+    let isCapturingPcm = false;
     let audioQueue = [];
     let isPlayingQueue = false;
     let currentTxSenderOverride = null;
     let currentTxTgOverride = null;
 
+    function encodeFloat32ToWavBase64(float32Chunks, inputSampleRate) {
+        let totalLen = 0;
+        for (const c of float32Chunks) totalLen += c.length;
+        if (totalLen === 0) return null;
+
+        const merged = new Float32Array(totalLen);
+        let offset = 0;
+        for (const c of float32Chunks) {
+            merged.set(c, offset);
+            offset += c.length;
+        }
+
+        // Downsample to 12000 Hz mono for compact cloud size & crisp Rakel voice clarity
+        const targetRate = 12000;
+        const ratio = inputSampleRate / targetRate;
+        const outLength = Math.max(1, Math.floor(totalLen / ratio));
+        const outSamples = new Float32Array(outLength);
+
+        let peak = 0.01;
+        for (let i = 0; i < outLength; i++) {
+            const idx = Math.min(totalLen - 1, Math.floor(i * ratio));
+            const s = merged[idx];
+            outSamples[i] = s;
+            const abs = Math.abs(s);
+            if (abs > peak) peak = abs;
+        }
+
+        // Automatic microphone gain normalization so quiet laptop/phone mics are always loud & clear
+        const normGain = Math.min(4.0, 0.88 / peak);
+
+        const wavBuffer = new ArrayBuffer(44 + outLength * 2);
+        const view = new DataView(wavBuffer);
+        const writeStr = (pos, str) => {
+            for (let i = 0; i < str.length; i++) view.setUint8(pos + i, str.charCodeAt(i));
+        };
+
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + outLength * 2, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);          // Subchunk1Size (PCM)
+        view.setUint16(20, 1, true);           // AudioFormat (1 = PCM)
+        view.setUint16(22, 1, true);           // NumChannels (1 = Mono)
+        view.setUint32(24, targetRate, true);  // SampleRate
+        view.setUint32(28, targetRate * 2, true); // ByteRate
+        view.setUint16(32, 2, true);           // BlockAlign
+        view.setUint16(34, 16, true);          // BitsPerSample
+        writeStr(36, 'data');
+        view.setUint32(40, outLength * 2, true);
+
+        let bytePos = 44;
+        for (let i = 0; i < outLength; i++) {
+            let sample = Math.max(-1, Math.min(1, outSamples[i] * normGain));
+            view.setInt16(bytePos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+            bytePos += 2;
+        }
+
+        const bytes = new Uint8Array(wavBuffer);
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+        }
+        return 'data:audio/wav;base64,' + btoa(binary);
+    }
+
     async function ensureMicAccess() {
-        if (mediaRecorder) return true;
+        if (audioCtx.state === 'suspended') {
+            try { await audioCtx.resume(); } catch (e) {}
+        }
+        if (micStream && pcmRecorderNode) return true;
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            let options = {};
-            if (typeof MediaRecorder.isTypeSupported === 'function') {
-                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) options = { mimeType: 'audio/webm;codecs=opus' };
-                else if (MediaRecorder.isTypeSupported('audio/mp4')) options = { mimeType: 'audio/mp4' };
-                else if (MediaRecorder.isTypeSupported('audio/webm')) options = { mimeType: 'audio/webm' };
+            micStream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
+            if (audioCtx.state === 'suspended') {
+                try { await audioCtx.resume(); } catch (e) {}
             }
-            mediaRecorder = new MediaRecorder(stream, options);
-            mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
-            mediaRecorder.onstop = () => {
-                const audioType = mediaRecorder.mimeType || (window.IS_IOS ? 'audio/mp4' : 'audio/webm');
-                const audioBlob = new Blob(audioChunks, { type: audioType });
-                audioChunks = [];
-                const reader = new FileReader(); 
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => { 
-                    if (window.dbSendAudio) {
-                        const txTg = currentTxTgOverride || window.getActiveTxTalkgroupName();
-                        window.dbSendAudio(reader.result, txTg, currentTxSenderOverride);
-                        currentTxSenderOverride = null;
-                        currentTxTgOverride = null;
-                    }
-                };
+            pcmSourceNode = audioCtx.createMediaStreamSource(micStream);
+            pcmRecorderNode = audioCtx.createScriptProcessor(4096, 1, 1);
+            pcmZeroGain = audioCtx.createGain();
+            pcmZeroGain.gain.value = 0;
+
+            pcmRecorderNode.onaudioprocess = (e) => {
+                if (!isCapturingPcm) return;
+                const input = e.inputBuffer.getChannelData(0);
+                pcmChunks.push(new Float32Array(input));
             };
+
+            pcmSourceNode.connect(pcmRecorderNode);
+            pcmRecorderNode.connect(pcmZeroGain);
+            pcmZeroGain.connect(audioCtx.destination);
             return true;
-        } catch (err) { return false; }
+        } catch (err) {
+            console.warn("Mic access error:", err);
+            return false;
+        }
+    }
+
+    function finishAndSendPcmRecording() {
+        if (!isCapturingPcm) return;
+        isCapturingPcm = false;
+        const captured = pcmChunks;
+        pcmChunks = [];
+        const txTg = currentTxTgOverride || window.getActiveTxTalkgroupName();
+        const txSender = currentTxSenderOverride;
+        currentTxSenderOverride = null;
+        currentTxTgOverride = null;
+
+        const wavBase64 = encodeFloat32ToWavBase64(captured, audioCtx.sampleRate || 44100);
+        if (wavBase64 && window.dbSendAudio) {
+            window.dbSendAudio(wavBase64, txTg, txSender);
+        }
     }
 
     window.startPtt = async function(e) {
         if (e) e.preventDefault();
+        unlockBrowserAudio();
         if (powerState === 'OFF' || powerState === 'PIN') return;
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
         if (txInhibit) { soundError(); showTempMsg("🚫 Sändningsspärr aktiv", 1200); return; }
@@ -2584,10 +2733,11 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
 
         currentTxSenderOverride = null;
         currentTxTgOverride = null;
+        pcmChunks = [];
+        isCapturingPcm = true;
         const ok = await ensureMicAccess();
-        if (ok && isPttActive && mediaRecorder && mediaRecorder.state === 'inactive') {
-            audioChunks = [];
-            try { mediaRecorder.start(); } catch (err) {}
+        if (!ok) {
+            isCapturingPcm = false;
         }
     };
 
@@ -2613,9 +2763,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             return;
         }
 
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            try { mediaRecorder.stop(); } catch (err) {}
-        }
+        finishAndSendPcmRecording();
     };
     window.cancelPtt = function(e) { window.stopPtt(e); };
 
@@ -2646,7 +2794,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     function processAudioQueue() {
         const rlcActive = window.isRlcViewActive();
         if (isPlayingQueue || audioQueue.length === 0) return;
-        // Only apply handset mute rules when NOT in RLC Command Center view
         if (!rlcActive && (volumeLevel === 0 || speakerMuted || currentProfile === "Tyst")) {
             audioQueue = [];
             return;
@@ -2668,22 +2815,50 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         isReceivingReal = false;
         setLed('right', '');
         setRlcRxUiState(false, tgName, "");
-        soundPttRelease(); // Subtle Rakel squelch tail click when incoming transmission ends
+        soundPttRelease();
         updateScreenDisplay();
         processAudioQueue();
     }
 
-    // Bulletproof cross-platform audio playback (WebAudio decode + HTML5 Audio fallback for Android/iOS -> PC)
+    // Direct PCM WAV & WebAudio Playback (Bypasses mobile autoplay blocks & WebM/MP4 codec incompatibility!)
     async function playBase64Audio(base64Data, tgName) {
         const rlcActive = window.isRlcViewActive();
-        const effGain = rlcActive ? 1.0 : Math.min(1.0, volumeLevel / 7);
+        const effGain = rlcActive ? 1.8 : Math.max(0.35, (volumeLevel / 6) * 1.6);
 
         try {
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
             const base64String = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
             const binaryString = atob(base64String);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            // 1. Direct synchronous RIFF WAV 16-bit PCM parser -> AudioBuffer (Zero browser codec issues!)
+            const isRiffWav = bytes.length > 44 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+            if (isRiffWav) {
+                const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+                const sampleRate = view.getUint32(24, true) || 12000;
+                const numSamples = Math.floor((bytes.length - 44) / 2);
+                if (numSamples > 0) {
+                    const audioBuffer = audioCtx.createBuffer(1, numSamples, sampleRate);
+                    const channelData = audioBuffer.getChannelData(0);
+                    for (let i = 0; i < numSamples; i++) {
+                        channelData[i] = view.getInt16(44 + i * 2, true) / 32768.0;
+                    }
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = audioBuffer;
+                    const gainNode = audioCtx.createGain();
+                    gainNode.gain.value = effGain;
+                    source.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    source.onended = () => finishCurrentAudioPlayback(tgName);
+                    source.start(0);
+                    return;
+                }
+            }
+
+            // 2. Standard WebAudio decodeAudioData for any legacy/other audio format
             const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
@@ -2694,13 +2869,13 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             source.onended = () => finishCurrentAudioPlayback(tgName);
             source.start(0);
         } catch (decodeErr) {
-            // Fallback to native HTML5 Audio element if WebAudio decodeAudioData fails on mobile container format
+            // 3. Fallback to pre-unlocked globalAudioPlayer element
             try {
-                const htmlAudio = new Audio(base64Data);
-                htmlAudio.volume = effGain;
-                htmlAudio.onended = () => finishCurrentAudioPlayback(tgName);
-                htmlAudio.onerror = () => finishCurrentAudioPlayback(tgName);
-                await htmlAudio.play();
+                globalAudioPlayer.src = base64Data;
+                globalAudioPlayer.volume = Math.min(1.0, effGain);
+                globalAudioPlayer.onended = () => finishCurrentAudioPlayback(tgName);
+                globalAudioPlayer.onerror = () => finishCurrentAudioPlayback(tgName);
+                await globalAudioPlayer.play();
             } catch (fallbackErr) {
                 console.warn("Audio playback error:", fallbackErr);
                 finishCurrentAudioPlayback(tgName);
@@ -2741,7 +2916,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         ];
         const chosen = missions[Math.floor(Math.random() * missions.length)];
         sdsInbox.push({ from: `RLC ${activeRlcCode}`, text: chosen, time: getTime() });
-        soundPttRelease();
+        soundPttGrant();
         speakSwedish(chosen, null, `RLC ${activeRlcCode}`, "Order PO1 MPU");
     };
 
@@ -2751,13 +2926,21 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         }
     }, 35000);
 
-    window.receiveSds = function(from, text) {
+    window.receiveSds = function(from, text, ttsText = "", tgName = "") {
         sdsInbox.push({ from: from, text: text, time: getTime() });
         if (powerState === 'OFF' || powerState === 'PIN') return;
         soundStatusDelivered();
         setLed('right', 'blue');
         setTimeout(() => setLed('right', ''), 2500);
-        showTempMsg(`✉️ <b>Nytt SDS från ${from}:</b><br><span style="font-size:11px;font-weight:normal;">${text}</span>`, 3200);
+        showTempMsg(`✉️ <b>Nytt SDS från ${from}:</b><br><span style="font-size:11px;font-weight:normal;">${text}</span>`, 3500);
+
+        // If RLC sent a Voice Broadcast or HR Dispatch with spoken text, read it out loud on the phone too!
+        if (ttsText && !window.isRlcViewActive()) {
+            setTimeout(() => {
+                soundPttGrant();
+                speakSwedish(ttsText, null, from, tgName || window.getActiveTxTalkgroupName());
+            }, 350);
+        }
     };
 
     window.sendStatusToRlc = function(statusText) {
@@ -3133,8 +3316,8 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     window.rlcSendDirectSds = function(tactical) {
         askInput(`Skicka direkt SDS till ${tactical}:`, "", (msg) => {
             if (msg) {
-                if (window.dbSendSds) window.dbSendSds(tactical, msg, { fromOverride: "RLC 9-7" });
-                if (tactical === window.MY_TACTICAL) window.receiveSds("RLC 9-7", msg);
+                if (window.dbSendSds) window.dbSendSds(tactical, msg, { fromOverride: "RLC 9-7", ttsText: msg });
+                if (tactical === window.MY_TACTICAL) window.receiveSds("RLC 9-7", msg, msg);
                 appendRlcLog(`✉️ SDS till ${tactical}: "${msg}"`);
             }
         });
@@ -3186,10 +3369,11 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
 
         currentTxSenderOverride = "RLC 9-7";
         currentTxTgOverride = rlcSelectedTxTg;
+        pcmChunks = [];
+        isCapturingPcm = true;
         const ok = await ensureMicAccess();
-        if (ok && isRlcConsolePtt && mediaRecorder && mediaRecorder.state === 'inactive') {
-            audioChunks = [];
-            try { mediaRecorder.start(); } catch (err) {}
+        if (!ok) {
+            isCapturingPcm = false;
         }
     };
 
@@ -3202,9 +3386,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         if (ind) { ind.style.color = '#2ecc71'; ind.innerText = `● MEDLYSSNAR ALLA`; }
         soundPttRelease();
 
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            try { mediaRecorder.stop(); } catch (err) {}
-        }
+        finishAndSendPcmRecording();
         appendRlcLog(`🎙️ RLC 9-7 sände röst på ${rlcSelectedTxTg}`);
     };
 
@@ -3215,7 +3397,11 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         inp.value = "";
         appendRlcLog(`🔊 RLC 9-7 (${rlcSelectedTxTg}): "${text}"`);
         if (window.dbSendSds) {
-            window.dbSendSds("ALL", `[${rlcSelectedTxTg}] ${text}`, { fromOverride: "RLC 9-7" });
+            window.dbSendSds("ALL", `[${rlcSelectedTxTg}] ${text}`, {
+                fromOverride: "RLC 9-7",
+                ttsText: text,
+                tg: rlcSelectedTxTg
+            });
         }
         speakSwedish(text, null, "RLC 9-7", rlcSelectedTxTg);
     };
@@ -3255,11 +3441,13 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const target = document.getElementById('rlcHrTargetUnit')?.value || "ALL";
 
         const hrText = `🚨 HR: ${type} | Plats: ${addr} | TG: ${tg} | ${desc}`;
+        const spokenDispatch = `Utlarmning från 9-7. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`;
         if (window.dbSendSds) {
-            window.dbSendSds(target, hrText, { fromOverride: "RLC 9-7" });
-        }
-        if (target === "ALL" || target === window.MY_TACTICAL) {
-            window.receiveSds("RLC 9-7", hrText);
+            window.dbSendSds(target, hrText, {
+                fromOverride: "RLC 9-7",
+                ttsText: spokenDispatch,
+                tg: tg
+            });
         }
 
         if (rlcMap) {
@@ -3274,7 +3462,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         }
 
         appendRlcLog(`🚨 Utlarmat HR (${type} @ ${addr}) till ${target} på ${tg}`);
-        speakSwedish(`Utlarmning från 9-7. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`, null, "RLC 9-7", tg);
+        speakSwedish(spokenDispatch, null, "RLC 9-7", tg);
     };
 
     function appendRlcLog(text, isAlert = false) {
