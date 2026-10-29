@@ -113,28 +113,27 @@
         .led-light.blue { background: #3498db; box-shadow: 0 0 8px #3498db; }
 
         .side-btn {
-            position: absolute; left: -12px; width: 12px; height: 32px;
+            position: absolute; left: -26px; width: 26px; height: 38px;
             background: linear-gradient(to right, #4a4d52, #1a1c1e); border: 1px solid #000;
-            border-radius: 4px 0 0 4px; cursor: pointer;
-            box-shadow: inset 2px 0 3px rgba(255,255,255,0.15), -2px 2px 5px rgba(0,0,0,0.6);
-            color: #ccc; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 0;
+            border-radius: 8px 0 0 8px; cursor: pointer;
+            box-shadow: inset 2px 0 3px rgba(255,255,255,0.2), -3px 3px 6px rgba(0,0,0,0.65);
+            color: #e2e8f0; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 0;
         }
-        .side-btn:active { background: #111; transform: translateX(1px); }
-        .side-btn-a { top: 82px; border-left: 2px solid #5bc0de; }
-        .side-btn-b { top: 120px; }
+        .side-btn:active { background: #111; transform: translateX(2px); }
+        .side-btn-a { top: 76px; border-left: 3px solid #5bc0de; }
+        .side-btn-b { top: 122px; }
         .ptt-btn {
-            position: absolute; left: -15px; top: 162px; width: 15px; height: 96px;
+            position: absolute; left: -30px; top: 168px; width: 30px; height: 104px;
             background: linear-gradient(to right, #ff8c00, #b35900); border: 1px solid #000;
-            border-radius: 7px 0 0 7px; cursor: pointer;
-            box-shadow: inset 3px 0 5px rgba(255,255,255,0.4), inset -2px 0 5px rgba(0,0,0,0.6), -4px 5px 12px rgba(0,0,0,0.5);
+            border-radius: 10px 0 0 10px; cursor: pointer;
+            box-shadow: inset 3px 0 5px rgba(255,255,255,0.45), inset -2px 0 5px rgba(0,0,0,0.6), -4px 5px 12px rgba(0,0,0,0.55);
             display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl;
-            color: rgba(0,0,0,0.65); font-size: 9px; font-weight: 900; letter-spacing: 1px;
+            color: rgba(0,0,0,0.75); font-size: 11px; font-weight: 900; letter-spacing: 1.5px;
         }
-        .ptt-btn:active, .ptt-btn.active { background: #cc4400; transform: translateX(1px); box-shadow: inset 4px 0 8px rgba(0,0,0,0.8); }
-        .side-btn-c { top: 268px; }
+        .ptt-btn:active, .ptt-btn.active { background: #cc4400; transform: translateX(2px); box-shadow: inset 4px 0 8px rgba(0,0,0,0.8); }
+        .side-btn-c { top: 280px; }
 
-        .speaker-grill { width: 110px; height: 24px; border-radius: 12px; background-color: #0a0a0a; background-image: radial-gradient(#282828 20%, transparent 21%), radial-gradient(#282828 20%, transparent 21%); background-size: 6px 6px; background-position: 0 0, 3px 3px; box-shadow: inset 0 3px 6px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.15); margin-bottom: 4px; border: 1px solid #000; }
-        .brand { color: #d8d8d8; font-weight: 900; font-size: 16px; letter-spacing: 1.5px; margin-bottom: 8px; font-family: 'Arial', sans-serif; text-transform: lowercase; text-shadow: -1px -1px 0 #000, 1px 1px 0 rgba(255,255,255,0.2); }
+        .speaker-grill { width: 110px; height: 24px; border-radius: 12px; background-color: #0a0a0a; background-image: radial-gradient(#282828 20%, transparent 21%), radial-gradient(#282828 20%, transparent 21%); background-size: 6px 6px; background-position: 0 0, 3px 3px; box-shadow: inset 0 3px 6px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.15); margin-bottom: 12px; border: 1px solid #000; }
 
         .screen-bezel { background: #050505; padding: 10px 10px 8px 10px; border-radius: 8px; width: 92%; box-shadow: inset 0 4px 12px rgba(0,0,0,1), 0 1px 2px rgba(255,255,255,0.1); margin-bottom: 10px; position: relative; border: 1px solid #1a1a1a; }
         .screen {
@@ -209,7 +208,7 @@
         .d-pad button { background: linear-gradient(to bottom, #3a3d42, #1a1c1e); border: 1px solid #000; color: #ddd; font-size: 11px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 3px rgba(0,0,0,0.8); cursor:pointer; }
         .d-pad button:active { background: #000; }
         .d-up { grid-column: 2; border-radius: 8px 8px 2px 2px; } .d-down { grid-column: 2; grid-row: 3; border-radius: 2px 2px 8px 8px; } .d-left { grid-column: 1; grid-row: 2; border-radius: 8px 2px 2px 8px; } .d-right { grid-column: 3; grid-row: 2; border-radius: 2px 8px 8px 2px; }
-        .d-center { grid-column: 2; grid-row: 2; border-radius: 50%; background: radial-gradient(circle, #5a5e65, #2a2c30) !important; font-weight: bold; font-size: 10px !important; border: 2px solid #000 !important; color: white !important; }
+        .d-center-cap { grid-column: 2; grid-row: 2; border-radius: 50%; background: radial-gradient(circle, #26292e, #121316); border: 1px solid #0a0a0a; box-shadow: inset 0 1px 2px rgba(255,255,255,0.08); pointer-events: none; }
 
         .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 0; margin-top: 2px;}
         .numpad button { background: linear-gradient(to bottom, #32353a, #151515); color: #fff; border: 1px solid #000; border-radius: 6px; padding: 8px 0; font-size: 16px; font-weight: bold; display: flex; flex-direction: row; align-items: baseline; justify-content: center; gap: 4px; box-shadow: 0 3px 5px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.15); cursor:pointer; border-bottom: 2px solid #0a0a0a; text-shadow: 1px 1px 2px #000; }
@@ -367,6 +366,8 @@
                         if (isNotFromMe && (data.to_issi === window.MY_ISSI || data.to_issi === window.MY_MSISDN || data.to_issi === window.MY_TACTICAL || data.to_issi === "ALL")) {
                             if (data.type === "RLC_RING") {
                                 if (window.triggerIncomingRlcRingFromConsole) window.triggerIncomingRlcRingFromConsole(data.rlcCode || "9-7");
+                            } else if (data.type === "RLC_SET_STATUS" && data.newStatus) {
+                                if (window.applyStatusFromRlcConsole) window.applyStatusFromRlcConsole(data.newStatus, data.rlcCode || "9-7");
                             } else {
                                 window.receiveSds(data.from_issi, data.msg, data.ttsText || "", data.tg || "");
                             }
@@ -493,11 +494,22 @@
                 to_issi: toIssi,
                 msg: msgText,
                 type: extra.type || "SDS",
+                newStatus: extra.newStatus || "",
                 ttsText: extra.ttsText || "",
                 tg: extra.tg || "",
                 rlcCode: extra.rlcCode || "9-7",
                 timestamp: Date.now()
             });
+        };
+
+        window.dbSetPatrolStatusFromRlc = async function(tactical, newStatus) {
+            if (!db) return;
+            try {
+                const unit = (window.liveConnectedUnits || []).find(u => u.tactical === tactical);
+                if (unit && unit._docId) {
+                    await setDoc(doc(db, 'presence', unit._docId), { status: newStatus, timestamp: Date.now() }, { merge: true });
+                }
+            } catch (e) { console.warn("Status update warning:", e); }
         };
 
         window.dbSendAudio = async function(base64Data, tgName, senderOverride = null) {
@@ -857,7 +869,6 @@
             <div class="led-light" id="ledRight"></div>
         </div>
         <div class="speaker-grill"></div>
-        <div class="brand">sepura</div>
 
         <div class="screen-bezel">
             <div class="screen off" id="screen-container">
@@ -894,7 +905,7 @@
                 <div class="d-pad">
                     <button class="d-up" onpointerdown="pressArrow('upp')">▲</button>
                     <button class="d-left" onpointerdown="pressArrow('vänster')">◄</button>
-                    <button class="d-center" onpointerdown="pressCenter()">OK</button>
+                    <div class="d-center-cap"></div>
                     <button class="d-right" onpointerdown="pressArrow('höger')">►</button>
                     <button class="d-down" onpointerdown="pressArrow('ner')">▼</button>
                 </div>
@@ -933,10 +944,11 @@
         const topBar = document.getElementById('topBar');
         if (!wrapper) return;
         const topOffset = topBar ? (topBar.offsetHeight + topBar.offsetTop + 10) : 55;
-        const availW = window.innerWidth - 16;
+        const availW = window.innerWidth - 24;
         const availH = window.innerHeight - topOffset - 8;
-        const scale = Math.max(0.45, Math.min(availW / 365, availH / 855, 1.05));
+        const scale = Math.max(0.45, Math.min(availW / 390, availH / 855, 1.05));
         wrapper.style.marginTop = `${topOffset}px`;
+        wrapper.style.marginLeft = `14px`;
         wrapper.style.transform = `scale(${scale})`;
     }
     window.addEventListener('resize', resizeRadio);
@@ -3464,6 +3476,17 @@
         showTempMsg(`Status skickad:<br><b>${statusText}</b><br><span style="color:#27ae60;font-size:11px;">✔ Kvitterad av RLC ${activeRlcCode}</span>`, 1700);
     };
 
+    window.applyStatusFromRlcConsole = function(newStatus, rlcCodeStr = "9-7") {
+        if (powerState === 'OFF' || powerState === 'PIN') return;
+        if (!window.canReachRlcNetwork()) return;
+        radioStatus = newStatus;
+        soundStatusDelivered();
+        if (window.syncPresenceNow) window.syncPresenceNow();
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+        updateScreenDisplay();
+        showTempMsg(`📟 Status ändrad av <b>RLC ${rlcCodeStr}</b>:<br><b style="color:#005bb5;">${newStatus}</b>`, 2200);
+    };
+
     window.promptApiKey = function() {
         askInput("Ange Gemini API-nyckel (valfritt):", window.GEMINI_API_KEY || "", (val) => {
             if (val !== null) {
@@ -3758,19 +3781,29 @@
         const listEl = document.getElementById('rlcUnitsList');
         if (listEl) {
             listEl.innerHTML = units.map(u => {
-                const pillClass = getStatusPillClass(u.status);
+                const curStatus = u.status || 'Klar, ledig';
+                const pillClass = getStatusPillClass(curStatus);
                 const isEmerg = pillClass === 'status-alarm';
                 const isReq = pillClass === 'status-warn';
                 const aliasLabel = u.alias ? ` • <span style="color:#7cc4fa;">${u.alias}</span>` : '';
                 const dmoIsolated = (u.mode === 'DMO') && !(gw.active && u.tg === gw.dmo);
+                const statusSelectOptions = statusMenuOptions.map(st =>
+                    `<option value="${st}" ${curStatus === st ? 'selected' : ''}>${st}</option>`
+                ).join('');
                 return `<div class="rlc-unit-card ${isEmerg ? 'emergency' : ''} ${isReq ? 'req-call' : ''}">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                         <span style="font-weight:bold;font-size:13px;color:#fff;">🚔 ${u.tactical}${aliasLabel}</span>
-                        <span class="rlc-status-pill ${pillClass}">${u.status || 'Klar, ledig'}</span>
+                        <span class="rlc-status-pill ${pillClass}">📟 ${curStatus}</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
                         <span>👥 TG: <b style="color:#e2e8f0;">${u.tg}</b></span>
                         <span>Läge: <b style="color:${dmoIsolated ? '#f39c12' : '#2ecc71'};">${u.mode || 'TMO'}${u.gwActive || (u.mode==='DMO' && gw.active && u.tg===gw.dmo) ? '+GW' : (dmoIsolated ? ' (Ej nät)' : '')}</b></span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;background:#101824;padding:4px 6px;border-radius:6px;border:1px solid #26354a;">
+                        <span style="font-size:10px;color:#8bbfff;font-weight:bold;white-space:nowrap;">Sätt status:</span>
+                        <select class="rlc-form-select" style="padding:3px 6px;font-size:11px;height:24px;" onchange="rlcSetPatrolStatus('${u.tactical}', this.value)">
+                            ${statusSelectOptions}
+                        </select>
                     </div>
                     <div style="display:flex;gap:5px;margin-top:2px;">
                         <button class="rlc-btn-sm" onclick="rlcFocusUnitOnMap('${u.tactical}')">📍 Karta</button>
@@ -3785,7 +3818,7 @@
         if (targetSelect) {
             const currentVal = targetSelect.value;
             targetSelect.innerHTML = `<option value="ALL">Till: Alla patruller (Utlarmning)</option>` +
-                units.map(u => `<option value="${u.tactical}">Till: ${u.tactical}${u.alias ? ' (' + u.alias + ')' : ''}</option>`).join('');
+                units.map(u => `<option value="${u.tactical}">Till: ${u.tactical}${u.alias ? ' (' + u.alias + ')' : ''} — [${u.status || 'Klar, ledig'}]</option>`).join('');
             if ([...targetSelect.options].some(o => o.value === currentVal)) targetSelect.value = currentVal;
         }
 
@@ -3796,8 +3829,8 @@
             });
             units.forEach(u => {
                 const lat = u.lat || 55.6050, lng = u.lng || 13.0038;
-                const labelTxt = `🚔 ${u.tactical}${u.alias ? ' • ' + u.alias : ''} (${u.tg})`;
-                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [140, 24], iconAnchor: [70, 12] });
+                const labelTxt = `🚔 ${u.tactical}${u.alias ? ' • ' + u.alias : ''} [${u.status || 'Klar, ledig'}]`;
+                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [165, 24], iconAnchor: [82, 12] });
                 if (rlcUnitMarkers[u.tactical]) {
                     rlcUnitMarkers[u.tactical].setLatLng([lat, lng]);
                     rlcUnitMarkers[u.tactical].setIcon(icon);
@@ -3807,6 +3840,44 @@
             });
         }
         renderRlcTgGrid();
+    };
+
+    window.rlcSetPatrolStatus = function(tactical, newStatus) {
+        if (!tactical || !newStatus) return;
+        const all = getCombinedUnitsList();
+        const u = all.find(x => x.tactical === tactical);
+        const gw = window.getAnyActiveGateway();
+        if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`⚠️ ${tactical} är i DMO utan Gateway – status satt i RLC men når ej radion förrän den är i TMO/GW.`, true);
+        }
+
+        const simUnit = (window.simulatedPatrols || []).find(x => x.tactical === tactical);
+        if (simUnit) simUnit.status = newStatus;
+
+        const liveUnit = (window.liveConnectedUnits || []).find(x => x.tactical === tactical);
+        if (liveUnit) liveUnit.status = newStatus;
+
+        if (tactical === window.MY_TACTICAL) {
+            radioStatus = newStatus;
+            updateScreenDisplay();
+            if (window.syncPresenceNow) window.syncPresenceNow();
+        }
+
+        if (window.dbSetPatrolStatusFromRlc) window.dbSetPatrolStatusFromRlc(tactical, newStatus);
+        if (window.dbSendSds) {
+            window.dbSendSds(tactical, `Status ändrad till: ${newStatus}`, {
+                type: "RLC_SET_STATUS",
+                newStatus: newStatus,
+                rlcCode: "9-7",
+                fromOverride: "RLC 9-7"
+            });
+        }
+
+        soundStatusDelivered();
+        appendRlcLog(`📟 RLC 9-7 satte status på <b>${tactical}</b> till: <b>${newStatus}</b>`);
+        window.updateOnlinePillUI();
+        window.refreshRlcDashboard();
     };
 
     function renderRlcTgGrid() {
