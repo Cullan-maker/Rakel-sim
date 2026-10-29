@@ -9,7 +9,6 @@
     <title>Sepura SC21 - Rakel Utbildningssimulator & RLC</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <style>
         :root {
             --sc21-blue: #002855;
@@ -20,21 +19,17 @@
         body {
             display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
             height: 100dvh; width: 100vw;
-            background: radial-gradient(circle at center, #3a4b5c, #16202a); 
-            font-family: 'Arial', sans-serif; margin: 0; overflow: hidden; 
+            background: radial-gradient(circle at center, #3a4b5c, #16202a);
+            font-family: 'Arial', sans-serif; margin: 0; overflow: hidden;
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
         }
-
-        /* Top Bar - Responsive & Never Overlaps Radio */
         .top-bar {
             position: fixed; top: max(6px, env(safe-area-inset-top)); left: 8px; right: 8px;
             display: flex; justify-content: space-between; align-items: center; gap: 4px; z-index: 1000;
             pointer-events: none; flex-wrap: nowrap;
         }
         .top-bar > * { pointer-events: auto; }
-        .top-bar-group {
-            display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
-        }
+        .top-bar-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
         .top-btn {
             background: linear-gradient(to bottom, #005bb5, #003f80); color: white;
             padding: 5px 9px; border-radius: 16px; font-weight: bold; font-size: 11px;
@@ -56,13 +51,10 @@
             z-index: 1600; box-shadow: 0 12px 35px rgba(0,0,0,0.85); display: none;
             width: 90%; max-width: 340px; text-align: center;
         }
-
-        #scale-wrapper { 
-            display: flex; flex-direction: column; align-items: center; 
+        #scale-wrapper {
+            display: flex; flex-direction: column; align-items: center;
             transform-origin: top center; transition: transform 0.15s ease-out;
         }
-
-        /* Vehicle Gateway Panel (SRG3900) */
         .vehicle-panel {
             position: fixed; top: 55px; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 380px; background: linear-gradient(145deg, #22252a, #141619);
@@ -71,20 +63,14 @@
         }
         .vehicle-panel.open { display: block; }
         .vp-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 6px; margin-bottom: 8px; font-size: 12px; font-weight: bold; color: #8bbfff; }
-        .vp-screen {
-            background: #e6ecf2; color: #000; border: 2px solid #000; border-radius: 4px;
-            padding: 6px 8px; font-family: 'Arial', sans-serif; margin-bottom: 10px;
-        }
+        .vp-screen { background: #e6ecf2; color: #000; border: 2px solid #000; border-radius: 4px; padding: 6px 8px; font-family: 'Arial', sans-serif; margin-bottom: 10px; }
         .vp-status-row { display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #002855; border-bottom: 1px solid #99b; padding-bottom: 3px; margin-bottom: 4px; }
         .vp-tg-box { border: 1px solid #002855; background: #fff; padding: 4px 6px; margin-bottom: 4px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
         .vp-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px; }
-        .vp-controls select, .vp-controls button {
-            padding: 6px; border-radius: 4px; border: 1px solid #555; background: #2c313a; color: #fff; font-weight: bold; font-size: 11px; width: 100%;
-        }
+        .vp-controls select, .vp-controls button { padding: 6px; border-radius: 4px; border: 1px solid #555; background: #2c313a; color: #fff; font-weight: bold; font-size: 11px; width: 100%; }
         .vp-controls button.gw-toggle { grid-column: span 2; background: #005bb5; border-color: #003f80; cursor: pointer; margin-top: 4px; padding: 8px; }
         .vp-controls button.gw-toggle.on { background: #c0392b; border-color: #922b21; }
 
-        /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         .modal-content { background: #ffffff; width: 92%; max-width: 480px; max-height: 85dvh; border-radius: 12px; padding: 20px; overflow-y: auto; box-shadow: 0 15px 50px rgba(0,0,0,0.8); color: #222; position: relative; border: 1px solid #999; font-size: 13px; line-height: 1.45; }
         .modal-content h2 { color: #002855; margin-top: 0; border-bottom: 2px solid #005bb5; padding-bottom: 8px; font-size: 18px; }
@@ -102,21 +88,19 @@
         .input-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
         .input-modal-actions button { padding: 8px 14px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
 
-        /* Sepura SC21 Hardware Chassis */
+        /* Sepura SC21 Chassis */
         .radio-body {
             background: radial-gradient(circle at 30% 10%, #4a4d52 0%, transparent 40%), linear-gradient(135deg, #32353a 0%, #181a1d 100%);
-            width: 336px; height: 740px; border-radius: 24px 24px 38px 38px; padding: 18px 15px; 
+            width: 336px; height: 740px; border-radius: 24px 24px 38px 38px; padding: 18px 15px;
             box-shadow: inset 2px 2px 6px rgba(255,255,255,0.15), inset -5px -5px 15px rgba(0,0,0,0.8), 15px 20px 40px rgba(0,0,0,0.8);
             position: relative; display: flex; flex-direction: column; align-items: center; border: 1px solid #111; border-right: 2px solid #000; border-bottom: 3px solid #000;
             margin-top: 105px;
         }
         .radio-body::before { content: ''; position: absolute; top: 5px; left: 8px; right: 8px; bottom: 5px; border: 1px solid rgba(255,255,255,0.06); border-radius: 19px 19px 32px 32px; pointer-events: none; }
-
         .antenna { width: 28px; height: 105px; background: linear-gradient(to right, #111 0%, #3a3a3a 35%, #111 75%, #000 100%); position: absolute; top: -98px; right: 36px; border-radius: 14px 14px 0 0; box-shadow: inset -2px 0 5px rgba(0,0,0,0.8), 4px 4px 10px rgba(0,0,0,0.5); border: 1px solid #000; z-index: -1; }
         .vol-knob { width: 48px; height: 32px; background: repeating-linear-gradient(90deg, #151515, #2e2e2e 2px, #050505 3px, #050505 5px); position: absolute; top: -29px; left: 48px; border-radius: 6px 6px 0 0; box-shadow: inset 0 3px 5px rgba(255,255,255,0.2), 0 5px 10px rgba(0,0,0,0.7); border: 1px solid #000; display: flex; overflow: hidden; border-top: 2px solid #555; z-index: 5; }
         .knob-half { flex: 1; height: 100%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.35); font-size: 10px; font-weight: bold; }
         .knob-half:active { background: rgba(255,255,255,0.15); }
-
         .emergency-btn-guard { position: absolute; top: -9px; left: 138px; width: 52px; height: 18px; background: #111; border-radius: 9px 9px 0 0; border: 1px solid #000; }
         .emergency-btn { width: 42px; height: 15px; background: linear-gradient(to bottom, #ff3b30, #990000); position: absolute; top: 1px; left: 4px; border-radius: 5px 5px 0 0; cursor: pointer; border: 1px solid #400; box-shadow: inset 0 2px 3px rgba(255,255,255,0.5); }
         .emergency-btn:active { background: #700; transform: translateY(1px); }
@@ -136,9 +120,8 @@
             color: #ccc; font-size: 9px; font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 0;
         }
         .side-btn:active { background: #111; transform: translateX(1px); }
-        .side-btn-a { top: 82px; border-left: 2px solid #5bc0de; }  
-        .side-btn-b { top: 120px; }                                 
-        
+        .side-btn-a { top: 82px; border-left: 2px solid #5bc0de; }
+        .side-btn-b { top: 120px; }
         .ptt-btn {
             position: absolute; left: -15px; top: 162px; width: 15px; height: 96px;
             background: linear-gradient(to right, #ff8c00, #b35900); border: 1px solid #000;
@@ -148,31 +131,24 @@
             color: rgba(0,0,0,0.65); font-size: 9px; font-weight: 900; letter-spacing: 1px;
         }
         .ptt-btn:active, .ptt-btn.active { background: #cc4400; transform: translateX(1px); box-shadow: inset 4px 0 8px rgba(0,0,0,0.8); }
-
-        .side-btn-c { top: 268px; }                                 
+        .side-btn-c { top: 268px; }
 
         .speaker-grill { width: 110px; height: 24px; border-radius: 12px; background-color: #0a0a0a; background-image: radial-gradient(#282828 20%, transparent 21%), radial-gradient(#282828 20%, transparent 21%); background-size: 6px 6px; background-position: 0 0, 3px 3px; box-shadow: inset 0 3px 6px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.15); margin-bottom: 4px; border: 1px solid #000; }
         .brand { color: #d8d8d8; font-weight: 900; font-size: 16px; letter-spacing: 1.5px; margin-bottom: 8px; font-family: 'Arial', sans-serif; text-transform: lowercase; text-shadow: -1px -1px 0 #000, 1px 1px 0 rgba(255,255,255,0.2); }
 
         .screen-bezel { background: #050505; padding: 10px 10px 8px 10px; border-radius: 8px; width: 92%; box-shadow: inset 0 4px 12px rgba(0,0,0,1), 0 1px 2px rgba(255,255,255,0.1); margin-bottom: 10px; position: relative; border: 1px solid #1a1a1a; }
-        
         .screen {
             background-color: #ffffff; height: 200px; border-radius: 2px; color: #000000;
             font-family: 'Tahoma', 'Arial', sans-serif; display: flex; flex-direction: column;
             justify-content: space-between; overflow: hidden; position: relative; border: 1px solid #000;
-            -webkit-font-smoothing: none;
         }
-
         .screen-header {
             background-color: #000000; color: #ffffff; display: flex; justify-content: space-between;
-            align-items: center; font-size: 10px; padding: 1px 4px; height: 18px; flex-shrink: 0;
-            border-bottom: 1px solid #222;
+            align-items: center; font-size: 10px; padding: 1px 4px; height: 18px; flex-shrink: 0; border-bottom: 1px solid #222;
         }
         .header-left, .header-right { display: flex; align-items: center; gap: 3px; height: 100%; }
         .sep-svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
-
         .screen-content { flex-grow: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; background: #fff; }
-        
         .screen-footer {
             background: linear-gradient(to bottom, #002b66, #001333); color: #ffffff; display: flex; justify-content: space-between;
             align-items: center; font-size: 11px; height: 20px; flex-shrink: 0; border-top: 1px solid #000;
@@ -198,10 +174,14 @@
         .menu-row { padding: 3px 6px; font-size: 12px; color: #000; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f0f2f5; }
         .menu-row.selected { background: #005bb5; color: #ffffff !important; font-weight: bold; }
         .menu-row.selected span { color: #ffffff !important; }
+        .sepura-grid-menu { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 3px; padding: 4px; background: #fff; }
+        .sepura-grid-item { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; padding: 2px; position: relative; background: #f8fafc; }
+        .sepura-grid-item.selected { background: #005bb5; border: 1.5px solid #001f4d; box-shadow: inset 0 0 4px rgba(0,0,0,0.4); }
+        .sepura-grid-item span { font-size: 9px; margin-top: 2px; color: #1e293b; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .sepura-grid-item.selected span { color: #ffffff !important; }
 
         .anropa-box { border: 1px solid #001f4d; margin: 4px 3px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; background: #ffffff; padding: 4px 6px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
         .anropa-number { font-size: 21px; text-align: right; font-weight: bold; color: #000; letter-spacing: 0.5px; margin-top: auto; padding-bottom: 4px; border-bottom: 1px solid #99aabb; font-family: 'Tahoma', sans-serif; min-height: 28px; }
-        
         .sepura-top-net { font-size: 11px; color: #000; padding: 1px 4px; border-bottom: 1px solid #ccc; background: #f4f6f9; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .volume-overlay { position: absolute; right: 5px; top: 22px; height: 145px; width: 22px; background: rgba(255,255,255,0.96); border: 1.5px solid #002855; border-radius: 3px; display: flex; flex-direction: column-reverse; padding: 2px; z-index: 100; opacity: 0; transition: opacity 0.2s; pointer-events: none; box-shadow: -2px 2px 6px rgba(0,0,0,0.35); }
         .volume-bar { width: 100%; background: #2ecc71; transition: height 0.1s; }
@@ -213,7 +193,6 @@
         .screen.profile-natt .menu-row.selected { background-color: #660000 !important; color: #fff !important; }
         .screen.emergency-mode .screen-header { background-color: #cc0000 !important; }
 
-        /* Keypad Area */
         .keypad-area { width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 0 4px; }
         .softkeys-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 2px; }
         .softkeys-row button { background: linear-gradient(to bottom, #4a4d52, #1e2023); color: #fff; border: 1px solid #000; border-radius: 5px; padding: 7px 0; font-size: 12px; font-weight: bold; box-shadow: 0 3px 5px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.15); cursor:pointer; border-bottom: 2px solid #0a0a0a; display: flex; align-items: center; justify-content: center; }
@@ -229,7 +208,7 @@
         .d-pad { display: grid; grid-template-columns: 32px 32px 32px; grid-template-rows: 32px 32px 32px; gap: 2px; justify-content: center; background: linear-gradient(135deg, #151515, #000); padding: 5px; border-radius: 50%; border: 1px solid #222; box-shadow: inset 0 0 10px rgba(0,0,0,1), 0 4px 8px rgba(0,0,0,0.7); margin: 0 auto; }
         .d-pad button { background: linear-gradient(to bottom, #3a3d42, #1a1c1e); border: 1px solid #000; color: #ddd; font-size: 11px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 3px rgba(0,0,0,0.8); cursor:pointer; }
         .d-pad button:active { background: #000; }
-        .d-up { grid-column: 2; border-radius: 8px 8px 2px 2px; } .d-down { grid-column: 2; grid-row: 3; border-radius: 2px 2px 8px 8px; } .d-left { grid-column: 1; grid-row: 2; border-radius: 8px 2px 2px 8px; } .d-right { grid-column: 3; grid-row: 2; border-radius: 2px 8px 8px 2px; } 
+        .d-up { grid-column: 2; border-radius: 8px 8px 2px 2px; } .d-down { grid-column: 2; grid-row: 3; border-radius: 2px 2px 8px 8px; } .d-left { grid-column: 1; grid-row: 2; border-radius: 8px 2px 2px 8px; } .d-right { grid-column: 3; grid-row: 2; border-radius: 2px 8px 8px 2px; }
         .d-center { grid-column: 2; grid-row: 2; border-radius: 50%; background: radial-gradient(circle, #5a5e65, #2a2c30) !important; font-weight: bold; font-size: 10px !important; border: 2px solid #000 !important; color: white !important; }
 
         .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 0; margin-top: 2px;}
@@ -237,7 +216,7 @@
         .numpad button:active { background: #0a0a0a; transform: translateY(2px); }
         .numpad span { font-size: 9px; color: #999; letter-spacing: 0.5px; font-weight: normal; text-shadow: none; }
 
-        /* Step 2: Tactical RLC Command Center Dashboard */
+        /* Tactical RLC Command Center */
         .rlc-dashboard {
             position: fixed; top: 42px; left: 0; right: 0; bottom: 0;
             background: #0b1017; color: #e2e8f0; z-index: 1200;
@@ -246,104 +225,55 @@
         }
         .rlc-dashboard.active { display: grid; }
         @media (max-width: 1024px) {
-            .rlc-dashboard.active {
-                grid-template-columns: 1fr; grid-template-rows: auto 380px auto;
-                overflow-y: auto;
-            }
+            .rlc-dashboard.active { grid-template-columns: 1fr; grid-template-rows: auto 380px auto; overflow-y: auto; }
         }
         .rlc-panel {
             background: linear-gradient(180deg, #131c28 0%, #0e151f 100%);
             border: 1px solid #26354a; border-radius: 10px;
-            display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.6);
         }
         .rlc-panel-header {
             background: linear-gradient(90deg, #17263b, #0f1926);
             padding: 10px 14px; border-bottom: 1px solid #2a3f5a;
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 12px; font-weight: 800; letter-spacing: 0.8px; color: #7cc4fa;
-            text-transform: uppercase;
+            font-size: 12px; font-weight: 800; letter-spacing: 0.8px; color: #7cc4fa; text-transform: uppercase;
         }
-        .rlc-panel-body {
-            flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;
-        }
+        .rlc-panel-body { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .rlc-unit-card {
             background: #172231; border: 1px solid #2b3c54; border-radius: 8px;
             padding: 9px 11px; display: flex; flex-direction: column; gap: 6px;
-            transition: border-color 0.15s, background 0.15s;
         }
-        .rlc-unit-card:hover { border-color: #4a90e2; background: #1c293b; }
         .rlc-unit-card.emergency { border-color: #ff3b30; background: rgba(231, 76, 60, 0.18); animation: pulseRed 1s infinite; }
         .rlc-unit-card.req-call { border-color: #f39c12; background: rgba(243, 156, 18, 0.15); }
         @keyframes pulseRed { 0%, 100% { box-shadow: 0 0 0 rgba(255,59,48,0); } 50% { box-shadow: 0 0 14px rgba(255,59,48,0.8); } }
-        .rlc-status-pill {
-            font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px;
-            display: inline-block; text-transform: uppercase;
-        }
+        .rlc-status-pill { font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px; display: inline-block; text-transform: uppercase; }
         .status-free { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #27ae60; }
         .status-busy { background: rgba(52, 152, 219, 0.2); color: #5dade2; border: 1px solid #2980b9; }
         .status-warn { background: rgba(243, 156, 18, 0.25); color: #f1c40f; border: 1px solid #d68910; }
         .status-alarm { background: rgba(231, 76, 60, 0.3); color: #ff6b6b; border: 1px solid #e74c3c; }
-
-        .rlc-btn-sm {
-            background: #223247; color: #dbeafe; border: 1px solid #3b5270;
-            border-radius: 5px; padding: 4px 8px; font-size: 11px; font-weight: bold;
-            cursor: pointer; transition: background 0.12s;
-        }
+        .rlc-btn-sm { background: #223247; color: #dbeafe; border: 1px solid #3b5270; border-radius: 5px; padding: 4px 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
         .rlc-btn-sm:hover { background: #2d4360; }
         .rlc-btn-sm.call { background: #1e8449; border-color: #2ecc71; color: #fff; }
         .rlc-btn-sm.hr { background: #005bb5; border-color: #66a3ff; color: #fff; }
 
         #rlcMapContainer { flex: 1; width: 100%; height: 100%; min-height: 300px; background: #090d12; position: relative; z-index: 1; }
-        .rlc-map-toolbar {
-            display: flex; gap: 6px; padding: 8px 10px; background: #101823;
-            border-top: 1px solid #26354a; align-items: center; flex-wrap: wrap; font-size: 11px;
-        }
-        .map-unit-label {
-            background: rgba(15, 23, 34, 0.92); color: #fff; border: 1.5px solid #3498db;
-            border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: bold;
-            white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.7);
-        }
-        .map-hr-label {
-            background: rgba(192, 57, 43, 0.95); color: #fff; border: 1.5px solid #ffeb3b;
-            border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: bold;
-            white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.8);
-        }
+        .rlc-map-toolbar { display: flex; gap: 6px; padding: 8px 10px; background: #101823; border-top: 1px solid #26354a; align-items: center; flex-wrap: wrap; font-size: 11px; }
+        .map-unit-label { background: rgba(15, 23, 34, 0.92); color: #fff; border: 1.5px solid #3498db; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+        .map-hr-label { background: rgba(192, 57, 43, 0.95); color: #fff; border: 1.5px solid #ffeb3b; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.8); }
 
         .rlc-tg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-        .rlc-tg-chip {
-            background: #16202e; border: 1px solid #2b3c54; border-radius: 6px;
-            padding: 5px 7px; font-size: 11px; display: flex;
-            justify-content: space-between; align-items: center; color: #cbd5e1;
-            transition: all 0.15s;
-        }
+        .rlc-tg-chip { background: #16202e; border: 1px solid #2b3c54; border-radius: 6px; padding: 5px 7px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; color: #cbd5e1; }
         .rlc-tg-chip.monitored { border-left: 3px solid #2ecc71; }
         .rlc-tg-chip.muted { opacity: 0.55; border-left: 3px solid #64748b; background: #0c121a; }
         .rlc-tg-chip.selected-tx { background: #003f80; border-color: #66a3ff; color: #fff; font-weight: bold; }
         .rlc-tg-chip.rx-active { background: #1e8449 !important; border-color: #2ecc71 !important; color: #fff !important; font-weight: bold; box-shadow: 0 0 10px rgba(46,204,113,0.5); }
         .rlc-tg-name { cursor: pointer; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .rlc-mon-btn {
-            background: #223247; border: 1px solid #3b5270; color: #94a3b8;
-            border-radius: 4px; padding: 2px 5px; font-size: 10px; cursor: pointer;
-            margin-left: 4px; font-weight: bold; line-height: 1.1;
-        }
+        .rlc-mon-btn { background: #223247; border: 1px solid #3b5270; color: #94a3b8; border-radius: 4px; padding: 2px 5px; font-size: 10px; cursor: pointer; margin-left: 4px; font-weight: bold; line-height: 1.1; }
         .rlc-mon-btn.active { background: #145a32; border-color: #2ecc71; color: #82e0aa; }
-        .rlc-ptt-box {
-            background: linear-gradient(135deg, #d35400, #a04000); color: #fff;
-            border: 2px solid #f39c12; border-radius: 8px; padding: 12px;
-            text-align: center; font-weight: 900; font-size: 13px; cursor: pointer;
-            letter-spacing: 0.8px; user-select: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
+        .rlc-ptt-box { background: linear-gradient(135deg, #d35400, #a04000); color: #fff; border: 2px solid #f39c12; border-radius: 8px; padding: 12px; text-align: center; font-weight: 900; font-size: 13px; cursor: pointer; letter-spacing: 0.8px; user-select: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .rlc-ptt-box:active, .rlc-ptt-box.transmitting { background: #c0392b; border-color: #ff6b6b; transform: scale(0.99); }
-        .rlc-form-input, .rlc-form-select, .rlc-form-textarea {
-            width: 100%; background: #0b111a; color: #fff; border: 1px solid #2c3e55;
-            border-radius: 6px; padding: 7px 9px; font-size: 12px; font-family: inherit;
-        }
-        .rlc-log-box {
-            background: #080c11; border: 1px solid #1e2c3d; border-radius: 6px;
-            padding: 6px 8px; font-family: monospace; font-size: 11px;
-            max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
-        }
+        .rlc-form-input, .rlc-form-select, .rlc-form-textarea { width: 100%; background: #0b111a; color: #fff; border: 1px solid #2c3e55; border-radius: 6px; padding: 7px 9px; font-size: 12px; font-family: inherit; }
+        .rlc-log-box { background: #080c11; border: 1px solid #1e2c3d; border-radius: 6px; padding: 6px 8px; font-family: monospace; font-size: 11px; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
         .leaflet-dark-tiles { filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(90%); }
     </style>
 </head>
@@ -371,16 +301,11 @@
     window.multiplayerEnabled = false;
     window.localSentTxIds = new Set();
 
-    // Cross-tab echo blocker: Prevents other open tabs on the same PC from playing back your own voice
     const localTxChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('rakel_local_tx_guard') : null;
     if (localTxChannel) {
         localTxChannel.onmessage = (ev) => {
-            if (ev.data && ev.data.txId) {
-                window.localSentTxIds.add(ev.data.txId);
-            }
-            if (ev.data && ev.data.txTime) {
-                window.lastSameMachineTxTime = ev.data.txTime;
-            }
+            if (ev.data && ev.data.txId) window.localSentTxIds.add(ev.data.txId);
+            if (ev.data && ev.data.txTime) window.lastSameMachineTxTime = ev.data.txTime;
         };
     }
 
@@ -399,7 +324,6 @@
         if (auth && auth.currentUser && data.senderId === auth.currentUser.uid) return true;
         if (data.txId && window.localSentTxIds.has(data.txId)) return true;
         if (data.fromTactical && data.fromTactical === window.MY_TACTICAL) return true;
-        // If both sender and receiver are RLC 9-7 console, never play back own RLC dispatch
         if (window.isRlcViewActive && window.isRlcViewActive() && data.fromTactical === "RLC 9-7") return true;
         let lastLocalTx = window.lastSameMachineTxTime || 0;
         try {
@@ -414,21 +338,17 @@
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        
         await signInAnonymously(auth);
         window.multiplayerEnabled = true;
-        
+
         const sessionStartTime = Date.now();
-        
-        const qAudio = query(collection(db, 'transmissions'));
-        onSnapshot(qAudio, (snapshot) => {
+
+        onSnapshot(query(collection(db, 'transmissions')), (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const data = change.doc.data();
                     if (data.timestamp > sessionStartTime && !isEchoFromThisMachine(data)) {
-                        if (window.onRlcAudioMonitor) {
-                            window.onRlcAudioMonitor(data);
-                        }
+                        if (window.onRlcAudioMonitor) window.onRlcAudioMonitor(data);
                         if (window.shouldReceiveTransmission && window.shouldReceiveTransmission(data.tg, data.isBridged)) {
                             window.enqueueMultiplayerAudio(data.audioData, data.tg, data.fromMsisdn);
                         }
@@ -437,8 +357,7 @@
             });
         }, (err) => console.warn("Audio snapshot warning:", err));
 
-        const qSds = query(collection(db, 'sds'));
-        onSnapshot(qSds, (snapshot) => {
+        onSnapshot(query(collection(db, 'sds')), (snapshot) => {
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const data = change.doc.data();
@@ -463,8 +382,7 @@
             const now = Date.now();
             const byTactical = new Map();
             for (const d of rawList) {
-                if (!d || !d.tactical) continue;
-                if (d.status === "Avstängd") continue;
+                if (!d || !d.tactical || d.status === "Avstängd") continue;
                 if (now - (d.timestamp || 0) >= PRESENCE_TIMEOUT_MS) continue;
                 const existing = byTactical.get(d.tactical);
                 if (!existing || (d.timestamp || 0) > (existing.timestamp || 0)) {
@@ -474,14 +392,12 @@
             return Array.from(byTactical.values());
         }
 
-        const qPresence = query(collection(db, 'presence'));
-        onSnapshot(qPresence, (snapshot) => {
+        onSnapshot(query(collection(db, 'presence')), (snapshot) => {
             const now = Date.now();
             let raw = [];
             snapshot.forEach((docSnap) => {
                 const d = docSnap.data();
                 if (!d || !d.tactical || (now - (d.timestamp || 0) >= PRESENCE_TIMEOUT_MS) || d.status === "Avstängd") {
-                    // Automatically delete stale/disconnected ghost units from Firestore
                     if (now - (d?.timestamp || 0) >= 25000 || d?.status === "Avstängd") {
                         deleteDoc(doc(db, 'presence', docSnap.id)).catch(() => {});
                     }
@@ -494,7 +410,6 @@
             if (window.refreshRlcDashboard) window.refreshRlcDashboard();
         }, (err) => console.warn("Presence snapshot warning:", err));
 
-        // Local pruning timer every 4 seconds so units disappear automatically even if no new database write occurs
         setInterval(() => {
             if (window.liveConnectedUnits && window.liveConnectedUnits.length > 0) {
                 const beforeCount = window.liveConnectedUnits.length;
@@ -508,9 +423,7 @@
 
         window.removePresenceNow = async function() {
             if (auth && auth.currentUser && db) {
-                try {
-                    await deleteDoc(doc(db, 'presence', auth.currentUser.uid));
-                } catch (e) {}
+                try { await deleteDoc(doc(db, 'presence', auth.currentUser.uid)); } catch (e) {}
             }
         };
 
@@ -539,7 +452,6 @@
             } catch (e) { console.warn("Purge warning:", e); }
         };
 
-        // Immediately remove user from presence when closing tab/app
         window.addEventListener('pagehide', () => { if (window.removePresenceNow) window.removePresenceNow(); });
         window.addEventListener('beforeunload', () => { if (window.removePresenceNow) window.removePresenceNow(); });
 
@@ -570,23 +482,7 @@
             }
         };
 
-        setInterval(() => {
-            if (window.syncPresenceNow) window.syncPresenceNow();
-        }, 8000);
-
-        window.dbGetOnlineUsers = async function() {
-            let online = [];
-            const querySnapshot = await getDocs(collection(db, 'presence'));
-            const now = Date.now();
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                if(data.issi !== window.MY_ISSI && data.status !== "Avstängd" && (now - data.timestamp < PRESENCE_TIMEOUT_MS)) {
-                    const aliasStr = data.alias ? ` ${data.alias}` : '';
-                    online.push(`${data.tactical || data.issi}${aliasStr} (${data.tg} • ${data.status || 'Aktiv'})`);
-                }
-            });
-            return online;
-        };
+        setInterval(() => { if (window.syncPresenceNow) window.syncPresenceNow(); }, 8000);
 
         window.dbSendSds = async function(toIssi, msgText, extra = {}) {
             if(!auth || !auth.currentUser) return;
@@ -622,7 +518,6 @@
                 timestamp: Date.now()
             });
 
-            // Automatic Gateway Bridge in Cloud: If Gateway is active between DMO and TMO, bridge the transmission!
             const gw = window.getAnyActiveGateway ? window.getAnyActiveGateway() : null;
             if (gw && gw.active) {
                 const bridgeTxId = `${txId}_gw`;
@@ -654,7 +549,7 @@
                 }
             }
         };
-    } catch (e) { 
+    } catch (e) {
         console.warn("Firebase Offline Mode:", e.message);
     }
 </script>
@@ -662,22 +557,21 @@
 <!-- TOP BAR -->
 <div class="top-bar" id="topBar">
     <div class="top-bar-group">
-        <button class="top-btn" id="rlcViewToggleBtn" onclick="toggleRlcViewMode()" style="background:linear-gradient(to bottom,#8e44ad,#5b2c6f);border-color:#d2b4de;" title="Växla mellan Handterminal (SC21) och Taktisk RLC-central för dator">🖥️ RLC-vy</button>
+        <button class="top-btn" id="rlcViewToggleBtn" onclick="toggleRlcViewMode()" style="background:linear-gradient(to bottom,#8e44ad,#5b2c6f);border-color:#d2b4de;">🖥️ RLC-vy</button>
         <button class="top-btn" id="gwPanelBtn" onclick="toggleVehiclePanel()">🚓 Gateway</button>
-        <button class="top-btn active-gw" id="spontanBtn" onclick="toggleSpontaneousMode()" title="Slå på/av spontana utlarmningar när du är Klar, ledig">🚨 Spontan: PÅ</button>
-        <button class="top-btn" onclick="triggerSpontaneousDispatch(true)" title="Tvinga RLC att ropa ut ett larm direkt">⚡ Larma</button>
+        <button class="top-btn active-gw" id="spontanBtn" onclick="toggleSpontaneousMode()">🚨 Spontan: PÅ</button>
+        <button class="top-btn" onclick="triggerSpontaneousDispatch(true)">⚡ Larma</button>
     </div>
     <div class="top-bar-group" style="justify-content:flex-end;">
-        <span class="device-badge" id="myCallsignBadge" onclick="showCallsignToast()" title="Klicka för att visa eller ändra ditt anropsnummer och namn">🆔 --</span>
-        <button class="top-btn" id="onlineUnitsBtn" onclick="toggleOnlineUnitsModal()" title="Se alla uppkopplade patruller">👥 1</button>
-        <button class="top-btn" id="apiKeyBtn" onclick="promptApiKey()" title="Ställ in Gemini API-nyckel">🔑</button>
+        <span class="device-badge" id="myCallsignBadge" onclick="showCallsignToast()">🆔 --</span>
+        <button class="top-btn" id="onlineUnitsBtn" onclick="toggleOnlineUnitsModal()">👥 1</button>
+        <button class="top-btn" id="apiKeyBtn" onclick="promptApiKey()">🔑</button>
         <button class="top-btn" onclick="toggleLathund()">📘 Manual</button>
     </div>
 </div>
 
 <!-- STEP 2: RLC COMMAND CENTER VIEW -->
 <div class="rlc-dashboard" id="rlcDashboard">
-    <!-- Left Panel: Connected Patrols & Gateway Bridge -->
     <div class="rlc-panel">
         <div class="rlc-panel-header">
             <span>🚔 Uppkopplade Patruller (Live)</span>
@@ -692,12 +586,11 @@
             <div style="margin-top:auto;padding-top:8px;border-top:1px solid #223247;display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="rlc-btn-sm" style="flex:1;" onclick="addSimulatedDemoPatrol()">➕ Övningspatrull</button>
                 <button class="rlc-btn-sm" onclick="clearSimulatedPatrols()">🗑️ Rensa demo</button>
-                <button class="rlc-btn-sm" onclick="if(window.purgeAllGhostUnitsNow) window.purgeAllGhostUnitsNow()" title="Rensa bort gamla inaktiva sessioner ur listan">🧹 Rensa spöken</button>
+                <button class="rlc-btn-sm" onclick="if(window.purgeAllGhostUnitsNow) window.purgeAllGhostUnitsNow()">🧹 Rensa spöken</button>
             </div>
         </div>
     </div>
 
-    <!-- Center Panel: Google Maps Tactical View -->
     <div class="rlc-panel">
         <div class="rlc-panel-header">
             <span>🗺️ Taktisk Lägeskarta (Google Maps • GPS Live)</span>
@@ -710,12 +603,11 @@
         <div id="rlcMapContainer"></div>
         <div class="rlc-map-toolbar">
             <span style="color:#8bbfff;font-weight:bold;">📍 Tips:</span>
-            <span>Klicka var som helst på kartan för att sätta position för ett nytt HR-larm.</span>
-            <button class="rlc-btn-sm" style="margin-left:auto;" onclick="fitAllRlcMarkers()">🎯 Centrera alla enheter</button>
+            <span>Klicka på kartan för att välja plats för nytt HR.</span>
+            <button class="rlc-btn-sm" style="margin-left:auto;" onclick="fitAllRlcMarkers()">🎯 Centrera alla</button>
         </div>
     </div>
 
-    <!-- Right Panel: RLC Radio Console & HR Dispatch -->
     <div class="rlc-panel">
         <div class="rlc-panel-header">
             <span>🎙️ RLC 9-7 Radiobord & Utlarmning</span>
@@ -725,9 +617,9 @@
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
                 <span style="font-size:11px;font-weight:bold;color:#94a3b8;">1. FLERKANALSPASSNING & SÄNDNING:</span>
                 <div style="display:flex;gap:4px;">
-                    <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(true)" title="Passa alla talgrupper samtidigt">👂 Alla</button>
-                    <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(false)" title="Passa enbart vald sändningskanal">🎯 Endast TX</button>
-                    <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()" title="Klicka för att testa och låsa upp ljudutgång">🔊 Test</button>
+                    <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(true)">👂 Alla</button>
+                    <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(false)">🎯 Endast TX</button>
+                    <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()">🔊 Test</button>
                 </div>
             </div>
             <div class="rlc-tg-grid" id="rlcTgSelectorGrid"></div>
@@ -735,8 +627,18 @@
                 <select id="rlcAddTgSelect" class="rlc-form-select" style="font-size:11px;padding:5px 7px;">
                     <option value="">➕ Lägg till talgrupp på radiobordet...</option>
                     <option value="LPO Sorgenfri">LPO Sorgenfri (7102)</option>
+                    <option value="IGV PO2 MPU">IGV PO2 MPU (7012)</option>
+                    <option value="IGV PO3 MPU">IGV PO3 MPU (7013)</option>
+                    <option value="IGV PO4 MPU">IGV PO4 MPU (7014)</option>
+                    <option value="IGV PO5 MPU">IGV PO5 MPU (7015)</option>
+                    <option value="Insats 2 MPU">Insats 2 MPU (702)</option>
+                    <option value="Insats 21 MPU">Insats 21 MPU (721)</option>
+                    <option value="Insats 22 MPU">Insats 22 MPU (722)</option>
+                    <option value="Trafik 1 MPU">Trafik 1 MPU (7601)</option>
+                    <option value="Polkon 1 MPU">Polkon 1 MPU (7701)</option>
                     <option value="SAMV Pol">SAMV Pol (801)</option>
                     <option value="RAPS 1 Syd">RAPS 1 Syd (111)</option>
+                    <option value="RAPS 2 Syd">RAPS 2 Syd (112)</option>
                     <option value="RLC POL MPU">RLC POL MPU (970)</option>
                     <option value="Alla DMO 2">Alla DMO 2 (9042)</option>
                 </select>
@@ -756,7 +658,7 @@
 
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:11px;font-weight:bold;color:#94a3b8;">2. SKAPA & LARMA UT HR (ÄRENDE):</span>
-                <button class="rlc-btn-sm" onclick="generateAiHrForConsole()">🤖 AI-förslag</button>
+                <button class="rlc-btn-sm" onclick="generateAiHrForConsole()">🤖 Förslag</button>
             </div>
             <select id="rlcHrTypeSelect" class="rlc-form-select" onchange="prefillHrTemplate()">
                 <option value="Pågående inbrott">Pågående inbrott (Prio 1)</option>
@@ -764,15 +666,15 @@
                 <option value="Pågående misshandel / bråk">Pågående misshandel / bråk (Prio 1)</option>
                 <option value="Misstänkt rattfylleri">Misstänkt rattfylleri (Prio 2)</option>
                 <option value="Farligt föremål / person med vapen">Person med vapen (Prio 1)</option>
-                <option value="Eget ärende">Eget ärende / Fritext</option>
             </select>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
-                <input type="text" id="rlcHrAddressInput" class="rlc-form-input" placeholder="Plats / Adress (eller klicka på kartan)" value="Storgatan 15, Malmö">
+                <input type="text" id="rlcHrAddressInput" class="rlc-form-input" value="Storgatan 15, Malmö">
                 <select id="rlcHrAssignTg" class="rlc-form-select">
                     <option value="IGV PO1 MPU">TG: IGV PO1 MPU</option>
                     <option value="Insats 11 MPU">TG: Insats 11 MPU</option>
                     <option value="Insats 12 MPU">TG: Insats 12 MPU</option>
                     <option value="Insats 1 MPU">TG: Insats 1 MPU</option>
+                    <option value="RAPS 1 Syd">TG: RAPS 1 Syd</option>
                     <option value="Alla DMO 1">TG: Alla DMO 1 (GW)</option>
                 </select>
             </div>
@@ -791,7 +693,7 @@
     </div>
 </div>
 
-<!-- CUSTOM INPUT MODAL (No browser prompt/alert!) -->
+<!-- CUSTOM INPUT MODAL -->
 <div class="modal-overlay" id="customInputModal">
     <div class="input-modal-box">
         <h4 id="customInputTitle">Ange text</h4>
@@ -854,7 +756,7 @@
     </div>
     <div class="vp-controls">
         <div>
-            <label style="font-size:10px;color:#aaa;">TMO Ordertalgrupp:</label>
+            <label style="font-size:10px;color:#aaa;">TMO Nättalgrupp:</label>
             <select id="vpTmoSelect" onchange="updateGatewayConfig()">
                 <option value="Insats 12 MPU|712">Insats 12 MPU (712)</option>
                 <option value="Insats 11 MPU|711">Insats 11 MPU (711)</option>
@@ -874,7 +776,7 @@
     </div>
 </div>
 
-<!-- MANUAL / KNOWLEDGE BASE MODAL (No PIN code revealed!) -->
+<!-- MANUAL MODAL -->
 <div class="modal-overlay" id="lathundModal">
     <div class="modal-content">
         <button class="modal-close" onclick="toggleLathund()">Stäng</button>
@@ -888,36 +790,46 @@
         <div id="kb-start" class="kb-section active">
             <h3>Starta & Stänga av</h3>
             <p>• <b>Starta radion:</b> Håll in <b>Röd lur</b> i cirka 1,5 sekunder tills skärmen tänds och ange din behörighetskod.<br>
-               • <b>Namn / Alias:</b> Klicka på <b>🆔</b>-knappen högst upp för att skriva in ditt namn efter ditt anropsnummer (t.ex. <i>97-6571 • Kalle</i>).</p>
+               • <b>Uttal av anropsnummer:</b> RLC uttalas en siffra i taget (t.ex. <i>nio sju</i> för 9-7). Patruller uttalas två siffror i taget (t.ex. <i>97 65 10</i>).</p>
             <h3>Statusmeddelanden</h3>
             <p>• <b>Påbörjat uppdrag:</b> Tryck på <b>Pil Vänster (◄)</b> eller <b>Pil Höger (►)</b> i grundläget.<br>
                • <b>Klar, ledig:</b> Dubbelklicka snabbt (2x) på <b>Mitten valknapp (ם)</b>.<br>
-               • <b>Statusmeny (t.ex. 16 Biträde önskas):</b> Öppnas via <b>Meny</b> ➔ <i>Statusmeny</i>.</p>
+               • <b>Alla statusar:</b> Öppnas via <b>Meny</b> ➔ <i>Statusmeny</i> (Klar ledig, Påbörjat uppdrag, Framme på plats, Upptagen, Disponibel, 16 Biträde önskas, Anropsbegäran, Rapport, Utgår).</p>
         </div>
         <div id="kb-tg" class="kb-section">
             <h3>Mappnavigering & Indexering</h3>
             <p>• <b>Öppna talgrupper:</b> Tryck på <b>Mitten valknapp (ם / Grupper)</b> i grundläget.<br>
                • <b>Bläddra mapp:</b> Använd <b>Pil Vänster (◄)</b> och <b>Pil Höger (►)</b>.<br>
-               • <b>Bläddra talgrupp:</b> Använd <b>Pil Upp (▲)</b> / <b>Pil Ner (▼)</b> eller vrid på <b>Navi-ratten</b>.<br>
-               • <b>Indexering:</b> När du är inne i <i>Välj talgrupp</i> kan du slå siffror direkt (t.ex. <b>712</b> för Insats 12 MPU eller <b>970</b> för RLC POL MPU) och trycka <b>OK</b>.</p>
+               • <b>Indexering:</b> Inne i <i>Välj talgrupp</i> kan du slå siffror direkt (t.ex. <b>712</b> för Insats 12 MPU, <b>111</b> för RAPS 1 Syd eller <b>970</b> för RLC POL MPU) och trycka <b>OK</b>.</p>
+            <h3>Bygga egen Skanningslista (SKAN 17 / 18 / 19)</h3>
+            <p>1. Gå till <b>Meny</b> ➔ <b>Talgrupper / Skanning</b> ➔ <b>Skanningslistor</b> och välj t.ex. <b>17 SKAN 17</b>.<br>
+               2. <b>Lägg till talgrupper (max 10):</b> Tryck <b>Mer</b> (vänster valknapp) ➔ <i>Lägg till talgrupp</i> och bläddra fram talgruppen med ◄/► och ▲/▼.<br>
+               3. <b>Prioritera (▼ Låg / ▲ Hög):</b> Tryck <b>Pil Vänster (◄)</b> på raden (eller klicka på triangeln). Ordertalgrupper har röd triangel (▲ Hög).<br>
+               4. <b>Välj till displayen (🔵):</b> Tryck <b>Pil Höger (►)</b> på raden (eller klicka på cirkeln) för att sätta den blå pricken.<br>
+               5. Tryck <b>Spara</b> (mitten valknapp)!</p>
         </div>
         <div id="kb-call" class="kb-section">
+            <h3>Programmera Direktval (DV 1, 7, 9 m.fl.)</h3>
+            <p>• Gå till <b>Meny</b> ➔ <b>Talgrupper / Skanning</b> ➔ <b>Direktval</b>.<br>
+               • Markera t.ex. <b>Direktval 1</b>, <b>Direktval 7</b> eller <b>Direktval 9</b> och tryck <b>Mer</b>:<br>
+               &nbsp;&nbsp;- <b>Välj talgrupp:</b> Bläddra fram valfri talgrupp eller skanningslista (t.ex. från mappen <i>SKAN MPU</i>) och tryck <b>Välj</b>.<br>
+               &nbsp;&nbsp;- <b>Välj:</b> Lägger direkt in den talgrupp eller skanningslista du just nu har framme i displayen på direktvalet.</p>
             <h3>Individanrop & Direktval (Långtryck)</h3>
-            <p>• <b>Slå nummer i grundläge:</b> Slå valfria siffror i grundläget för att öppna <b>Anropa</b>-fönstret. Byt anropstyp (MSISDN / ISSI / Telefon) med <b>Pil Upp/Ner</b>. Ring med <b>PTT</b> eller <b>Grön lur</b>.<br>
-               • <b>Se eget ISSI:</b> Slå <b>*477</b> i grundläget.<br>
+            <p>• <b>Slå nummer i grundläge:</b> Slå valfria siffror i grundläget för att öppna <b>Anropa</b>-fönstret.<br>
                • <b>Långtryck (Direktval):</b><br>
-               &nbsp;&nbsp;- <b>Håll in 1:</b> Normalpassning (SKAN IGV PO1 MPU + Skanning PÅ)<br>
-               &nbsp;&nbsp;- <b>Håll in 2 (eller sidoknapp A):</b> Anropsbegäran till RLC<br>
-               &nbsp;&nbsp;- <b>Håll in 3 / 4 / 5:</b> Insats 1 / Insats 11 / Insats 12<br>
-               &nbsp;&nbsp;- <b>Håll in 6:</b> Toggla föregående talgrupp<br>
-               &nbsp;&nbsp;- <b>Håll in 8:</b> Växla Nätläge (TMO) / Direktläge (DMO)<br>
-               &nbsp;&nbsp;- <b>Håll in 9:</b> Alla DMO 1<br>
+               &nbsp;&nbsp;- <b>DV 1:</b> Normalpassning (SKAN IGV PO1 MPU + Skanning PÅ)<br>
+               &nbsp;&nbsp;- <b>DV 2 (eller sidoknapp A):</b> Anropsbegäran till RLC<br>
+               &nbsp;&nbsp;- <b>DV 3 / 4 / 5:</b> Insats 1 / Insats 11 / Insats 12<br>
+               &nbsp;&nbsp;- <b>DV 6:</b> Toggla föregående talgrupp<br>
+               &nbsp;&nbsp;- <b>DV 7:</b> SAMV Pol (801)<br>
+               &nbsp;&nbsp;- <b>DV 8:</b> Välj driftsätt: Nätläge (TMO) / Direktläge (DMO)<br>
+               &nbsp;&nbsp;- <b>DV 9:</b> RAPS 1 Syd (111)<br>
                &nbsp;&nbsp;- <b>Håll in *:</b> Knapplås PÅ/AV &nbsp;|&nbsp; <b>Håll in #:</b> Smartmeny</p>
         </div>
         <div id="kb-rlc" class="kb-section">
-            <h3>🖥️ RLC-vy & Gateway</h3>
-            <p>• <b>RLC-central på dator:</b> Klicka på <b>🖥️ RLC-vy</b> uppe till vänster för att se alla uppkopplade patruller på Google Maps, medlyssna på alla talgrupper samtidigt (även om handterminalen i bakgrunden är avstängd), skicka HR-larm, ringa upp enskilda patruller och sända som RLC 9-7.<br>
-               • <b>Gateway (SRG3900):</b> När en patrull är i <b>DMO</b> (t.ex. <i>Alla DMO 1</i>) och fordonsterminalen har <b>Gateway</b> aktiv mot t.ex. <i>Insats 12 MPU</i> bryggas allt tal i båda riktningarna mellan DMO och RLC.</p>
+            <h3>🖥️ DMO-spärr & Gateway</h3>
+            <p>• <b>Direktläge (DMO):</b> När du är i DMO har radion ingen direktkontakt med Rakel-nätet och kan varken ta emot samtal från RLC eller skicka status till RLC.<br>
+               • <b>Gateway (SRG3900):</b> Om fordonsterminalen har <b>Gateway</b> aktiv på din DMO-talgrupp bryggas trafiken så att du når RLC även i DMO.</p>
         </div>
     </div>
 </div>
@@ -926,19 +838,19 @@
 <div id="scale-wrapper">
     <div class="radio-body" id="radioBody">
         <div class="antenna"></div>
-        <div class="vol-knob" onwheel="handleKnobScroll(event)" title="Skrolla eller klicka för att ändra volym / bläddra">
+        <div class="vol-knob" onwheel="handleKnobScroll(event)">
             <div class="knob-half" onpointerdown="turnKnob('left')">◄</div>
             <div class="knob-half" onpointerdown="turnKnob('right')">►</div>
         </div>
-        
+
         <div class="emergency-btn-guard">
-            <button class="emergency-btn" onpointerdown="startEmergencyBtn()" onpointerup="stopEmergencyBtn()" onpointerleave="stopEmergencyBtn()" title="Håll in 2 sek för Nödlarm / Förtursanrop"></button>
+            <button class="emergency-btn" onpointerdown="startEmergencyBtn()" onpointerup="stopEmergencyBtn()" onpointerleave="stopEmergencyBtn()"></button>
         </div>
-        
-        <button class="side-btn side-btn-a" onpointerdown="startSideA()" onpointerup="stopSideA()" onpointerleave="stopSideA()" title="A: Anropsbegäran RLC">A</button>
-        <button class="side-btn side-btn-b" onpointerdown="pressABC('B')" title="B: Profil 5 Normal ljud">B</button>
+
+        <button class="side-btn side-btn-a" onpointerdown="startSideA()" onpointerup="stopSideA()" onpointerleave="stopSideA()">A</button>
+        <button class="side-btn side-btn-b" onpointerdown="pressABC('B')">B</button>
         <button class="ptt-btn" id="pttButton" onpointerdown="startPtt(event)" onpointerup="stopPtt(event)" onpointerleave="cancelPtt(event)" onpointercancel="cancelPtt(event)">PTT</button>
-        <button class="side-btn side-btn-c" onpointerdown="pressABC('C')" title="C: Profil 2 Natt">C</button>
+        <button class="side-btn side-btn-c" onpointerdown="pressABC('C')">C</button>
 
         <div class="led-bar">
             <div class="led-light" id="ledLeft"></div>
@@ -946,14 +858,13 @@
         </div>
         <div class="speaker-grill"></div>
         <div class="brand">sepura</div>
-        
+
         <div class="screen-bezel">
             <div class="screen off" id="screen-container">
                 <div class="volume-overlay" id="volume-overlay">
                     <div style="font-size:10px;text-align:center;">🔊</div>
                     <div class="volume-bar" id="volume-bar"></div>
                 </div>
-
                 <div class="screen-header" id="screen-header">
                     <div class="header-left" id="header-left"></div>
                     <div class="header-right" id="header-right"></div>
@@ -1017,10 +928,6 @@
     // =========================================================
     // 1. PLATFORM, SCALING & CALLSIGN/ALIAS MANAGEMENT
     // =========================================================
-    const ua = navigator.userAgent || navigator.vendor || window.opera;
-    window.IS_IOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    window.IS_ANDROID = /android/i.test(ua);
-
     function resizeRadio() {
         const wrapper = document.getElementById('scale-wrapper');
         const topBar = document.getElementById('topBar');
@@ -1028,10 +935,7 @@
         const topOffset = topBar ? (topBar.offsetHeight + topBar.offsetTop + 10) : 55;
         const availW = window.innerWidth - 16;
         const availH = window.innerHeight - topOffset - 8;
-        const totalRadioHeight = 855;
-        const scaleX = availW / 365;
-        const scaleY = availH / totalRadioHeight;
-        const scale = Math.max(0.45, Math.min(scaleX, scaleY, 1.05));
+        const scale = Math.max(0.45, Math.min(availW / 365, availH / 855, 1.05));
         wrapper.style.marginTop = `${topOffset}px`;
         wrapper.style.transform = `scale(${scale})`;
     }
@@ -1042,8 +946,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const customIdParam = urlParams.get('id');
     const customNameParam = urlParams.get('name') || "";
-    let savedFour = null;
-    let savedAlias = "";
+    let savedFour = null, savedAlias = "";
     try {
         savedFour = localStorage.getItem('rakel_saved_four');
         savedAlias = localStorage.getItem('rakel_saved_alias') || "";
@@ -1074,7 +977,6 @@
     }
     setMyNumbers(initFour);
 
-    // GPS Coordinates (Defaults to Malmö area with slight offset, updates via real GPS if permitted)
     window.MY_LAT = 55.6050 + (Math.random() - 0.5) * 0.018;
     window.MY_LNG = 13.0038 + (Math.random() - 0.5) * 0.025;
     if (navigator.geolocation) {
@@ -1107,7 +1009,7 @@
     };
 
     window.changeMyCallsign = function() {
-        askInput("Ange dina 4 sista siffror i anropsnumret (t.ex. 6571 för 97-6571):", window.MY_TACTICAL.split('-')[1], (val) => {
+        askInput("Ange dina 4 sista siffror i anropsnumret (t.ex. 6510 för 97-6510):", window.MY_TACTICAL.split('-')[1], (val) => {
             if (val && /^\d{4}$/.test(val.trim())) {
                 setMyNumbers(val.trim());
                 updateScreenDisplay();
@@ -1141,24 +1043,9 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        const field = document.getElementById('customInputField');
-        if (field) {
-            field.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') window.submitCustomPrompt();
-            });
-        }
-        const aliasInput = document.getElementById('toastAliasInput');
-        if (aliasInput) {
-            aliasInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') window.saveAliasAndCloseToast();
-            });
-        }
-        const rlcTts = document.getElementById('rlcQuickTtsInput');
-        if (rlcTts) {
-            rlcTts.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') window.sendRlcVoiceBroadcast();
-            });
-        }
+        document.getElementById('customInputField')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.submitCustomPrompt(); });
+        document.getElementById('toastAliasInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.saveAliasAndCloseToast(); });
+        document.getElementById('rlcQuickTtsInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') window.sendRlcVoiceBroadcast(); });
     });
 
     window.toggleLathund = function() {
@@ -1168,8 +1055,7 @@
     window.switchKbTab = function(tabId, btnEl) {
         document.querySelectorAll('.kb-section').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        const target = document.getElementById(tabId);
-        if (target) target.classList.add('active');
+        document.getElementById(tabId)?.classList.add('active');
         if (btnEl) btnEl.classList.add('active');
     };
 
@@ -1187,13 +1073,40 @@
             { name: "Order PO1 MPU", index: "7001", prio: "high", displayed: false },
             { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
         ]},
-        { id: 3, name: "17 SKAN 17", index: "7817", editable: true, tgs: [
-            { name: "Insats 11 MPU", index: "711", prio: "low", displayed: true },
-            { name: "Order PO1 MPU", index: "7001", prio: "high", displayed: false }
-        ]},
-        { id: 4, name: "18 SKAN 18", index: "7818", editable: true, tgs: [
-            { name: "Insats 12 MPU", index: "712", prio: "low", displayed: true },
+        { id: 3, name: "SKAN IGV PO2 MPU", index: "7803", editable: false, tgs: [
+            { name: "IGV PO2 MPU", index: "7012", prio: "low", displayed: true },
+            { name: "Order PO2 MPU", index: "7002", prio: "high", displayed: false },
             { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 4, name: "SKAN IGV PO3 MPU", index: "7804", editable: false, tgs: [
+            { name: "IGV PO3 MPU", index: "7013", prio: "low", displayed: true },
+            { name: "Order PO3 MPU", index: "7003", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 5, name: "SKAN IGV PO4 MPU", index: "7805", editable: false, tgs: [
+            { name: "IGV PO4 MPU", index: "7014", prio: "low", displayed: true },
+            { name: "Order PO4 MPU", index: "7004", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 6, name: "SKAN IGV PO5 MPU", index: "7806", editable: false, tgs: [
+            { name: "IGV PO5 MPU", index: "7015", prio: "low", displayed: true },
+            { name: "Order PO5 MPU", index: "7005", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 17, name: "17 SKAN 17", index: "7817", editable: true, tgs: [
+            { name: "Insats 11 MPU", index: "711", prio: "low", displayed: true },
+            { name: "Order PO1 MPU", index: "7001", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 18, name: "18 SKAN 18", index: "7818", editable: true, tgs: [
+            { name: "Insats 12 MPU", index: "712", prio: "low", displayed: true },
+            { name: "Order PO1 MPU", index: "7001", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 19, name: "19 SKAN 19", index: "7819", editable: true, tgs: [
+            { name: "Kom 2 LPU", index: "7902", prio: "low", displayed: true },
+            { name: "Order PO3 LPU", index: "7903", prio: "high", displayed: false },
+            { name: "Order Reg LPU", index: "7900", prio: "high", displayed: false }
         ]}
     ];
 
@@ -1201,8 +1114,27 @@
         { name: "SKAN MPU", isScanFolder: true, tgs: [
             { name: "SKAN IGV PO1 MPU", index: "7801", isScanList: true, scanId: 1 },
             { name: "SKAN LPO CENTRUM", index: "7802", isScanList: true, scanId: 2 },
-            { name: "17 SKAN 17", index: "7817", isScanList: true, scanId: 3 },
-            { name: "18 SKAN 18", index: "7818", isScanList: true, scanId: 4 }
+            { name: "SKAN IGV PO2 MPU", index: "7803", isScanList: true, scanId: 3 },
+            { name: "SKAN IGV PO3 MPU", index: "7804", isScanList: true, scanId: 4 },
+            { name: "SKAN IGV PO4 MPU", index: "7805", isScanList: true, scanId: 5 },
+            { name: "SKAN IGV PO5 MPU", index: "7806", isScanList: true, scanId: 6 },
+            { name: "17 SKAN 17", index: "7817", isScanList: true, scanId: 17 },
+            { name: "18 SKAN 18", index: "7818", isScanList: true, scanId: 18 },
+            { name: "19 SKAN 19", index: "7819", isScanList: true, scanId: 19 }
+        ]},
+        { name: "REG MPU", tgs: [
+            { name: "Order Reg MPU", index: "700" },
+            { name: "Insats 1 MPU", index: "701" },
+            { name: "Insats 2 MPU", index: "702" },
+            { name: "Insats 11 MPU", index: "711" },
+            { name: "Insats 12 MPU", index: "712" },
+            { name: "Insats 21 MPU", index: "721" },
+            { name: "Insats 22 MPU", index: "722" },
+            { name: "Övn 1 MPU", index: "731" },
+            { name: "Projekt 1 MPU", index: "741" },
+            { name: "Proj 12 MPU", index: "742" },
+            { name: "VAKTB MPU", index: "799" },
+            { name: "LKC Län", index: "600" }
         ]},
         { name: "PO 1 MPU", tgs: [
             { name: "IGV PO1 MPU", index: "7011" },
@@ -1210,42 +1142,84 @@
             { name: "LPO Sorgenfri", index: "7102" },
             { name: "Order PO1 MPU", index: "7001" }
         ]},
-        { name: "REG MPU INSATS", tgs: [
-            { name: "Insats 1 MPU", index: "701" },
-            { name: "Insats 11 MPU", index: "711" },
-            { name: "Insats 12 MPU", index: "712" },
-            { name: "Order Reg MPU", index: "700" }
+        { name: "PO 2 MPU", tgs: [
+            { name: "IGV PO2 MPU", index: "7012" },
+            { name: "LPO Lindängen", index: "7201" },
+            { name: "LPO Oxie", index: "7202" },
+            { name: "Order PO2 MPU", index: "7002" }
+        ]},
+        { name: "PO 3 MPU", tgs: [
+            { name: "IGV PO3 MPU", index: "7013" },
+            { name: "LPO Kirseberg", index: "7301" },
+            { name: "LPO V Hamnen MPU", index: "7302" },
+            { name: "Order PO3 MPU", index: "7003" },
+            { name: "Kom 2 LPU", index: "7902" },
+            { name: "Order PO3 LPU", index: "7903" },
+            { name: "Order Reg LPU", index: "7900" }
+        ]},
+        { name: "PO 4 MPU", tgs: [
+            { name: "IGV PO4 MPU", index: "7014" },
+            { name: "LPO Rosengård", index: "7401" },
+            { name: "LPO Husie", index: "7402" },
+            { name: "Order PO4 MPU", index: "7004" }
+        ]},
+        { name: "PO 5 MPU", tgs: [
+            { name: "IGV PO5 MPU", index: "7015" },
+            { name: "LPO Limhamn", index: "7501" },
+            { name: "LPO Slotts", index: "7502" },
+            { name: "Order PO5 MPU", index: "7005" }
+        ]},
+        { name: "TRAFIK", tgs: [
+            { name: "Trafik 1 MPU", index: "7601" },
+            { name: "Trafik 2 MPU", index: "7602" },
+            { name: "Trafik 3 MPU", index: "7603" },
+            { name: "Gräns 1 MPU", index: "7611" },
+            { name: "Gräns 2 MPU", index: "7612" },
+            { name: "MC MPU", index: "7621" }
+        ]},
+        { name: "POLKON PU", tgs: [
+            { name: "Polkon 1 MPU", index: "7701" },
+            { name: "Polkon 2 MPU", index: "7702" },
+            { name: "Polkon 3 MPU", index: "7703" },
+            { name: "Polkon 4 MPU", index: "7704" }
         ]},
         { name: "RLC / NLC", tgs: [
             { name: "RLC POL MPU", index: "970", rlcCode: "9-7" },
             { name: "RLC POL LPU", index: "960", rlcCode: "9-6" },
             { name: "RLC POL BPU", index: "950", rlcCode: "9-5" },
             { name: "RLC POL SPU", index: "930", rlcCode: "9-3" },
-            { name: "RLC POL UPU", index: "910", rlcCode: "9-1" }
+            { name: "RLC POL UPU", index: "910", rlcCode: "9-1" },
+            { name: "NLC POL", index: "900", rlcCode: "9-0" }
         ]},
         { name: "SAMVERKAN / RAPS", tgs: [
+            { name: "SAMV Pol", index: "801" },
+            { name: "SAMV 1 Syd", index: "811" },
             { name: "RAPS 1 Syd", index: "111" },
-            { name: "SAMV Pol", index: "801" }
+            { name: "RAPS 2 Syd", index: "112" },
+            { name: "RAPS 3 Syd", index: "113" }
         ]},
         { name: "DMO DIREKT", isDmoFolder: true, tgs: [
             { name: "Alla DMO 1", index: "9041", isDmo: true },
             { name: "Alla DMO 2", index: "9042", isDmo: true },
-            { name: "Pol 1 DMO", index: "9001", isDmo: true }
+            { name: "Pol 1 DMO", index: "9001", isDmo: true },
+            { name: "Pol 2 DMO", index: "9002", isDmo: true },
+            { name: "Pol 3 DMO", index: "9003", isDmo: true },
+            { name: "RAPS DMO 1", index: "9111", isDmo: true }
         ]}
     ];
 
-    const DMO_TG_NAMES = new Set(["Alla DMO 1", "Alla DMO 2", "Pol 1 DMO"]);
+    const DMO_TG_NAMES = new Set(["Alla DMO 1", "Alla DMO 2", "Pol 1 DMO", "Pol 2 DMO", "Pol 3 DMO", "RAPS DMO 1"]);
 
     // =========================================================
-    // 4. RADIO STATE & DEFAULT PROFILE ("5 Normal ljud")
+    // 4. RADIO STATE, FULL STATUS LIST & DMO GATEWAY CHECK
     // =========================================================
-    let powerState = 'OFF'; // Starts OFF as requested
+    let powerState = 'OFF';
     const REQUIRED_PIN = "0403";
     let isLocked = false, txInhibit = false, scanning = true, speakerMuted = false;
     let isPttActive = false, isEmergency = false, isReceivingReal = false;
     let receivingTgName = "", receivingSender = "";
     let currentMode = "TMO";
-    let currentProfile = "Normal ljud"; // Default profile 5 ("Normal ljud")
+    let currentProfile = "Normal ljud";
     let radioStatus = "Klar, ledig";
     let activeRlcCode = "9-7";
 
@@ -1260,31 +1234,70 @@
         folderName: "SKAN MPU"
     };
     let previousSelection = { ...activeSelection };
+    let lastTmoSelection = { ...activeSelection };
+    let lastDmoSelection = {
+        isScanList: false,
+        scanListObj: null,
+        tgObj: folderSystem[folderSystem.length - 1].tgs[0],
+        folderName: "DMO DIREKT"
+    };
+    let selectedScanListIdx = 0;
+
+    // Default DV assignments (DV9 = RAPS 1 Syd as standard)
+    const dvAssignments = {
+        1: "SKAN IGV PO1 MPU",
+        3: "Insats 1 MPU",
+        4: "Insats 11 MPU",
+        5: "Insats 12 MPU",
+        7: "SAMV Pol",
+        9: "RAPS 1 Syd"
+    };
+    const dvKeysOrder = ['1', '3', '4', '5', '7', '9'];
+    let selectedDvIdx = 0;
+    let dvPopupOpen = false;
+    let dvPopupIndex = 1;
+    let scanPopupOpen = false;
+    let scanPopupIndex = 0;
+    let folderPickerMode = null; // null | 'SCAN_ADD' | 'DV_ASSIGN'
 
     let pinInput = "", dialInput = "", activeCallNumber = "", callDialMode = "MSISDN";
     let volumeLevel = 7, volumeUI_Timeout = null, returnToIdleTimeout = null;
-    let emergencyInterval = null, ringingInterval = null;
+    let emergencyInterval = null, ringingInterval = null, rlcCallTimeout = null;
 
-    // Menu System States
     let menuState = "IDLE";
     let menuIndex = 0;
     const mainMenuItems = [
-        "1. Inkorg (SDS)",
-        "2. Statusmeddelanden",
-        "3. Kontakter",
-        "4. Uppkopplade patruller",
-        "5. Användarprofiler (1-5)",
-        "6. Skanningslistor",
-        "7. GPS Position",
-        "8. Radioinformation"
+        { title: "Meddelanden", short: "Meddel.", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" fill="#f39c12" stroke="#002855" stroke-width="1.5"/><polyline points="2,6 12,13 22,6" fill="none" stroke="#fff" stroke-width="1.8"/></svg>` },
+        { title: "Statusmeny", short: "Status", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="#3498db" stroke="#002855" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="8" stroke="#fff" stroke-width="2"/><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"/><line x1="8" y1="16" x2="13" y2="16" stroke="#fff" stroke-width="2"/></svg>` },
+        { title: "Talgrupper", short: "Talgrupp", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3" fill="#2980b9"/><circle cx="16" cy="8" r="3" fill="#2980b9"/><circle cx="12" cy="10" r="3.5" fill="#27ae60"/><path d="M2 19c0-3.5 8-3.5 8 0" fill="#2980b9"/><path d="M14 19c0-3.5 8-3.5 8 0" fill="#2980b9"/><path d="M6 20c0-4 12-4 12 0" fill="#27ae60"/></svg>` },
+        { title: "Driftsätt (TMO/DMO)", short: "Driftsätt", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#9b59b6" stroke="#002855" stroke-width="1.5"/><path d="M7 12h10M12 7l4 5-4 5" fill="none" stroke="#fff" stroke-width="1.8"/></svg>` },
+        { title: "Användarprofiler", short: "Profiler", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="#e67e22" stroke="#002855" stroke-width="1.5"/><path d="M5 20c0-5 14-5 14 0" fill="#e67e22" stroke="#002855" stroke-width="1.5"/></svg>` },
+        { title: "Skanningslistor", short: "Skanning", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="3" y="6" width="5" height="12" fill="#34495e"/><polygon points="8,8 16,4 16,20 8,16" fill="#f1c40f"/><rect x="16" y="6" width="5" height="12" fill="#34495e"/></svg>` },
+        { title: "Position / GPS", short: "GPS", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#1abc9c" stroke="#002855" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" fill="#fff"/><line x1="12" y1="2" x2="12" y2="6" stroke="#002855" stroke-width="2"/><line x1="12" y1="18" x2="12" y2="22" stroke="#002855" stroke-width="2"/></svg>` },
+        { title: "Kontakter", short: "Kontakt", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" fill="#2ecc71" stroke="#002855" stroke-width="1.5"/><circle cx="12" cy="9" r="3" fill="#fff"/><path d="M7 18c0-3 10-3 10 0" fill="#fff"/></svg>` },
+        { title: "Radioinformation", short: "Info", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#005bb5" stroke="#002855" stroke-width="1.5"/><text x="10" y="17" fill="#fff" font-size="13" font-weight="bold" font-family="Arial">i</text></svg>` }
     ];
+
+    const tgSubmenuItems = [
+        "Mappar",
+        "Skanningslistor",
+        "Skanning På/Av",
+        "Direktval"
+    ];
+
+    // Complete list of authentic Rakel Police statuses
     const statusMenuOptions = [
         "Klar, ledig",
         "Påbörjat uppdrag",
         "Framme på plats",
+        "Upptagen",
+        "Disponibel",
         "16 Biträde önskas",
-        "Utgår / Paus"
+        "Anropsbegäran",
+        "Rapport / Avrapportering",
+        "Utgår"
     ];
+
     const profileOptions = [
         "1 Normal tyst",
         "2 Natt",
@@ -1302,7 +1315,6 @@
         { from: "RLC 9-7", text: "Välkommen i tjänst. Anmäl Klar, ledig vid uppstart.", time: "08:00" }
     ];
 
-    // Gateway state
     let vehicleGatewayActive = false;
     let vehicleGwTmoTg = { name: "Insats 12 MPU", index: "712" };
     let vehicleGwDmoTg = { name: "Alla DMO 1", index: "9041" };
@@ -1338,13 +1350,17 @@
         return { active: false, tmo: "", dmo: "", owner: "" };
     };
 
+    // Checks if the radio can reach RLC right now (TMO always can; DMO ONLY if Gateway is active on current DMO TG)
+    window.canReachRlcNetwork = function() {
+        if (currentMode === "TMO") return true;
+        const gw = window.getAnyActiveGateway();
+        const myCurrentTg = window.getActiveTxTalkgroupName();
+        return Boolean(gw && gw.active && myCurrentTg === gw.dmo);
+    };
+
     window.getActiveTxTalkgroupName = function() {
-        if (window.isRlcViewActive()) {
-            return rlcSelectedTxTg || "IGV PO1 MPU";
-        }
-        if (currentMode === "DMO") {
-            return activeSelection.tgObj.isDmo ? activeSelection.tgObj.name : "Alla DMO 1";
-        }
+        if (window.isRlcViewActive()) return rlcSelectedTxTg || "IGV PO1 MPU";
+        if (currentMode === "DMO") return activeSelection.tgObj.isDmo ? activeSelection.tgObj.name : "Alla DMO 1";
         if (activeSelection.isScanList && activeSelection.scanListObj) {
             const disp = activeSelection.scanListObj.tgs.find(t => t.displayed) || activeSelection.scanListObj.tgs[0];
             return disp ? disp.name : activeSelection.scanListObj.name;
@@ -1353,9 +1369,7 @@
     };
 
     window.getActiveTxTalkgroupIndex = function() {
-        if (currentMode === "DMO") {
-            return activeSelection.tgObj.isDmo ? activeSelection.tgObj.index : "9041";
-        }
+        if (currentMode === "DMO") return activeSelection.tgObj.isDmo ? activeSelection.tgObj.index : "9041";
         if (activeSelection.isScanList && activeSelection.scanListObj) {
             const disp = activeSelection.scanListObj.tgs.find(t => t.displayed) || activeSelection.scanListObj.tgs[0];
             return disp ? disp.index : activeSelection.scanListObj.index;
@@ -1363,49 +1377,79 @@
         return activeSelection.tgObj.index;
     };
 
-    // Controls whether incoming audio from another unit should be played
     window.shouldReceiveTransmission = function(incomingTg, isBridged = false) {
         if (window.isRlcViewActive()) {
             const gw = window.getAnyActiveGateway();
             if (DMO_TG_NAMES.has(incomingTg)) {
                 if (gw.active && incomingTg === gw.dmo) return false;
-                return rlcMonitoredTgsSet.has(incomingTg) || rlcSelectedTxTg === incomingTg;
+                return false; // RLC cannot hear unbridged DMO directly
             }
             return rlcMonitoredTgsSet.has(incomingTg) || rlcSelectedTxTg === incomingTg;
         }
 
         if (powerState === 'OFF' || powerState === 'BOOT' || powerState === 'PIN') return false;
         const myCurrentTg = window.getActiveTxTalkgroupName();
+
+        // In DMO mode: only hear same DMO TG, or TMO traffic bridged via active Gateway
+        if (currentMode === "DMO") {
+            if (incomingTg === myCurrentTg) return true;
+            const gw = window.getAnyActiveGateway();
+            if (gw.active && !isBridged && myCurrentTg === gw.dmo && incomingTg === gw.tmo) return true;
+            return false;
+        }
+
         if (incomingTg === myCurrentTg) return true;
         if (currentMode === "TMO" && scanning && activeSelection.isScanList && activeSelection.scanListObj) {
             if (activeSelection.scanListObj.tgs.some(t => t.name === incomingTg)) return true;
         }
         const gw = window.getAnyActiveGateway();
         if (gw.active && !isBridged) {
-            if (currentMode === "DMO" && myCurrentTg === gw.dmo && incomingTg === gw.tmo) return true;
             if (currentMode === "TMO" && myCurrentTg === gw.tmo && incomingTg === gw.dmo) return true;
         }
         return false;
     };
 
     // =========================================================
-    // 5. AUDIO SYNTHESIS, MOBILE AUDIO UNLOCK & UNIVERSAL WAV ENGINE
+    // 5. SWEDISH RADIO CALLSIGN PRONUNCIATION & AUDIO ENGINE
     // =========================================================
+    const DIGIT_WORDS_SV = { '0': 'noll', '1': 'ett', '2': 'två', '3': 'tre', '4': 'fyra', '5': 'fem', '6': 'sex', '7': 'sju', '8': 'åtta', '9': 'nio' };
+
+    function formatTwoDigitPairSv(pairStr) {
+        if (!pairStr || pairStr.length !== 2) return pairStr;
+        if (pairStr[0] === '0') {
+            return `noll ${DIGIT_WORDS_SV[pairStr[1]] || pairStr[1]}`;
+        }
+        return pairStr;
+    }
+
+    // Formats RLC ("9-7" -> "nio sju") and Patrol numbers ("97-6510" -> "97 65 10")
+    window.formatSwedishRadioSpeech = function(rawText) {
+        if (!rawText) return "";
+        let txt = String(rawText);
+
+        // 1. Replace "RLC" with "R L C" or keep natural flow, and replace RLC codes like 9-7, 9-6, 9-5, 9-3, 9-1, 9-0 with single digits ("nio sju")
+        txt = txt.replace(/\b9-([0-9])\b/g, (_, d) => `nio ${DIGIT_WORDS_SV[d] || d}`);
+
+        // 2. Replace Patrol numbers like 97-6510 or 976510 with two-digit groups: "97 65 10"
+        txt = txt.replace(/\b(\d{2})-(\d{2})(\d{2})\b/g, (_, p1, p2, p3) => {
+            return `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`;
+        });
+        txt = txt.replace(/\b(97)(\d{2})(\d{2})\b/g, (_, p1, p2, p3) => {
+            return `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`;
+        });
+
+        return txt;
+    };
+
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContextClass();
-
-    // Pre-unlocked reusable HTML5 Audio element for iOS/Android fallback
     const globalAudioPlayer = new Audio();
     globalAudioPlayer.playsInline = true;
     const SILENT_WAV_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-    let speechInited = false;
-    let htmlAudioPrimed = false;
+    let speechInited = false, htmlAudioPrimed = false;
 
     function unlockBrowserAudio() {
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume().catch(() => {});
-        }
-        // Play a 1-sample silent buffer on audioCtx to ensure iOS WebAudio hardware channel is open
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
         try {
             const buf = audioCtx.createBuffer(1, 1, 22050);
             const src = audioCtx.createBufferSource();
@@ -1413,7 +1457,6 @@
             src.connect(audioCtx.destination);
             src.start(0);
         } catch (e) {}
-
         if (!htmlAudioPrimed) {
             globalAudioPlayer.src = SILENT_WAV_URI;
             globalAudioPlayer.volume = 0.01;
@@ -1423,13 +1466,11 @@
                 globalAudioPlayer.volume = 1.0;
             }).catch(() => {});
         }
-
         if (!speechInited) {
             if ('speechSynthesis' in window) {
                 try {
                     let u = new SpeechSynthesisUtterance("");
-                    u.volume = 0;
-                    u.lang = 'sv-SE';
+                    u.volume = 0; u.lang = 'sv-SE';
                     window.speechSynthesis.speak(u);
                 } catch (e) {}
             }
@@ -1437,7 +1478,6 @@
         }
     }
 
-    // Attach to touchend, click, and pointerdown so mobile browsers continuously keep audioCtx awake
     ['touchend', 'click', 'pointerdown'].forEach(evtName => {
         document.addEventListener(evtName, () => {
             if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
@@ -1447,8 +1487,7 @@
 
     function setLed(side, color) {
         const el = document.getElementById(side === 'left' ? 'ledLeft' : 'ledRight');
-        if (!el) return;
-        el.className = 'led-light' + (color ? ' ' + color : '');
+        if (el) el.className = 'led-light' + (color ? ' ' + color : '');
     }
 
     function playTone(freq, type, duration, baseVol) {
@@ -1494,21 +1533,22 @@
     window.testRlcSpeakerAudio = function() {
         unlockBrowserAudio();
         soundPttGrant();
-        speakSwedish("Ljudtest för R L C nio sju. Högtalare och medlyssning fungerar.", null, "RLC 9-7", rlcSelectedTxTg);
-        appendRlcLog("🔊 Ljudtest utfört. Datorns ljudutgång är upplåst och redo för medlyssning.");
+        speakSwedish("Ljudtest från 9-7 till 97-6510. Högtalare och medlyssning fungerar.", null, "RLC 9-7", rlcSelectedTxTg);
+        appendRlcLog("🔊 Ljudtest utfört (uttal: nio sju / 97 65 10).");
     };
 
     function speakSwedish(text, callback, senderLabel, customTgLabel) {
         receivingSender = senderLabel || `RLC ${activeRlcCode}`;
         receivingTgName = customTgLabel || window.getActiveTxTalkgroupName();
         const rlcActive = window.isRlcViewActive();
+        const formattedSpeechText = window.formatSwedishRadioSpeech(text);
         if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
 
         if ('speechSynthesis' in window && (rlcActive || (volumeLevel > 0 && currentProfile !== "Tyst"))) {
             try {
                 window.speechSynthesis.cancel();
                 window.speechSynthesis.resume();
-                let msg = new SpeechSynthesisUtterance(text);
+                let msg = new SpeechSynthesisUtterance(formattedSpeechText);
                 msg.lang = 'sv-SE';
                 msg.volume = 1.0;
                 let voices = window.speechSynthesis.getVoices();
@@ -1527,17 +1567,13 @@
                     if (callback) callback();
                 };
 
-                // Safety timeout in case mobile speechSynthesis hangs
-                const safetyTimer = setTimeout(finishOnce, Math.max(3500, text.length * 110));
-
+                const safetyTimer = setTimeout(finishOnce, Math.max(3500, formattedSpeechText.length * 110));
                 msg.onstart = () => { isReceivingReal = true; setLed('right', 'green'); updateScreenDisplay(); };
                 msg.onend = () => { clearTimeout(safetyTimer); finishOnce(); };
                 msg.onerror = () => { clearTimeout(safetyTimer); finishOnce(); };
                 window.speechSynthesis.speak(msg);
                 return;
-            } catch (e) {
-                console.warn("TTS fallback:", e);
-            }
+            } catch (e) {}
         }
 
         isReceivingReal = true; setLed('right', 'green'); updateScreenDisplay();
@@ -1618,16 +1654,12 @@
         if (speakerMuted) leftIcons.push(SEPURA_ICONS.speakerOff);
         if (isLocked) leftIcons.push(SEPURA_ICONS.keyLock);
 
-        let rightIcons = [];
-        rightIcons.push(SEPURA_ICONS.battery);
-        rightIcons.push(SEPURA_ICONS.signalTmo);
-
+        let rightIcons = [SEPURA_ICONS.battery, SEPURA_ICONS.signalTmo];
         const hl = document.getElementById('header-left');
         const hr = document.getElementById('header-right');
         if (hl) hl.innerHTML = leftIcons.join('');
         if (hr) hr.innerHTML = rightIcons.join('');
 
-        // 1. PIN SCREEN
         if (powerState === 'PIN') {
             display.innerHTML = `
                 <div class="sepura-top-net"><span>Polisen</span><span>${getTime()}</span></div>
@@ -1639,7 +1671,6 @@
             return;
         }
 
-        // 2. DIALING ("Anropa" window)
         if (powerState === 'DIALING') {
             let symIcon = SEPURA_ICONS.symMsisdn;
             let modeLabel = "MSISDN (PTT / Grön lur)";
@@ -1659,33 +1690,37 @@
             return;
         }
 
-        // 3. FOLDERS & TALKGROUP SELECTION
         if (powerState === 'FOLDERS') {
             const folder = folderSystem[navFolderIndex];
             const tg = folder.tgs[navTgIndex] || folder.tgs[0];
+            const tgIcon = tg.isScanList ? '📻' : (tg.isDmo ? '⇄' : '👥');
+            const headerLabel = folderPickerMode === 'DV_ASSIGN'
+                ? `Direktval ${dvKeysOrder[selectedDvIdx]} ➔ Välj TG`
+                : (folderPickerMode === 'SCAN_ADD' ? `Lägg till i ${(scanListsData[selectedScanListIdx] || scanListsData[0]).name}` : `Välj talgrupp (${navFolderIndex + 1}/${folderSystem.length})`);
             display.innerHTML = `
-                <div class="sepura-top-net"><span>Välj talgrupp</span><span>${getTime()}</span></div>
-                <div class="ui-box-frame" style="padding:5px;justify-content:space-between;">
-                    <div style="font-size:11px;color:#002855;font-weight:bold;text-align:center;border-bottom:1px solid #ccd6e0;padding-bottom:3px;">
-                        ◄ 📁 ${folder.name} ►
+                <div class="sepura-top-net"><span>${headerLabel}</span><span>${getTime()}</span></div>
+                <div class="ui-box-frame" style="padding:4px 5px;justify-content:space-between;">
+                    <div style="font-size:11px;color:#002855;font-weight:bold;border-bottom:1px solid #ccd6e0;padding-bottom:2px;display:flex;align-items:center;gap:4px;">
+                        <span>📁</span><span>Välj talgrupp</span>
                     </div>
-                    <div style="text-align:center;margin:4px 0;">
-                        <div style="font-size:10px;color:#666;">▲</div>
-                        <div style="background:#005bb5;color:#fff;padding:5px 8px;border-radius:3px;font-size:14px;font-weight:bold;">
-                            👥 ${tg.name}
+                    <div style="text-align:left;margin:2px 0;border:1px solid #99aabb;padding:3px 5px;background:#f8fafc;">
+                        <div style="font-size:13px;font-weight:bold;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${tgIcon} ${tg.name}
                         </div>
-                        <div style="font-size:10px;color:#666;">▼</div>
+                        <div style="display:flex;justify-content:space-between;font-size:11px;color:#002855;margin-top:2px;">
+                            <span>↕ (${navTgIndex + 1}/${folder.tgs.length})</span>
+                            <span>Index: <b>${folderIndexInput !== "" ? folderIndexInput + "_" : tg.index}</b></span>
+                        </div>
                     </div>
-                    <div style="display:flex;justify-content:space-between;font-size:11px;border-top:1px solid #ccd6e0;padding-top:3px;">
-                        <span>Index: <b>${folderIndexInput !== "" ? folderIndexInput + "_" : tg.index}</b></span>
-                        <span>${tg.rlcCode ? "Lång Grön = Rikta " + tg.rlcCode : "OK = Välj"}</span>
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;border:1px solid #002855;background:#eef3f8;padding:2px 5px;font-weight:bold;">
+                        <span>${navFolderIndex + 1}</span>
+                        <span>◄ 📁 ${folder.name} ►</span>
                     </div>
                 </div>`;
             updateSoftkeys("Välj", "Index", "Avbryt");
             return;
         }
 
-        // 4. SMARTMENU (# Long Press)
         if (powerState === 'SMARTMENU') {
             display.innerHTML = `
                 <div class="sepura-top-net"><span>Smartmeny</span><span>${getTime()}</span></div>
@@ -1699,7 +1734,6 @@
             return;
         }
 
-        // 5. INCOMING RLC RING
         if (powerState === 'RINGING_RLC') {
             display.innerHTML = `
                 <div class="sepura-top-net"><span>RAKEL</span><span>${getTime()}</span></div>
@@ -1714,7 +1748,6 @@
             return;
         }
 
-        // 6. ACTIVE INDIVIDUAL CALL / RLC CONNECTED
         if (powerState === 'RLC_CONNECTED' || powerState === 'CALL_ACTIVE') {
             const party = powerState === 'RLC_CONNECTED' ? `RLC ${activeRlcCode}` : activeCallNumber;
             const stateTxt = isPttActive ? "🎤 Sänder tal..." : (isReceivingReal ? "🔊 Mottar tal..." : "Individsamtal anslutet");
@@ -1733,26 +1766,49 @@
             return;
         }
 
-        // 7. SUBMENUS
         if (menuState !== "IDLE") {
             if (menuState === "MAIN_MENU") {
+                const curItem = mainMenuItems[menuIndex] || mainMenuItems[0];
                 display.innerHTML = `
                     <div class="ui-box-frame">
-                        <div class="ui-title"><span>Huvudmeny</span><span>${menuIndex + 1}/${mainMenuItems.length}</span></div>
-                        <div class="menu-list">
-                            ${mainMenuItems.map((it, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()"><span>${it}</span></div>`).join('')}
+                        <div class="ui-title"><span>${curItem.title}</span><span>${menuIndex + 1}/${mainMenuItems.length}</span></div>
+                        <div class="sepura-grid-menu">
+                            ${mainMenuItems.map((it, idx) => `
+                                <div class="sepura-grid-item ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()">
+                                    ${it.icon}
+                                    <span>${it.short}</span>
+                                </div>`).join('')}
                         </div>
                     </div>`;
                 updateSoftkeys("Välj", "", "Tillb.");
                 return;
             }
+            if (menuState === "MODE_SELECT") {
+                const modes = [
+                    { name: "Nätläge (TMO)", code: "TMO", desc: "Rakel rikstäckande nät", icon: "📡" },
+                    { name: "Direktläge (DMO)", code: "DMO", desc: "Radio-till-radio / Gateway", icon: "⇄" }
+                ];
+                display.innerHTML = `
+                    <div class="ui-box-frame">
+                        <div class="ui-title"><span>Välj driftsätt (DV 8)</span><span>Aktivt: ${currentMode}</span></div>
+                        <div class="menu-list">
+                            ${modes.map((m, idx) => `
+                                <div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()" style="padding:6px;">
+                                    <span>${m.icon} <b>${m.name}</b><br><small style="font-size:10px;opacity:0.85;">${m.desc}</small></span>
+                                    <span>${currentMode === m.code ? '✔' : ''}</span>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+                updateSoftkeys("Välj", "", "Avbryt");
+                return;
+            }
             if (menuState === "INBOX") {
                 display.innerHTML = `
                     <div class="ui-box-frame">
-                        <div class="ui-title"><span>✉️ Inkorg SDS</span><span>${sdsInbox.length} st</span></div>
+                        <div class="ui-title"><span>✉️ Meddelanden (SDS)</span><span>${sdsInbox.length} st</span></div>
                         <div class="menu-list">
                             ${sdsInbox.slice().reverse().map((m, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" style="flex-direction:column;align-items:flex-start;">
-                                <span style="font-weight:bold;font-size:11px;">${m.from} (${m.time || getTime()})</span>
+                                <span style="font-weight:bold;font-size:11px;">📨 ${m.from} (${m.time || getTime()})</span>
                                 <span style="font-size:11px;">${m.text}</span>
                             </div>`).join('')}
                         </div>
@@ -1763,9 +1819,9 @@
             if (menuState === "STATUS_MENU") {
                 display.innerHTML = `
                     <div class="ui-box-frame">
-                        <div class="ui-title"><span>Skicka Status</span><span>RLC ${activeRlcCode}</span></div>
+                        <div class="ui-title"><span>📋 Skicka Status</span><span>RLC ${activeRlcCode}</span></div>
                         <div class="menu-list">
-                            ${statusMenuOptions.map((st, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()"><span>${st}</span></div>`).join('')}
+                            ${statusMenuOptions.map((st, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()"><span>📟 ${st}</span><span>${radioStatus === st ? '✔' : ''}</span></div>`).join('')}
                         </div>
                     </div>`;
                 updateSoftkeys("Sänd", "", "Tillb.");
@@ -1774,9 +1830,9 @@
             if (menuState === "CONTACTS") {
                 display.innerHTML = `
                     <div class="ui-box-frame">
-                        <div class="ui-title"><span>Kontakter</span></div>
+                        <div class="ui-title"><span>📗 Kontakter</span><span>${menuIndex + 1}/${contactList.length}</span></div>
                         <div class="menu-list">
-                            ${contactList.map((c, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()"><span>${c.name}</span><span>${c.number}</span></div>`).join('')}
+                            ${contactList.map((c, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()"><span>👤 ${c.name}</span><span>${c.number}</span></div>`).join('')}
                         </div>
                     </div>`;
                 updateSoftkeys("Anropa", "", "Tillb.");
@@ -1785,24 +1841,102 @@
             if (menuState === "PROFILES") {
                 display.innerHTML = `
                     <div class="ui-box-frame">
-                        <div class="ui-title"><span>Användarprofiler</span></div>
+                        <div class="ui-title"><span>👤 Användarprofiler</span></div>
                         <div class="menu-list">
-                            ${profileOptions.map((p, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()"><span>👤${p}</span></div>`).join('')}
+                            ${profileOptions.map((p, idx) => {
+                                const pName = p.substring(2);
+                                return `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()"><span>👤 ${p}</span><span>${currentProfile === pName ? '✔' : ''}</span></div>`;
+                            }).join('')}
                         </div>
                     </div>`;
                 updateSoftkeys("Aktivera", "", "Tillb.");
                 return;
             }
-            if (menuState === "SCAN_EDIT") {
-                const list = scanListsData[0];
+            if (menuState === "TG_SUBMENU") {
                 display.innerHTML = `
                     <div class="ui-box-frame">
-                        <div class="ui-title"><span>${list.name}</span><span>${scanning ? 'PÅ' : 'AV'}</span></div>
+                        <div class="ui-title"><span>👥 Talgrupper</span><span>Skan: ${scanning ? 'På' : 'Av'}</span></div>
                         <div class="menu-list">
-                            ${list.tgs.map((t, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}"><span>${t.prio === 'high' ? '🔺' : '🔻'} ${t.name}</span><span>${t.index}</span></div>`).join('')}
+                            ${tgSubmenuItems.map((item, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()">
+                                <span>${idx === 0 ? '📁' : (idx === 1 ? '📻' : (idx === 2 ? '🔄' : '⌨️'))} ${item}</span>
+                                <span>${idx === 2 ? (scanning ? 'PÅ' : 'AV') : '►'}</span>
+                            </div>`).join('')}
                         </div>
                     </div>`;
-                updateSoftkeys(scanning ? "Stäng AV" : "Slå PÅ", "", "Tillb.");
+                updateSoftkeys("Välj", "", "Åter");
+                return;
+            }
+            if (menuState === "DIREKTVAL_LIST") {
+                const curKey = dvKeysOrder[menuIndex] || '1';
+                const popupHtml = dvPopupOpen ? `
+                    <div style="position:absolute;left:22px;top:24px;width:155px;background:#fff;border:2px solid #001f4d;box-shadow:3px 4px 10px rgba(0,0,0,0.5);z-index:30;font-size:11px;">
+                        <div style="background:#eef3f8;padding:2px 6px;border-bottom:1px solid #99aabb;font-weight:bold;color:#002855;">Direktval ${curKey}</div>
+                        ${['Information', 'Välj talgrupp', 'Välj (från display)'].map((opt, oIdx) => `
+                            <div style="padding:3px 7px;cursor:pointer;${oIdx === dvPopupIndex ? 'background:#005bb5;color:#fff;font-weight:bold;' : 'color:#000;'}" onclick="dvPopupIndex=${oIdx};pressCenter()">${opt}</div>
+                        `).join('')}
+                    </div>` : '';
+                display.innerHTML = `
+                    <div class="ui-box-frame">
+                        <div class="ui-title"><span>Direktval</span><span>DV ${curKey}</span></div>
+                        <div class="menu-list">
+                            ${dvKeysOrder.map((k, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};dvPopupOpen=false;updateScreenDisplay()">
+                                <span>Direktval ${k}${['1','7','9'].includes(k) ? '' : ''}</span>
+                                <span style="font-size:10px;opacity:0.85;">${dvAssignments[k] || '-'}</span>
+                            </div>`).join('')}
+                        </div>
+                        ${popupHtml}
+                    </div>`;
+                if (dvPopupOpen) updateSoftkeys("Välj", "", "Åter");
+                else updateSoftkeys("Detaljer", "Mer", "Åter");
+                return;
+            }
+            if (menuState === "SCAN_LISTS") {
+                display.innerHTML = `
+                    <div class="ui-box-frame">
+                        <div class="ui-title"><span>📻 Skanningslistor</span><span>Skan: ${scanning ? 'PÅ' : 'AV'}</span></div>
+                        <div class="menu-list">
+                            ${scanListsData.map((s, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()">
+                                <span>${s.editable ? '✏️' : '📻'} ${s.name}</span>
+                                <span>${s.tgs.length}/10</span>
+                            </div>`).join('')}
+                        </div>
+                    </div>`;
+                updateSoftkeys("Öppna", scanning ? "Skan AV" : "Skan PÅ", "Åter");
+                return;
+            }
+            if (menuState === "SCAN_EDIT") {
+                const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+                const scanOpts = list.editable
+                    ? ["+ Lägg till talgrupp", "Ändra prio (▼/▲)", "Välj till display (🔵)", "- Ta bort talgrupp", "✔ Spara & Aktivera"]
+                    : ["✔ Aktivera lista"];
+                const popupHtml = scanPopupOpen ? `
+                    <div style="position:absolute;left:18px;top:20px;width:168px;background:#fff;border:2px solid #001f4d;box-shadow:3px 4px 10px rgba(0,0,0,0.5);z-index:30;font-size:11px;">
+                        ${scanOpts.map((opt, oIdx) => `
+                            <div style="padding:3px 7px;cursor:pointer;${oIdx === scanPopupIndex ? 'background:#005bb5;color:#fff;font-weight:bold;' : 'color:#000;'}" onclick="scanPopupIndex=${oIdx};pressCenter()">${opt}</div>
+                        `).join('')}
+                    </div>` : '';
+
+                display.innerHTML = `
+                    <div class="ui-box-frame">
+                        <div class="ui-title"><span>${list.name}</span><span>${list.tgs.length}/10 ${list.editable ? '(◄Prio ►Disp)' : '(Låst)'}</span></div>
+                        <div class="menu-list">
+                            ${list.tgs.map((t, idx) => {
+                                const triSvg = t.prio === 'high'
+                                    ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><polygon points="7,1 13,13 1,13" fill="#ff1a1a" stroke="#00334d" stroke-width="1"/></svg>`
+                                    : `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><polygon points="1,1 13,1 7,13" fill="#469597" stroke="#00334d" stroke-width="1"/></svg>`;
+                                const dotSvg = t.displayed
+                                    ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;" onclick="setScanRowDisplayed(${idx}, event)"><circle cx="7" cy="7" r="5.5" fill="#1da1f2" stroke="#000" stroke-width="1.3"/></svg>`
+                                    : `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;" onclick="setScanRowDisplayed(${idx}, event)"><circle cx="7" cy="7" r="5.5" fill="#ffffff" stroke="#000" stroke-width="1.3"/></svg>`;
+                                return `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};updateScreenDisplay()">
+                                    <span style="display:flex;align-items:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${triSvg}${t.name}</span>
+                                    <span>${dotSvg}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                        ${popupHtml}
+                    </div>`;
+                if (scanPopupOpen) updateSoftkeys("Välj", "", "Avbryt");
+                else updateSoftkeys("Mer", "Spara!", "Åter");
                 return;
             }
             if (menuState === "GPS_VIEW") {
@@ -1834,13 +1968,14 @@
             }
         }
 
-        // 8. IDLE SCREEN (Authentic Sepura SC21 Layout)
+        // IDLE SCREEN
         const tgName = activeSelection.isScanList && activeSelection.scanListObj
             ? (activeSelection.scanListObj.tgs.find(t => t.displayed) || activeSelection.scanListObj.tgs[0]).name
             : activeSelection.tgObj.name;
         const tgIdx = window.getActiveTxTalkgroupIndex();
         const aliasStr = window.MY_ALIAS ? ` • ${window.MY_ALIAS}` : "";
         const gwInfo = window.getAnyActiveGateway();
+        const dmoBridged = currentMode === "DMO" && gwInfo.active && tgName === gwInfo.dmo;
 
         let statusBannerHtml = "";
         if (isPttActive) {
@@ -1853,7 +1988,7 @@
             <div class="idle-layout">
                 <div class="idle-top-row">
                     <div>
-                        <div style="font-size:12px;font-weight:bold;color:#000;">RAKEL (${currentMode}${gwInfo.active ? '+GW' : ''})</div>
+                        <div style="font-size:12px;font-weight:bold;color:#000;">RAKEL (${currentMode}${dmoBridged || (currentMode==='TMO' && gwInfo.active) ? '+GW' : ''})</div>
                         <div class="idle-net-label">${window.MY_TACTICAL}${aliasStr}</div>
                         <div style="font-size:11px;font-weight:bold;color:#002855;">${radioStatus}</div>
                     </div>
@@ -1872,7 +2007,7 @@
                 </div>
                 <div class="idle-folder-row">
                     <span>📁 ${currentMode === 'DMO' ? 'DMO DIREKT' : activeSelection.folderName}</span>
-                    <span style="font-size:10px;color:#555;">RLC ${activeRlcCode}</span>
+                    <span style="font-size:10px;color:${window.canReachRlcNetwork() ? '#555' : '#c0392b'};">${window.canReachRlcNetwork() ? 'RLC ' + activeRlcCode : 'Ej nät (DMO)'}</span>
                 </div>
             </div>`;
         updateSoftkeys("Meny", "Grupper", "Inkorg");
@@ -1891,19 +2026,45 @@
     // =========================================================
     // 7. TALKGROUP SELECTION & INDEXING HELPERS
     // =========================================================
+    function applyOperatingMode(targetMode) {
+        if (targetMode === "DMO") {
+            if (currentMode === "TMO" && !activeSelection.tgObj.isDmo) {
+                lastTmoSelection = { ...activeSelection };
+            }
+            currentMode = "DMO";
+            activeSelection = { ...lastDmoSelection };
+        } else {
+            if (currentMode === "DMO" && activeSelection.tgObj.isDmo) {
+                lastDmoSelection = { ...activeSelection };
+            }
+            currentMode = "TMO";
+            activeSelection = { ...lastTmoSelection };
+        }
+        menuState = "IDLE";
+        powerState = 'IDLE';
+        updateScreenDisplay();
+        if (window.syncPresenceNow) window.syncPresenceNow();
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+        showTempMsg(`Driftsätt aktiverat:<br><b style="color:#005bb5;font-size:14px;">${currentMode === 'DMO' ? '⇄ Direktläge (DMO)' : '📡 Nätläge (TMO)'}</b><br><span style="font-size:11px;">TG: ${window.getActiveTxTalkgroupName()}</span>`, 1600);
+    }
+
     function selectTalkgroupObject(tgObj, folderName) {
         previousSelection = { ...activeSelection };
         if (tgObj.isDmo) {
+            if (currentMode === "TMO") lastTmoSelection = { ...activeSelection };
             currentMode = "DMO";
             activeSelection = { isScanList: false, scanListObj: null, tgObj: tgObj, folderName: folderName || "DMO DIREKT" };
+            lastDmoSelection = { ...activeSelection };
         } else if (tgObj.isScanList) {
             currentMode = "TMO";
             const sList = scanListsData.find(s => s.id === tgObj.scanId) || scanListsData[0];
             activeSelection = { isScanList: true, scanListObj: sList, tgObj: sList.tgs[0], folderName: sList.name };
+            lastTmoSelection = { ...activeSelection };
             scanning = true;
         } else {
             currentMode = "TMO";
             activeSelection = { isScanList: false, scanListObj: null, tgObj: tgObj, folderName: folderName || "PO 1 MPU" };
+            lastTmoSelection = { ...activeSelection };
         }
         powerState = 'IDLE';
         folderIndexInput = "";
@@ -1931,12 +2092,43 @@
         return null;
     }
 
+    window.toggleScanRowPrio = function(rowIdx, evt) {
+        if (evt) evt.stopPropagation();
+        const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+        if (!list.editable || !list.tgs[rowIdx]) {
+            soundError();
+            return;
+        }
+        soundKeypress();
+        menuIndex = rowIdx;
+        list.tgs[rowIdx].prio = (list.tgs[rowIdx].prio === 'high') ? 'low' : 'high';
+        updateScreenDisplay();
+    };
+
+    window.setScanRowDisplayed = function(rowIdx, evt) {
+        if (evt) evt.stopPropagation();
+        const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+        if (!list.editable || !list.tgs[rowIdx]) {
+            soundError();
+            return;
+        }
+        soundKeypress();
+        menuIndex = rowIdx;
+        list.tgs.forEach((t, i) => { t.displayed = (i === rowIdx); });
+        updateScreenDisplay();
+    };
+
+    function getCurrentDisplayedItemName() {
+        if (activeSelection.isScanList && activeSelection.scanListObj) {
+            return activeSelection.scanListObj.name;
+        }
+        return activeSelection.tgObj.name;
+    }
+
     // =========================================================
     // 8. KEYPAD, LONG-PRESS DIRECT SELECTIONS (DV) & NAVIGATION
     // =========================================================
-    let keypadTimer = null;
-    let isLongPress = false;
-    let activeKeyDown = null;
+    let keypadTimer = null, isLongPress = false, activeKeyDown = null;
 
     window.onKeypadDown = function(key, evt) {
         if (evt) evt.preventDefault();
@@ -1970,7 +2162,6 @@
     };
 
     function handleShortPressKey(key) {
-        // 1. PIN Entry
         if (powerState === 'PIN') {
             if (pinInput.length < 4 && /^\d$/.test(key)) {
                 pinInput += key;
@@ -2001,14 +2192,20 @@
             return;
         }
 
-        // 2. Smartmenu choices
+        if (menuState === "MAIN_MENU" && /^[1-9]$/.test(key)) {
+            menuIndex = parseInt(key, 10) - 1;
+            window.pressCenter();
+            return;
+        }
+
         if (powerState === 'SMARTMENU') {
             powerState = 'IDLE';
             switch(key) {
                 case '1': showTempMsg("💡 Bakgrundsbelysning PÅ", 1200); break;
                 case '2':
-                    currentMode = (currentMode === "TMO") ? "DMO" : "TMO";
-                    showTempMsg(`Driftsätt: <b>${currentMode}</b>`, 1400);
+                    menuState = "MODE_SELECT";
+                    menuIndex = (currentMode === "TMO") ? 1 : 0;
+                    updateScreenDisplay();
                     break;
                 case '3': window.sendStatusToRlc("Klar, ledig"); break;
                 case '4':
@@ -2031,7 +2228,6 @@
             return;
         }
 
-        // 3. Indexing inside FOLDERS view
         if (powerState === 'FOLDERS') {
             if (/^\d$/.test(key)) {
                 folderIndexInput += key;
@@ -2045,7 +2241,6 @@
             return;
         }
 
-        // 4. Direct Dialing in IDLE or DIALING (Never opens folders!)
         if (powerState === 'IDLE' || powerState === 'DIALING') {
             if (menuState !== "IDLE") menuState = "IDLE";
             powerState = 'DIALING';
@@ -2078,54 +2273,31 @@
         menuState = "IDLE";
         powerState = 'IDLE';
 
+        if (['1', '3', '4', '5', '7', '9'].includes(key)) {
+            const targetName = dvAssignments[key];
+            if (key === '1') scanning = true;
+            const m = findTalkgroupByName(targetName);
+            if (m) selectTalkgroupObject(m.tg, m.folder);
+            return;
+        }
+
         switch(key) {
-            case '1': {
-                scanning = true;
-                const m = findTalkgroupByName("SKAN IGV PO1 MPU");
-                if (m) selectTalkgroupObject(m.tg, m.folder);
-                break;
-            }
             case '2':
                 requestCallFromRlc();
                 break;
-            case '3': {
-                const m = findTalkgroupByName("Insats 1 MPU");
-                if (m) selectTalkgroupObject(m.tg, m.folder);
-                break;
-            }
-            case '4': {
-                const m = findTalkgroupByName("Insats 11 MPU");
-                if (m) selectTalkgroupObject(m.tg, m.folder);
-                break;
-            }
-            case '5': {
-                const m = findTalkgroupByName("Insats 12 MPU");
-                if (m) selectTalkgroupObject(m.tg, m.folder);
-                break;
-            }
             case '6': {
                 const temp = { ...activeSelection };
                 activeSelection = { ...previousSelection };
                 previousSelection = temp;
+                currentMode = activeSelection.tgObj.isDmo ? "DMO" : "TMO";
                 updateScreenDisplay();
                 showTempMsg(`Växlar till föregående:<br><b>${window.getActiveTxTalkgroupName()}</b>`, 1400);
                 break;
             }
-            case '7': {
-                const m = findTalkgroupByName("SAMV Pol");
-                if (m) selectTalkgroupObject(m.tg, m.folder);
-                break;
-            }
             case '8': {
-                currentMode = (currentMode === "TMO") ? "DMO" : "TMO";
-                if (window.syncPresenceNow) window.syncPresenceNow();
-                if (window.refreshRlcDashboard) window.refreshRlcDashboard();
-                showTempMsg(`Driftsätt ändrat:<br><b>${currentMode === 'DMO' ? 'Direktläge (DMO)' : 'Nätläge (TMO)'}</b>`, 1500);
-                break;
-            }
-            case '9': {
-                const m = findTalkgroupByName("Alla DMO 1");
-                if (m) selectTalkgroupObject(m.tg, m.folder);
+                menuState = "MODE_SELECT";
+                menuIndex = (currentMode === "TMO") ? 1 : 0;
+                updateScreenDisplay();
                 break;
             }
             case '#':
@@ -2147,12 +2319,49 @@
         soundKeypress();
 
         if (menuState !== "IDLE") {
+            if (menuState === "MAIN_MENU") {
+                const total = mainMenuItems.length;
+                if (dir === 'höger') menuIndex = (menuIndex + 1) % total;
+                if (dir === 'vänster') menuIndex = (menuIndex - 1 + total) % total;
+                if (dir === 'ner') menuIndex = (menuIndex + 3) % total;
+                if (dir === 'upp') menuIndex = (menuIndex - 3 + total) % total;
+                updateScreenDisplay();
+                return;
+            }
+            if (menuState === "DIREKTVAL_LIST" && dvPopupOpen) {
+                if (dir === 'ner') dvPopupIndex = (dvPopupIndex + 1) % 3;
+                if (dir === 'upp') dvPopupIndex = (dvPopupIndex + 2) % 3;
+                updateScreenDisplay();
+                return;
+            }
+            if (menuState === "SCAN_EDIT") {
+                const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+                if (scanPopupOpen) {
+                    const maxOpts = list.editable ? 5 : 1;
+                    if (dir === 'ner') scanPopupIndex = (scanPopupIndex + 1) % maxOpts;
+                    if (dir === 'upp') scanPopupIndex = (scanPopupIndex - 1 + maxOpts) % maxOpts;
+                    updateScreenDisplay();
+                    return;
+                }
+                if (dir === 'vänster' && list.editable) {
+                    window.toggleScanRowPrio(menuIndex);
+                    return;
+                }
+                if (dir === 'höger' && list.editable) {
+                    window.setScanRowDisplayed(menuIndex);
+                    return;
+                }
+            }
             let maxLen = mainMenuItems.length;
+            if (menuState === "MODE_SELECT") maxLen = 2;
+            if (menuState === "TG_SUBMENU") maxLen = tgSubmenuItems.length;
+            if (menuState === "DIREKTVAL_LIST") maxLen = dvKeysOrder.length;
             if (menuState === "STATUS_MENU") maxLen = statusMenuOptions.length;
             if (menuState === "CONTACTS") maxLen = contactList.length;
             if (menuState === "PROFILES") maxLen = profileOptions.length;
             if (menuState === "INBOX") maxLen = Math.max(1, sdsInbox.length);
-            if (menuState === "SCAN_EDIT") maxLen = scanListsData[0].tgs.length;
+            if (menuState === "SCAN_LISTS") maxLen = scanListsData.length;
+            if (menuState === "SCAN_EDIT") maxLen = Math.max(1, (scanListsData[selectedScanListIdx] || scanListsData[0]).tgs.length);
 
             if (dir === 'ner') menuIndex = (menuIndex + 1) % maxLen;
             if (dir === 'upp') menuIndex = (menuIndex - 1 + maxLen) % maxLen;
@@ -2207,7 +2416,20 @@
     window.pressCenter = function() {
         if (powerState === 'OFF') return;
         if (powerState === 'PIN') {
-            handleShortPressKey('');
+            if (pinInput === REQUIRED_PIN) {
+                powerState = 'IDLE';
+                pinInput = "";
+                unlockBrowserAudio();
+                soundStatusDelivered();
+                updateScreenDisplay();
+                if (window.syncPresenceNow) window.syncPresenceNow();
+                if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+                window.showCallsignToast();
+            } else {
+                soundError();
+                pinInput = "";
+                showTempMsg("❌ Felaktig PIN-kod!", 1500);
+            }
             return;
         }
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
@@ -2217,20 +2439,84 @@
             switch (menuIndex) {
                 case 0: menuState = "INBOX"; menuIndex = 0; updateScreenDisplay(); break;
                 case 1: menuState = "STATUS_MENU"; menuIndex = 0; updateScreenDisplay(); break;
-                case 2: menuState = "CONTACTS"; menuIndex = 0; updateScreenDisplay(); break;
-                case 3: menuState = "IDLE"; updateScreenDisplay(); toggleOnlineUnitsModal(); break;
+                case 2: menuState = "TG_SUBMENU"; menuIndex = 0; updateScreenDisplay(); break;
+                case 3: menuState = "MODE_SELECT"; menuIndex = (currentMode === "TMO" ? 1 : 0); updateScreenDisplay(); break;
                 case 4: menuState = "PROFILES"; menuIndex = 0; updateScreenDisplay(); break;
-                case 5: menuState = "SCAN_EDIT"; menuIndex = 0; updateScreenDisplay(); break;
+                case 5: menuState = "SCAN_LISTS"; menuIndex = 0; updateScreenDisplay(); break;
                 case 6: menuState = "GPS_VIEW"; updateScreenDisplay(); break;
-                case 7: menuState = "INFO_VIEW"; updateScreenDisplay(); break;
+                case 7: menuState = "CONTACTS"; menuIndex = 0; updateScreenDisplay(); break;
+                case 8: menuState = "INFO_VIEW"; updateScreenDisplay(); break;
             }
+            return;
+        }
+
+        if (menuState === "TG_SUBMENU") {
+            if (menuIndex === 0) {
+                menuState = "IDLE";
+                folderPickerMode = null;
+                powerState = 'FOLDERS';
+                folderIndexInput = "";
+                updateScreenDisplay();
+            } else if (menuIndex === 1) {
+                menuState = "SCAN_LISTS";
+                menuIndex = 0;
+                updateScreenDisplay();
+            } else if (menuIndex === 2) {
+                scanning = !scanning;
+                updateScreenDisplay();
+                showTempMsg(`Skanning: <b>${scanning ? 'PÅ' : 'AV'}</b>`, 1300);
+            } else if (menuIndex === 3) {
+                menuState = "DIREKTVAL_LIST";
+                menuIndex = 0;
+                dvPopupOpen = false;
+                updateScreenDisplay();
+            }
+            return;
+        }
+
+        if (menuState === "DIREKTVAL_LIST") {
+            const curKey = dvKeysOrder[menuIndex] || '1';
+            if (!dvPopupOpen) {
+                const assignedName = dvAssignments[curKey] || "-";
+                const found = findTalkgroupByName(assignedName);
+                showTempMsg(`<b>Direktval ${curKey}</b><br>Tilldelad: <b style="color:#005bb5;">${assignedName}</b><br><span style="font-size:11px;">Index: ${found ? found.tg.index : '-'}</span>`, 1900);
+                return;
+            }
+            dvPopupOpen = false;
+            if (dvPopupIndex === 0) {
+                const assignedName = dvAssignments[curKey] || "-";
+                const found = findTalkgroupByName(assignedName);
+                showTempMsg(`<b>Direktval ${curKey}</b><br>${assignedName}<br><span style="font-size:11px;">Mapp: ${found ? found.folder : '-'} | Index: ${found ? found.tg.index : '-'}</span>`, 2000);
+            } else if (dvPopupIndex === 1) {
+                selectedDvIdx = menuIndex;
+                folderPickerMode = 'DV_ASSIGN';
+                menuState = "IDLE";
+                powerState = 'FOLDERS';
+                folderIndexInput = "";
+                updateScreenDisplay();
+            } else if (dvPopupIndex === 2) {
+                const currentDispName = getCurrentDisplayedItemName();
+                dvAssignments[curKey] = currentDispName;
+                soundStatusDelivered();
+                updateScreenDisplay();
+                showTempMsg(`✔ <b>Direktval ${curKey}</b> programmerat:<br><b style="color:#005bb5;">${currentDispName}</b>`, 1800);
+            }
+            return;
+        }
+
+        if (menuState === "MODE_SELECT") {
+            applyOperatingMode(menuIndex === 1 ? "DMO" : "TMO");
             return;
         }
 
         if (menuState === "STATUS_MENU") {
             const chosen = statusMenuOptions[menuIndex];
             menuState = "IDLE";
-            window.sendStatusToRlc(chosen);
+            if (chosen === "Anropsbegäran") {
+                requestCallFromRlc();
+            } else {
+                window.sendStatusToRlc(chosen);
+            }
             return;
         }
 
@@ -2249,6 +2535,11 @@
             if (c.type === "RLC") {
                 requestCallFromRlc();
             } else {
+                if (!window.canReachRlcNetwork()) {
+                    soundError();
+                    showTempMsg("❌ Ej kontakt med nätet (DMO)<br><span style='font-size:11px;'>Kräver TMO eller Gateway</span>", 1900);
+                    return;
+                }
                 activeCallNumber = `${c.name} (${c.number})`;
                 powerState = 'CALL_ACTIVE';
                 updateScreenDisplay();
@@ -2259,6 +2550,11 @@
         if (menuState === "INBOX") {
             askInput("Skriv SDS-meddelande (skickas till alla / RLC):", "", (txt) => {
                 if (txt) {
+                    if (!window.canReachRlcNetwork()) {
+                        soundError();
+                        showTempMsg("❌ Kan ej sända SDS i DMO utan Gateway", 1800);
+                        return;
+                    }
                     if (window.dbSendSds) window.dbSendSds("ALL", txt);
                     sdsInbox.push({ from: "Mig", text: txt, time: getTime() });
                     showTempMsg("✔ SDS skickat!", 1400);
@@ -2267,9 +2563,74 @@
             return;
         }
 
-        if (menuState === "SCAN_EDIT") {
-            scanning = !scanning;
+        if (menuState === "SCAN_LISTS") {
+            selectedScanListIdx = menuIndex;
+            menuState = "SCAN_EDIT";
+            scanPopupOpen = false;
+            menuIndex = 0;
             updateScreenDisplay();
+            return;
+        }
+
+        if (menuState === "SCAN_EDIT") {
+            const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+            if (!scanPopupOpen) {
+                scanPopupOpen = true;
+                scanPopupIndex = 0;
+                updateScreenDisplay();
+                return;
+            }
+            scanPopupOpen = false;
+            if (!list.editable) {
+                selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, "SKAN MPU");
+                menuState = "IDLE";
+                return;
+            }
+            if (scanPopupIndex === 0) {
+                if (list.tgs.length >= 10) {
+                    soundError();
+                    showTempMsg("❌ Max 10 talgrupper i en skanningslista!", 1600);
+                    return;
+                }
+                folderPickerMode = 'SCAN_ADD';
+                menuState = "IDLE";
+                powerState = 'FOLDERS';
+                if (folderSystem[navFolderIndex].isScanFolder || folderSystem[navFolderIndex].isDmoFolder) {
+                    navFolderIndex = 1;
+                    navTgIndex = 0;
+                }
+                folderIndexInput = "";
+                updateScreenDisplay();
+            } else if (scanPopupIndex === 1) {
+                window.toggleScanRowPrio(menuIndex);
+            } else if (scanPopupIndex === 2) {
+                window.setScanRowDisplayed(menuIndex);
+            } else if (scanPopupIndex === 3) {
+                if (list.tgs.length <= 1) {
+                    soundError();
+                    showTempMsg("Minst 1 talgrupp krävs i listan", 1400);
+                    return;
+                }
+                const removed = list.tgs.splice(menuIndex, 1)[0];
+                if (removed && removed.displayed && list.tgs.length > 0) {
+                    list.tgs[0].displayed = true;
+                }
+                menuIndex = Math.max(0, menuIndex - 1);
+                updateScreenDisplay();
+            } else if (scanPopupIndex === 4) {
+                if (!list.tgs.some(t => t.displayed) && list.tgs.length > 0) {
+                    list.tgs[0].displayed = true;
+                }
+                selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, "SKAN MPU");
+                menuState = "IDLE";
+                soundStatusDelivered();
+                showTempMsg(`✔ <b>${list.name}</b> sparad & aktiverad!<br><span style="font-size:11px;">Display: ${window.getActiveTxTalkgroupName()}</span>`, 1800);
+            }
+            return;
+        }
+
+        if (menuState === "GPS_VIEW") {
+            showTempMsg("🛰️ GPS-koordinater synkade med RLC", 1300);
             return;
         }
 
@@ -2281,21 +2642,71 @@
         }
 
         if (powerState === 'FOLDERS') {
+            let chosenTg = null, chosenFolder = null;
             if (folderIndexInput !== "") {
                 const match = findTalkgroupByIndex(folderIndexInput);
                 if (match) {
-                    selectTalkgroupObject(match.tg, match.folder);
-                    return;
+                    chosenTg = match.tg;
+                    chosenFolder = match.folder;
                 } else {
                     soundError();
                     folderIndexInput = "";
                     showTempMsg("❌ Ogiltigt talgruppsindex!", 1400);
                     return;
                 }
+            } else {
+                const folder = folderSystem[navFolderIndex];
+                chosenTg = folder.tgs[navTgIndex];
+                chosenFolder = folder.name;
             }
-            const folder = folderSystem[navFolderIndex];
-            const tg = folder.tgs[navTgIndex];
-            selectTalkgroupObject(tg, folder.name);
+
+            if (folderPickerMode === 'DV_ASSIGN') {
+                const curKey = dvKeysOrder[selectedDvIdx] || '1';
+                dvAssignments[curKey] = chosenTg.name;
+                folderPickerMode = null;
+                folderIndexInput = "";
+                powerState = 'IDLE';
+                menuState = "DIREKTVAL_LIST";
+                menuIndex = selectedDvIdx;
+                soundStatusDelivered();
+                updateScreenDisplay();
+                showTempMsg(`✔ <b>Direktval ${curKey}</b> programmerat:<br><b style="color:#005bb5;">${chosenTg.name}</b>`, 1800);
+                return;
+            }
+
+            if (folderPickerMode === 'SCAN_ADD') {
+                const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+                if (chosenTg.isScanList || chosenTg.isDmo) {
+                    soundError();
+                    showTempMsg("❌ Välj en nät-talgrupp (TMO)!", 1500);
+                    return;
+                }
+                if (list.tgs.length >= 10) {
+                    soundError();
+                    showTempMsg("❌ Max 10 talgrupper!", 1500);
+                } else if (list.tgs.some(t => t.name === chosenTg.name)) {
+                    soundError();
+                    showTempMsg("Finns redan i skanningslistan!", 1400);
+                } else {
+                    const isOrder = chosenTg.name.toLowerCase().includes("order");
+                    list.tgs.push({
+                        name: chosenTg.name,
+                        index: chosenTg.index,
+                        prio: isOrder ? "high" : "low",
+                        displayed: list.tgs.length === 0
+                    });
+                    soundStatusDelivered();
+                }
+                folderPickerMode = null;
+                folderIndexInput = "";
+                powerState = 'IDLE';
+                menuState = "SCAN_EDIT";
+                menuIndex = list.tgs.length - 1;
+                updateScreenDisplay();
+                return;
+            }
+
+            selectTalkgroupObject(chosenTg, chosenFolder);
             return;
         }
 
@@ -2311,9 +2722,7 @@
         }
     };
 
-    // Center Softkey: 1x = Grupper, 2x = Klar, ledig, 3x = Växla profil
-    let centerSoftClicks = 0;
-    let centerSoftTimer = null;
+    let centerSoftClicks = 0, centerSoftTimer = null;
     window.pressCenterSoft = function() {
         if (powerState === 'OFF' || powerState === 'PIN') return;
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
@@ -2323,7 +2732,6 @@
             window.pressArrow('ner');
             return;
         }
-
         if (powerState === 'FOLDERS') {
             askInput("Ange talgruppsindex (t.ex. 7011, 712, 970):", "", (val) => {
                 if (val) {
@@ -2334,12 +2742,36 @@
             });
             return;
         }
+        if (menuState === "SCAN_LISTS") {
+            scanning = !scanning;
+            updateScreenDisplay();
+            return;
+        }
+        if (menuState === "DIREKTVAL_LIST") {
+            dvPopupOpen = !dvPopupOpen;
+            dvPopupIndex = 1;
+            updateScreenDisplay();
+            return;
+        }
+        if (menuState === "SCAN_EDIT") {
+            const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+            if (!list.tgs.some(t => t.displayed) && list.tgs.length > 0) {
+                list.tgs[0].displayed = true;
+            }
+            scanPopupOpen = false;
+            selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, "SKAN MPU");
+            menuState = "IDLE";
+            soundStatusDelivered();
+            showTempMsg(`✔ <b>${list.name}</b> sparad!<br><span style="font-size:11px;">Displaylagd: ${window.getActiveTxTalkgroupName()}</span>`, 1700);
+            return;
+        }
 
         centerSoftClicks++;
         clearTimeout(centerSoftTimer);
         centerSoftTimer = setTimeout(() => {
             if (centerSoftClicks === 1) {
                 menuState = "IDLE";
+                folderPickerMode = null;
                 powerState = 'FOLDERS';
                 folderIndexInput = "";
                 updateScreenDisplay();
@@ -2348,51 +2780,56 @@
                 powerState = 'IDLE';
                 window.sendStatusToRlc("Klar, ledig");
             } else if (centerSoftClicks >= 3) {
-                currentProfile = (currentProfile === "Normal ljud") ? "Natt" : "Normal ljud";
+                const nextProf = (currentProfile === "Normal ljud") ? "Normal tyst" : (currentProfile === "Normal tyst" ? "Natt" : "Normal ljud");
+                currentProfile = nextProf;
                 updateScreenDisplay();
-                showTempMsg(`Profil: <b>${currentProfile}</b>`, 1400);
+                showTempMsg(`Profil aktiverad:<br><b>${currentProfile}</b>`, 1400);
             }
             centerSoftClicks = 0;
         }, 320);
     };
 
-    let softHoldTimer = null;
+    let softTimer = null, softFired = false;
     window.startSoft = function(side) {
         if (powerState === 'OFF') return;
         soundKeypress();
-        clearTimeout(softHoldTimer);
+        softFired = false;
+        clearTimeout(softTimer);
+        softTimer = setTimeout(() => {
+            softFired = true;
+            if (side === 'V') {
+                speakerMuted = !speakerMuted;
+                updateScreenDisplay();
+                showTempMsg(speakerMuted ? "🔇 Högtalare AV" : "🔊 Högtalare PÅ", 1300);
+            } else {
+                document.getElementById('screen-container')?.classList.toggle('flipped');
+            }
+        }, 900);
     };
     window.stopSoft = function(side) {
-        clearTimeout(softHoldTimer);
-        if (side === 'V') window.triggerLeftSoft();
-        if (side === 'H') window.triggerRightSoft();
+        clearTimeout(softTimer);
+        if (!softFired) {
+            if (side === 'V') window.triggerLeftSoft();
+            if (side === 'H') window.triggerRightSoft();
+        }
     };
-    window.cancelSoft = function() { clearTimeout(softHoldTimer); };
+    window.cancelSoft = function() { clearTimeout(softTimer); };
 
     window.triggerLeftSoft = function() {
         if (powerState === 'OFF') return;
-        if (powerState === 'PIN') {
-            handleShortPressKey('');
-            return;
-        }
-        if (isLocked) { soundError(); return; }
-        soundKeypress();
-
-        if (powerState === 'RINGING_RLC') {
-            answerRlcCall();
-            return;
-        }
-        if (powerState === 'RLC_CONNECTED') {
-            askInput(`Skriv ditt meddelande till RLC ${activeRlcCode}:`, `${window.MY_TACTICAL}, vi är framme på plats, kom.`, (val) => {
-                if (val) processAiRlcConversation(val);
+        if (powerState === 'PIN') { window.pressCenter(); return; }
+        if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
+        if (powerState === 'RINGING_RLC') { window.pressGreen(); return; }
+        if (powerState === 'RLC_CONNECTED' || powerState === 'CALL_ACTIVE') {
+            askInput("Skriv svar/rapport till RLC:", "", (txt) => {
+                if (txt) {
+                    appendRlcLog(`🗣️ ${window.MY_TACTICAL}: "${txt}"`);
+                    showTempMsg("✔ Rapporterat till RLC", 1400);
+                }
             });
             return;
         }
-        if (powerState === 'DIALING') {
-            initiateDialedCall();
-            return;
-        }
-        if (powerState === 'FOLDERS' || menuState !== "IDLE") {
+        if (menuState !== "IDLE" || powerState === 'FOLDERS' || powerState === 'DIALING') {
             window.pressCenter();
             return;
         }
@@ -2405,30 +2842,62 @@
 
     window.triggerRightSoft = function() {
         if (powerState === 'OFF') return;
-        soundKeypress();
         if (powerState === 'PIN') {
             pinInput = pinInput.slice(0, -1);
             updateScreenDisplay();
             return;
         }
+        if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
         if (powerState === 'DIALING') {
             dialInput = dialInput.slice(0, -1);
             if (dialInput === "") powerState = 'IDLE';
             updateScreenDisplay();
             return;
         }
-        if (powerState === 'RINGING_RLC' || powerState === 'RLC_CONNECTED' || powerState === 'CALL_ACTIVE') {
-            endActiveCalls();
+        if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') {
+            endActiveCall();
+            return;
+        }
+        if (menuState !== "IDLE") {
+            if (menuState === "DIREKTVAL_LIST" && dvPopupOpen) {
+                dvPopupOpen = false;
+                updateScreenDisplay();
+                return;
+            }
+            if (menuState === "SCAN_EDIT" && scanPopupOpen) {
+                scanPopupOpen = false;
+                updateScreenDisplay();
+                return;
+            }
+            if (menuState === "SCAN_EDIT") {
+                menuState = "SCAN_LISTS";
+                menuIndex = selectedScanListIdx;
+            } else if (menuState === "DIREKTVAL_LIST" || menuState === "SCAN_LISTS") {
+                menuState = "TG_SUBMENU";
+                menuIndex = 0;
+            } else if (menuState !== "MAIN_MENU" && menuState !== "MODE_SELECT") {
+                menuState = "MAIN_MENU";
+                menuIndex = 0;
+            } else {
+                menuState = "IDLE";
+            }
+            updateScreenDisplay();
             return;
         }
         if (powerState === 'FOLDERS' || powerState === 'SMARTMENU') {
             folderIndexInput = "";
-            powerState = 'IDLE';
-            updateScreenDisplay();
-            return;
-        }
-        if (menuState !== "IDLE") {
-            menuState = "IDLE";
+            if (folderPickerMode === 'DV_ASSIGN') {
+                folderPickerMode = null;
+                powerState = 'IDLE';
+                menuState = "DIREKTVAL_LIST";
+                menuIndex = selectedDvIdx;
+            } else if (folderPickerMode === 'SCAN_ADD') {
+                folderPickerMode = null;
+                powerState = 'IDLE';
+                menuState = "SCAN_EDIT";
+            } else {
+                powerState = 'IDLE';
+            }
             updateScreenDisplay();
             return;
         }
@@ -2439,9 +2908,79 @@
         }
     };
 
-    // Green Call Button
-    let greenHoldTimer = null;
-    let greenLongFired = false;
+    let redHoldTimer = null, redLongFired = false;
+    window.startRed = function() {
+        unlockBrowserAudio();
+        if (powerState !== 'OFF') soundKeypress();
+        redLongFired = false;
+        clearTimeout(redHoldTimer);
+        redHoldTimer = setTimeout(() => {
+            redLongFired = true;
+            toggleRadioPower();
+        }, 1400);
+    };
+    window.stopRed = function() {
+        clearTimeout(redHoldTimer);
+        if (!redLongFired && powerState !== 'OFF') {
+            if (isEmergency) {
+                isEmergency = false;
+                clearInterval(emergencyInterval);
+                setLed('left', '');
+                updateScreenDisplay();
+                showTempMsg("Nödlarm återställt", 1500);
+                return;
+            }
+            if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') {
+                endActiveCall();
+                return;
+            }
+            menuState = "IDLE";
+            dialInput = "";
+            folderIndexInput = "";
+            if (powerState !== 'PIN') powerState = 'IDLE';
+            updateScreenDisplay();
+        }
+    };
+    window.cancelRed = function() { clearTimeout(redHoldTimer); };
+
+    function toggleRadioPower() {
+        if (powerState !== 'OFF') {
+            powerState = 'OFF';
+            isLocked = false; isPttActive = false; isEmergency = false; isReceivingReal = false;
+            menuState = "IDLE";
+            clearInterval(emergencyInterval); clearInterval(ringingInterval);
+            updateScreenDisplay();
+            if (window.removePresenceNow) window.removePresenceNow();
+            if (window.updateOnlinePillUI) window.updateOnlinePillUI();
+            if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+        } else {
+            unlockBrowserAudio();
+            powerState = 'BOOT';
+            const sc = document.getElementById('screen-container');
+            const disp = document.getElementById('display');
+            if (sc) sc.classList.remove("off");
+            if (disp) disp.innerHTML = `<div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;"><div style="font-size:18px;font-weight:900;color:#002855;letter-spacing:1px;">sepura</div><div style="font-size:11px;color:#555;margin-top:6px;">SC21 RAKEL Terminal</div></div>`;
+            updateSoftkeys("", "", "");
+            setLed('left', 'orange');
+            setTimeout(() => {
+                setLed('left', '');
+                powerState = 'PIN';
+                pinInput = "";
+                updateScreenDisplay();
+            }, 1300);
+        }
+    }
+
+    function endActiveCall() {
+        clearInterval(ringingInterval);
+        clearTimeout(rlcCallTimeout);
+        powerState = 'IDLE';
+        soundPttRelease();
+        updateScreenDisplay();
+        showTempMsg("Samtal avslutat", 1300);
+    }
+
+    let greenHoldTimer = null, greenLongFired = false;
     window.pressGreen = function() {
         if (powerState === 'OFF' || powerState === 'PIN') return;
         if (isLocked) { soundError(); return; }
@@ -2454,26 +2993,38 @@
                 const tg = folderSystem[navFolderIndex].tgs[navTgIndex];
                 if (tg && tg.rlcCode) {
                     activeRlcCode = tg.rlcCode;
-                    resetAiChatHistory();
                     powerState = 'IDLE';
-                    soundStatusDelivered();
-                    showTempMsg(`🌍 Geografisk förflyttning:<br>Aktivt RLC är nu <b>RLC ${activeRlcCode}</b>`, 2200);
+                    updateScreenDisplay();
+                    showTempMsg(`✔ Riktat mot <b>RLC ${activeRlcCode}</b> (${tg.name})`, 1800);
                 }
             }
         }, 700);
     };
-
     window.stopGreen = function() {
         clearTimeout(greenHoldTimer);
-        if (greenLongFired || powerState === 'OFF' || powerState === 'PIN') return;
+        if (greenLongFired || powerState === 'OFF' || powerState === 'PIN' || isLocked) return;
         if (powerState === 'RINGING_RLC') {
-            answerRlcCall();
-        } else if (powerState === 'DIALING') {
+            clearInterval(ringingInterval);
+            powerState = 'RLC_CONNECTED';
+            updateScreenDisplay();
+            setTimeout(() => {
+                soundPttGrant();
+                speakSwedish(`${window.MY_TACTICAL} från ${activeRlcCode}, kom.`, null, `RLC ${activeRlcCode}`, "Individanrop");
+            }, 400);
+            return;
+        }
+        if (powerState === 'DIALING') {
             initiateDialedCall();
-        } else if (powerState === 'FOLDERS') {
+            return;
+        }
+        if (powerState === 'FOLDERS') {
             window.pressCenter();
-        } else if (powerState === 'IDLE') {
-            requestCallFromRlc();
+            return;
+        }
+        if (powerState === 'IDLE') {
+            menuState = "CONTACTS";
+            menuIndex = 0;
+            updateScreenDisplay();
         }
     };
     window.cancelGreen = function() { clearTimeout(greenHoldTimer); };
@@ -2482,7 +3033,13 @@
         if (!dialInput) return;
         const num = dialInput.trim();
         dialInput = "";
-        if (num === "970" || num === "97") {
+        if (!window.canReachRlcNetwork()) {
+            soundError();
+            powerState = 'IDLE';
+            showTempMsg("❌ Ej kontakt med nätet (DMO)<br><span style='font-size:11px;'>Individanrop kräver TMO eller Gateway</span>", 2000);
+            return;
+        }
+        if (num === "970") {
             powerState = 'IDLE';
             requestCallFromRlc();
             return;
@@ -2493,421 +3050,221 @@
         updateScreenDisplay();
     }
 
-    // Red Hangup / Power Button
-    let redHoldTimer = null;
-    let redPowerTriggered = false;
-    window.startRed = function() {
-        unlockBrowserAudio();
-        redPowerTriggered = false;
-        if (powerState !== 'OFF') soundKeypress();
-        clearTimeout(redHoldTimer);
-        redHoldTimer = setTimeout(() => {
-            redPowerTriggered = true;
-            if (powerState === 'OFF') {
-                unlockBrowserAudio();
-                powerState = 'BOOT';
-                const sc = document.getElementById('screen-container');
-                const disp = document.getElementById('display');
-                if (sc) sc.classList.remove('off');
-                if (disp) disp.innerHTML = `<div style="margin:auto;text-align:center;font-weight:bold;color:#002855;">sepura<br><span style="font-size:11px;color:#555;">Startar SC21...</span></div>`;
-                setLed('left', 'green');
-                setTimeout(() => {
-                    setLed('left', '');
-                    powerState = 'PIN';
-                    pinInput = "";
-                    updateScreenDisplay();
-                }, 1100);
-            } else {
-                endActiveCalls();
-                powerState = 'OFF';
-                if (window.removePresenceNow) window.removePresenceNow();
-                if (window.updateOnlinePillUI) window.updateOnlinePillUI();
-                if (window.refreshRlcDashboard) window.refreshRlcDashboard();
-                updateScreenDisplay();
-            }
-        }, 1200);
+    window.handleKnobScroll = function(e) {
+        if (e.deltaY < 0) window.turnKnob('right');
+        else window.turnKnob('left');
     };
-
-    window.stopRed = function() {
-        clearTimeout(redHoldTimer);
-        if (redPowerTriggered || powerState === 'OFF' || powerState === 'PIN') return;
-        if (isEmergency) {
-            isEmergency = false;
-            clearInterval(emergencyInterval);
-            setLed('left', '');
-            updateScreenDisplay();
-            showTempMsg("Larm återställt", 1400);
-            return;
-        }
-        if (powerState === 'RINGING_RLC' || powerState === 'RLC_CONNECTED' || powerState === 'CALL_ACTIVE') {
-            endActiveCalls();
-            return;
-        }
-        menuState = "IDLE";
-        dialInput = "";
-        folderIndexInput = "";
-        powerState = 'IDLE';
-        updateScreenDisplay();
-    };
-    window.cancelRed = function() { clearTimeout(redHoldTimer); };
-
-    function endActiveCalls() {
-        clearInterval(ringingInterval);
-        isPttActive = false;
-        isReceivingReal = false;
-        setLed('left', '');
-        setLed('right', '');
-        powerState = 'IDLE';
-        updateScreenDisplay();
-    }
-
-    // Side Buttons A, B, C & Emergency Button
-    window.startSideA = function() {};
-    window.stopSideA = function() {
-        if (powerState === 'IDLE') requestCallFromRlc();
-    };
-    window.pressABC = function(btn) {
-        if (powerState === 'OFF' || powerState === 'PIN') return;
-        soundKeypress();
-        if (btn === 'B') currentProfile = "Normal ljud";
-        if (btn === 'C') currentProfile = (currentProfile === "Natt") ? "Normal ljud" : "Natt";
-        updateScreenDisplay();
-        showTempMsg(`Profil: <b>${currentProfile}</b>`, 1200);
-    };
-
-    let emergHoldTimer = null;
-    window.startEmergencyBtn = function() {
-        if (powerState === 'OFF' || powerState === 'PIN') return;
-        clearTimeout(emergHoldTimer);
-        emergHoldTimer = setTimeout(() => {
-            isEmergency = true;
-            radioStatus = "NÖDLARM";
-            setLed('left', 'red');
-            playTone(1450, 'square', 0.4, 0.2);
-            if (window.syncPresenceNow) window.syncPresenceNow();
-            if (window.refreshRlcDashboard) window.refreshRlcDashboard();
-            appendRlcLog(`🚨 NÖDLARM aktiverat av ${window.MY_TACTICAL}!`, true);
-            updateScreenDisplay();
-            showTempMsg("🚨 <b>FÖRTURSANROP / NÖDLARM</b><br>Skickat till RLC!", 2800);
-        }, 1200);
-    };
-    window.stopEmergencyBtn = function() { clearTimeout(emergHoldTimer); };
-
-    // Volume / Navigation Knob
     window.turnKnob = function(dir) {
-        if (powerState === 'OFF') return;
-        soundKeypress();
-        if (powerState === 'FOLDERS') {
-            window.pressArrow(dir === 'right' ? 'ner' : 'upp');
-            return;
-        }
-        if (menuState !== "IDLE") {
+        if (powerState === 'OFF' || isLocked) return;
+        if (powerState === 'FOLDERS' || menuState !== "IDLE") {
             window.pressArrow(dir === 'right' ? 'ner' : 'upp');
             return;
         }
         if (dir === 'right' && volumeLevel < 10) volumeLevel++;
         if (dir === 'left' && volumeLevel > 0) volumeLevel--;
-        showVolumeUI();
+        soundKeypress();
+        const vo = document.getElementById('volume-overlay');
+        const vb = document.getElementById('volume-bar');
+        if (vo && vb) {
+            vo.style.opacity = '1';
+            vb.style.height = `${volumeLevel * 10}%`;
+            vb.style.backgroundColor = volumeLevel === 0 ? '#e74c3c' : '#2ecc71';
+            clearTimeout(volumeUI_Timeout);
+            volumeUI_Timeout = setTimeout(() => { vo.style.opacity = '0'; }, 1400);
+        }
     };
 
-    window.handleKnobScroll = function(e) {
-        if (e.deltaY < 0) window.turnKnob('right');
-        else window.turnKnob('left');
+    let sideATimer = null;
+    window.startSideA = function() {
+        if (powerState === 'OFF' || isLocked) return;
+        soundKeypress();
+        clearTimeout(sideATimer);
+        sideATimer = setTimeout(() => { requestCallFromRlc(); }, 350);
     };
+    window.stopSideA = function() { clearTimeout(sideATimer); };
 
-    function showVolumeUI() {
-        const overlay = document.getElementById('volume-overlay');
-        const bar = document.getElementById('volume-bar');
-        if (!overlay || !bar) return;
-        overlay.style.opacity = '1';
-        bar.style.height = `${volumeLevel * 10}%`;
-        clearTimeout(volumeUI_Timeout);
-        volumeUI_Timeout = setTimeout(() => { overlay.style.opacity = '0'; }, 1400);
-    }
-
-    // =========================================================
-    // 10. PTT, UNIVERSAL PCM WAV RECORDER & CROSS-PLATFORM PLAYBACK
-    // =========================================================
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = SpeechRecognition ? new SpeechRecognition() : null;
-    let isRecognizing = false;
-    let transcriptBuffer = "";
-
-    if (recognition) {
-        recognition.lang = 'sv-SE';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-        recognition.onresult = (event) => {
-            transcriptBuffer = event.results[0][0].transcript;
-        };
-        recognition.onerror = () => { isRecognizing = false; };
-        recognition.onend = () => {
-            isRecognizing = false;
-            if (powerState === 'RLC_CONNECTED' && transcriptBuffer.trim() !== "") {
-                const spoken = transcriptBuffer.trim();
-                transcriptBuffer = "";
-                processAiRlcConversation(spoken);
-            }
-        };
-    }
-
-    let aiChatHistory = [];
-    function resetAiChatHistory() {
-        aiChatHistory = [
-            { role: "user", parts: [{ text: `Initiera samband. Du är RLC ${activeRlcCode}. Vi är patrull ${window.MY_TACTICAL}.` }] },
-            { role: "model", parts: [{ text: `${window.MY_TACTICAL} från ${activeRlcCode}, kom.` }] }
-        ];
-    }
-    resetAiChatHistory();
+    window.pressABC = function(btn) {
+        if (powerState === 'OFF' || isLocked) return;
+        soundKeypress();
+        if (btn === 'B') {
+            currentProfile = "Normal ljud";
+            updateScreenDisplay();
+            showTempMsg("Profil aktiverad:<br><b>5 Normal ljud</b>", 1300);
+        } else if (btn === 'C') {
+            currentProfile = (currentProfile === "Natt") ? "Normal ljud" : "Natt";
+            updateScreenDisplay();
+            showTempMsg(`Profil aktiverad:<br><b>${currentProfile === 'Natt' ? '2 Natt' : '5 Normal ljud'}</b>`, 1300);
+        }
+    };
 
     function requestCallFromRlc() {
-        window.sendStatusToRlc("Anropsbegäran RLC");
-        appendRlcLog(`📞 Anropsbegäran från ${window.MY_TACTICAL} till RLC ${activeRlcCode}`);
-        setTimeout(() => {
-            if (powerState !== 'OFF') {
+        if (!window.canReachRlcNetwork()) {
+            soundError();
+            showTempMsg("❌ Ej kontakt med RLC i DMO!<br><span style='font-size:11px;'>Kräver aktiv Gateway eller Nätläge (TMO)</span>", 2200);
+            return;
+        }
+        radioStatus = "Anropsbegäran";
+        soundStatusDelivered();
+        if (window.syncPresenceNow) window.syncPresenceNow();
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+        appendRlcLog(`📞 Anropsbegäran från ${window.MY_TACTICAL}${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''} till RLC ${activeRlcCode}`, true);
+        showTempMsg(`Anropsbegäran skickad<br>till <b>RLC ${activeRlcCode}</b>`, 2000);
+        clearTimeout(rlcCallTimeout);
+        rlcCallTimeout = setTimeout(() => {
+            if (powerState === 'IDLE' && !window.isRlcViewActive() && window.canReachRlcNetwork()) {
                 window.triggerIncomingRlcRingFromConsole(activeRlcCode);
             }
-        }, 1800);
+        }, 3200);
     }
 
-    window.triggerIncomingRlcRingFromConsole = function(rlcCode = "9-7") {
+    window.triggerIncomingRlcRingFromConsole = function(rlcCodeStr = "9-7") {
         if (powerState === 'OFF' || powerState === 'PIN') return;
-        activeRlcCode = rlcCode;
-        clearInterval(ringingInterval);
+        // Strict DMO block: Cannot receive call from RLC in DMO unless Gateway is active on current DMO talkgroup
+        if (!window.canReachRlcNetwork()) {
+            appendRlcLog(`⚠️ Samtal till ${window.MY_TACTICAL} nådde ej fram (Enheten är i DMO utan Gateway).`, true);
+            return;
+        }
+        activeRlcCode = rlcCodeStr;
         powerState = 'RINGING_RLC';
-        setLed('right', 'orange');
         updateScreenDisplay();
         soundRingIncoming();
-        ringingInterval = setInterval(soundRingIncoming, 2000);
+        clearInterval(ringingInterval);
+        ringingInterval = setInterval(soundRingIncoming, 1800);
     };
 
-    function answerRlcCall() {
-        clearInterval(ringingInterval);
-        setLed('right', '');
-        powerState = 'RLC_CONNECTED';
-        updateScreenDisplay();
-        setTimeout(() => {
-            soundPttRelease();
-            speakSwedish(`${window.MY_TACTICAL} från ${activeRlcCode}, kom.`, null, `RLC ${activeRlcCode}`);
-        }, 400);
-    }
+    let emergHoldTimer = null;
+    window.startEmergencyBtn = function() {
+        if (powerState === 'OFF') return;
+        clearTimeout(emergHoldTimer);
+        emergHoldTimer = setTimeout(() => {
+            isLocked = false; txInhibit = false; isEmergency = true;
+            radioStatus = "🚨 NÖDLARM";
+            setLed('left', 'red');
+            if (window.syncPresenceNow) window.syncPresenceNow();
+            if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+            appendRlcLog(`🚨 NÖDLARM AKTIVERAT AV ${window.MY_TACTICAL}!`, true);
+            updateScreenDisplay();
+            showTempMsg("🚨 NÖDLARM AKTIVERAT 🚨<br><span style='font-size:11px;'>Öppen mikrofon mot RLC</span>", 3500);
+        }, 1200);
+    };
+    window.stopEmergencyBtn = function() { clearTimeout(emergHoldTimer); };
 
-    async function processAiRlcConversation(userText) {
-        if (!userText) return;
-        appendRlcLog(`🗣️ ${window.MY_TACTICAL}: "${userText}"`);
-        showTempMsg(`RLC ${activeRlcCode} behandlar...`, 3000);
-        aiChatHistory.push({ role: "user", parts: [{ text: userText }] });
+    // =========================================================
+    // 10. PTT & UNIVERSAL PCM WAV RECORDING / PLAYBACK
+    // =========================================================
+    let audioQueue = [], isPlayingQueue = false;
+    let micStream = null, micSource = null, pcmProcessor = null, pcmChunks = [], isCapturingPcm = false;
+    let currentTxSenderOverride = null, currentTxTgOverride = null;
 
-        const systemPrompt = `Du är radiooperatör på polisens Regionledningscentral (RLC ${activeRlcCode}). Du talar i Rakel med polispatrull ${window.MY_TACTICAL}.
-Svara mycket kortfattat, sakligt och professionellt enligt svensk polisiär radiodisciplin (Tänk-Tryck-Tala).
-Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsperson", "HR". Avsluta med "kom" om du väntar på svar, eller "klart slut" om samtalet är färdigt.`;
-
-        const apiKey = window.GEMINI_API_KEY || "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
+    async function ensureMicAccess() {
+        if (micStream && pcmProcessor) return true;
         try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: aiChatHistory,
-                    systemInstruction: { parts: [{ text: systemPrompt }] }
-                })
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            micStream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
             });
-            const result = await response.json();
-            const replyText = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-            if (replyText) {
-                aiChatHistory.push({ role: "model", parts: [{ text: replyText }] });
-                appendRlcLog(`🎙️ RLC ${activeRlcCode}: "${replyText}"`);
-                soundPttRelease();
-                setTimeout(() => {
-                    speakSwedish(replyText, () => {
-                        if (replyText.toLowerCase().includes("klart slut")) {
-                            setTimeout(() => endActiveCalls(), 1200);
-                        }
-                    }, `RLC ${activeRlcCode}`);
-                }, 300);
-                return;
-            }
+            micSource = audioCtx.createMediaStreamSource(micStream);
+            pcmProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+            pcmProcessor.onaudioprocess = (e) => {
+                if (!isCapturingPcm) return;
+                pcmChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+            };
+            const zeroGain = audioCtx.createGain();
+            zeroGain.gain.value = 0;
+            micSource.connect(pcmProcessor);
+            pcmProcessor.connect(zeroGain);
+            zeroGain.connect(audioCtx.destination);
+            return true;
         } catch (err) {
-            console.warn("AI fallback:", err);
+            return false;
         }
-
-        const fallbackReply = `Uppfattat ${window.MY_TACTICAL}, vi noterar det i HR. Klart slut.`;
-        appendRlcLog(`🎙️ RLC ${activeRlcCode}: "${fallbackReply}"`);
-        soundPttRelease();
-        setTimeout(() => {
-            speakSwedish(fallbackReply, () => {
-                setTimeout(() => endActiveCalls(), 1200);
-            }, `RLC ${activeRlcCode}`);
-        }, 350);
     }
 
-    // UNIVERSAL WEB-AUDIO PCM WAV RECORDER (100% compatible across PC, Android, and iOS!)
-    let micStream = null;
-    let pcmRecorderNode = null;
-    let pcmSourceNode = null;
-    let pcmZeroGain = null;
-    let pcmChunks = [];
-    let isCapturingPcm = false;
-    let audioQueue = [];
-    let isPlayingQueue = false;
-    let currentTxSenderOverride = null;
-    let currentTxTgOverride = null;
-
-    function encodeFloat32ToWavBase64(float32Chunks, inputSampleRate) {
+    function encodeWavFromPcmChunks(chunks, inRate, outRate = 12000) {
         let totalLen = 0;
-        for (const c of float32Chunks) totalLen += c.length;
+        for (const c of chunks) totalLen += c.length;
         if (totalLen === 0) return null;
 
         const merged = new Float32Array(totalLen);
         let offset = 0;
-        for (const c of float32Chunks) {
-            merged.set(c, offset);
-            offset += c.length;
-        }
+        for (const c of chunks) { merged.set(c, offset); offset += c.length; }
 
-        // Downsample to 12000 Hz mono for compact cloud size & crisp Rakel voice clarity
-        const targetRate = 12000;
-        const ratio = inputSampleRate / targetRate;
-        const outLength = Math.max(1, Math.floor(totalLen / ratio));
-        const outSamples = new Float32Array(outLength);
-
-        let peak = 0.01;
-        for (let i = 0; i < outLength; i++) {
-            const idx = Math.min(totalLen - 1, Math.floor(i * ratio));
-            const s = merged[idx];
-            outSamples[i] = s;
-            const abs = Math.abs(s);
-            if (abs > peak) peak = abs;
-        }
-
-        // Automatic microphone gain normalization so quiet laptop/phone mics are always loud & clear
-        const normGain = Math.min(4.0, 0.88 / peak);
-
-        const wavBuffer = new ArrayBuffer(44 + outLength * 2);
-        const view = new DataView(wavBuffer);
-        const writeStr = (pos, str) => {
-            for (let i = 0; i < str.length; i++) view.setUint8(pos + i, str.charCodeAt(i));
-        };
+        const ratio = inRate / outRate;
+        const outLen = Math.max(1, Math.floor(totalLen / ratio));
+        const buffer = new ArrayBuffer(44 + outLen * 2);
+        const view = new DataView(buffer);
+        const writeStr = (pos, str) => { for (let i = 0; i < str.length; i++) view.setUint8(pos + i, str.charCodeAt(i)); };
 
         writeStr(0, 'RIFF');
-        view.setUint32(4, 36 + outLength * 2, true);
+        view.setUint32(4, 36 + outLen * 2, true);
         writeStr(8, 'WAVE');
         writeStr(12, 'fmt ');
-        view.setUint32(16, 16, true);          // Subchunk1Size (PCM)
-        view.setUint16(20, 1, true);           // AudioFormat (1 = PCM)
-        view.setUint16(22, 1, true);           // NumChannels (1 = Mono)
-        view.setUint32(24, targetRate, true);  // SampleRate
-        view.setUint32(28, targetRate * 2, true); // ByteRate
-        view.setUint16(32, 2, true);           // BlockAlign
-        view.setUint16(34, 16, true);          // BitsPerSample
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, outRate, true);
+        view.setUint32(28, outRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
         writeStr(36, 'data');
-        view.setUint32(40, outLength * 2, true);
+        view.setUint32(40, outLen * 2, true);
 
-        let bytePos = 44;
-        for (let i = 0; i < outLength; i++) {
-            let sample = Math.max(-1, Math.min(1, outSamples[i] * normGain));
-            view.setInt16(bytePos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-            bytePos += 2;
+        for (let i = 0; i < outLen; i++) {
+            const idx = Math.min(totalLen - 1, Math.floor(i * ratio));
+            const s = Math.max(-1, Math.min(1, merged[idx]));
+            view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
         }
 
-        const bytes = new Uint8Array(wavBuffer);
+        const bytes = new Uint8Array(buffer);
         let binary = '';
-        const chunkSize = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+        for (let i = 0; i < bytes.length; i += 8192) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
         }
         return 'data:audio/wav;base64,' + btoa(binary);
-    }
-
-    async function ensureMicAccess() {
-        if (audioCtx.state === 'suspended') {
-            try { await audioCtx.resume(); } catch (e) {}
-        }
-        if (micStream && pcmRecorderNode) return true;
-        try {
-            micStream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-            });
-            if (audioCtx.state === 'suspended') {
-                try { await audioCtx.resume(); } catch (e) {}
-            }
-            pcmSourceNode = audioCtx.createMediaStreamSource(micStream);
-            pcmRecorderNode = audioCtx.createScriptProcessor(4096, 1, 1);
-            pcmZeroGain = audioCtx.createGain();
-            pcmZeroGain.gain.value = 0;
-
-            pcmRecorderNode.onaudioprocess = (e) => {
-                if (!isCapturingPcm) return;
-                const input = e.inputBuffer.getChannelData(0);
-                pcmChunks.push(new Float32Array(input));
-            };
-
-            pcmSourceNode.connect(pcmRecorderNode);
-            pcmRecorderNode.connect(pcmZeroGain);
-            pcmZeroGain.connect(audioCtx.destination);
-            return true;
-        } catch (err) {
-            console.warn("Mic access error:", err);
-            return false;
-        }
     }
 
     function finishAndSendPcmRecording() {
         if (!isCapturingPcm) return;
         isCapturingPcm = false;
-        const captured = pcmChunks;
+        const wavDataUrl = encodeWavFromPcmChunks(pcmChunks, audioCtx.sampleRate || 44100, 12000);
         pcmChunks = [];
-        const txTg = currentTxTgOverride || window.getActiveTxTalkgroupName();
-        const txSender = currentTxSenderOverride;
-        currentTxSenderOverride = null;
-        currentTxTgOverride = null;
-
-        const wavBase64 = encodeFloat32ToWavBase64(captured, audioCtx.sampleRate || 44100);
-        if (wavBase64 && window.dbSendAudio) {
-            window.dbSendAudio(wavBase64, txTg, txSender);
+        if (wavDataUrl && window.dbSendAudio) {
+            const targetTg = currentTxTgOverride || window.getActiveTxTalkgroupName();
+            window.dbSendAudio(wavDataUrl, targetTg, currentTxSenderOverride);
         }
     }
 
     window.startPtt = async function(e) {
         if (e) e.preventDefault();
         unlockBrowserAudio();
-        if (powerState === 'OFF' || powerState === 'PIN') return;
+        if (powerState === 'OFF' || powerState === 'PIN' || powerState === 'BOOT') return;
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
-        if (txInhibit) { soundError(); showTempMsg("🚫 Sändningsspärr aktiv", 1200); return; }
+        if (txInhibit) { soundError(); showTempMsg("🚫 Sändningsspärr aktiv", 1300); return; }
 
-        if (powerState === 'RINGING_RLC') {
-            answerRlcCall();
-            return;
-        }
+        if (powerState === 'RINGING_RLC') { window.stopGreen(); return; }
         if (powerState === 'DIALING') {
-            initiateDialedCall();
-            return;
-        }
-
-        isPttActive = true;
-        if (window.markLocalMachineTransmitting) window.markLocalMachineTransmitting();
-        document.getElementById('pttButton')?.classList.add('active');
-        soundPttGrant();
-        setLed('left', 'red');
-        updateScreenDisplay();
-
-        if (powerState === 'RLC_CONNECTED') {
-            if (recognition) {
-                try { transcriptBuffer = ""; isRecognizing = true; recognition.start(); } catch (err) {}
+            if (callDialMode === 'TEL') {
+                soundError();
+                showTempMsg("Telefonnummer kräver Grön lur!", 1500);
+                return;
             }
-            return;
+            initiateDialedCall();
+            if (powerState !== 'CALL_ACTIVE') return;
         }
+
+        if (window.markLocalMachineTransmitting) window.markLocalMachineTransmitting();
+        isPttActive = true;
+        document.getElementById('pttButton')?.classList.add('active');
+        setLed('left', 'red');
+        soundPttGrant();
+        updateScreenDisplay();
 
         currentTxSenderOverride = null;
         currentTxTgOverride = null;
         pcmChunks = [];
         isCapturingPcm = true;
         const ok = await ensureMicAccess();
-        if (!ok) {
-            isCapturingPcm = false;
-        }
+        if (!ok) isCapturingPcm = false;
     };
 
     window.stopPtt = function(e) {
@@ -2918,20 +3275,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         soundPttRelease();
         setLed('left', '');
         updateScreenDisplay();
-
-        if (powerState === 'RLC_CONNECTED') {
-            if (recognition && isRecognizing) {
-                try { recognition.stop(); } catch (err) {}
-            } else {
-                setTimeout(() => {
-                    if (!isReceivingReal && powerState === 'RLC_CONNECTED') {
-                        processAiRlcConversation(`${window.MY_TACTICAL}, klart för uppdrag, kom.`);
-                    }
-                }, 400);
-            }
-            return;
-        }
-
         finishAndSendPcmRecording();
     };
     window.cancelPtt = function(e) { window.stopPtt(e); };
@@ -2946,16 +3289,10 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const chipId = `rlc-chip-${(tgName || '').replace(/\s+/g, '_')}`;
         const chip = document.getElementById(chipId);
         if (active) {
-            if (ind) {
-                ind.style.color = '#2ecc71';
-                ind.innerText = `🔊 MOTTAR: ${senderName} (${tgName})`;
-            }
+            if (ind) { ind.style.color = '#2ecc71'; ind.innerText = `🔊 MOTTAR: ${senderName} (${tgName})`; }
             if (chip) chip.classList.add('rx-active');
         } else {
-            if (ind && !isRlcConsolePtt) {
-                ind.style.color = '#2ecc71';
-                ind.innerText = `● MEDLYSSNAR ALLA`;
-            }
+            if (ind && !isRlcConsolePtt) updateRlcHeaderIndicator();
             if (chip) chip.classList.remove('rx-active');
         }
     }
@@ -2967,7 +3304,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             audioQueue = [];
             return;
         }
-
         isPlayingQueue = true;
         isReceivingReal = true;
         const item = audioQueue.shift();
@@ -2989,21 +3325,16 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         processAudioQueue();
     }
 
-    // Direct PCM WAV & WebAudio Playback (Bypasses mobile autoplay blocks & WebM/MP4 codec incompatibility!)
     async function playBase64Audio(base64Data, tgName) {
         const rlcActive = window.isRlcViewActive();
         const effGain = rlcActive ? 1.8 : Math.max(0.35, (volumeLevel / 6) * 1.6);
-
         try {
-            if (audioCtx.state === 'suspended') {
-                await audioCtx.resume();
-            }
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
             const base64String = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
             const binaryString = atob(base64String);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
 
-            // 1. Direct synchronous RIFF WAV 16-bit PCM parser -> AudioBuffer (Zero browser codec issues!)
             const isRiffWav = bytes.length > 44 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
             if (isRiffWav) {
                 const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -3012,9 +3343,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
                 if (numSamples > 0) {
                     const audioBuffer = audioCtx.createBuffer(1, numSamples, sampleRate);
                     const channelData = audioBuffer.getChannelData(0);
-                    for (let i = 0; i < numSamples; i++) {
-                        channelData[i] = view.getInt16(44 + i * 2, true) / 32768.0;
-                    }
+                    for (let i = 0; i < numSamples; i++) channelData[i] = view.getInt16(44 + i * 2, true) / 32768.0;
                     const source = audioCtx.createBufferSource();
                     source.buffer = audioBuffer;
                     const gainNode = audioCtx.createGain();
@@ -3027,7 +3356,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
                 }
             }
 
-            // 2. Standard WebAudio decodeAudioData for any legacy/other audio format
             const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
             const source = audioCtx.createBufferSource();
             source.buffer = audioBuffer;
@@ -3038,7 +3366,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             source.onended = () => finishCurrentAudioPlayback(tgName);
             source.start(0);
         } catch (decodeErr) {
-            // 3. Fallback to pre-unlocked globalAudioPlayer element
             try {
                 globalAudioPlayer.src = base64Data;
                 globalAudioPlayer.volume = Math.min(1.0, effGain);
@@ -3046,7 +3373,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
                 globalAudioPlayer.onerror = () => finishCurrentAudioPlayback(tgName);
                 await globalAudioPlayer.play();
             } catch (fallbackErr) {
-                console.warn("Audio playback error:", fallbackErr);
                 finishCurrentAudioPlayback(tgName);
             }
         }
@@ -3076,10 +3402,18 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             if (forced) showTempMsg("Logga in och gå till grundskärmen först!", 1600);
             return;
         }
+        // DMO block: Cannot receive RLC dispatch in DMO unless Gateway is active on current DMO TG
+        if (!window.canReachRlcNetwork()) {
+            if (forced) {
+                soundError();
+                showTempMsg("❌ Ej kontakt med RLC i DMO!<br><span style='font-size:11px;'>Aktivera Gateway eller byt till TMO</span>", 2100);
+            }
+            return;
+        }
         if (!forced && (!spontaneousDispatchEnabled || radioStatus !== "Klar, ledig")) return;
 
         const missions = [
-            `Uppdrag för ${window.MY_TACTICAL}. Pågående inbrott på Storgatan 15. Vi lägger ut HR, byter till Insats 11 MPU, kom.`,
+            `${window.MY_TACTICAL} från ${activeRlcCode}. Pågående inbrott på Storgatan 15. Vi lägger ut HR, byter till Insats 11 MPU, kom.`,
             `${window.MY_TACTICAL} från ${activeRlcCode}. Trafikolycka med personskada på Inre Ringvägen. Åk dit och samverka på IGV PO1 MPU, kom.`,
             `${window.MY_TACTICAL} från ${activeRlcCode}. Larm om pågående bråk vid Centralstationen, målsägande kvar på plats, kom.`
         ];
@@ -3090,20 +3424,23 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     };
 
     setInterval(() => {
-        if (!window.isRlcViewActive() && powerState === 'IDLE' && spontaneousDispatchEnabled && radioStatus === "Klar, ledig" && Math.random() < 0.18) {
+        if (!window.isRlcViewActive() && powerState === 'IDLE' && spontaneousDispatchEnabled && radioStatus === "Klar, ledig" && window.canReachRlcNetwork() && Math.random() < 0.18) {
             window.triggerSpontaneousDispatch(false);
         }
     }, 35000);
 
     window.receiveSds = function(from, text, ttsText = "", tgName = "") {
-        sdsInbox.push({ from: from, text: text, time: getTime() });
         if (powerState === 'OFF' || powerState === 'PIN') return;
+        // Strict DMO check: If in DMO without Gateway, cannot receive RLC SDS/dispatches
+        if (!window.canReachRlcNetwork() && String(from).includes("RLC")) {
+            return;
+        }
+        sdsInbox.push({ from: from, text: text, time: getTime() });
         soundStatusDelivered();
         setLed('right', 'blue');
         setTimeout(() => setLed('right', ''), 2500);
         showTempMsg(`✉️ <b>Nytt SDS från ${from}:</b><br><span style="font-size:11px;font-weight:normal;">${text}</span>`, 3500);
 
-        // If RLC sent a Voice Broadcast or HR Dispatch with spoken text, read it out loud on the phone too!
         if (ttsText && !window.isRlcViewActive()) {
             setTimeout(() => {
                 soundPttGrant();
@@ -3113,6 +3450,11 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     };
 
     window.sendStatusToRlc = function(statusText) {
+        if (!window.canReachRlcNetwork()) {
+            soundError();
+            showTempMsg("❌ Ej kontakt med RLC i DMO!<br><span style='font-size:11px;'>Status kräver TMO eller aktiv Gateway</span>", 2100);
+            return;
+        }
         radioStatus = statusText;
         soundStatusDelivered();
         if (window.syncPresenceNow) window.syncPresenceNow();
@@ -3139,10 +3481,8 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         });
     };
 
-    // Vehicle Gateway Panel (SRG3900)
     window.toggleVehiclePanel = function() {
-        const vp = document.getElementById('vehiclePanel');
-        if (vp) vp.classList.toggle('open');
+        document.getElementById('vehiclePanel')?.classList.toggle('open');
     };
 
     window.updateGatewayConfig = function() {
@@ -3159,6 +3499,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             document.getElementById('vpDmoIndex').innerText = dIdx;
             if (window.syncPresenceNow) window.syncPresenceNow();
             if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+            updateScreenDisplay();
         }
     };
 
@@ -3197,7 +3538,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const rlcActive = window.isRlcViewActive();
         const radioLoggedIn = powerState !== 'OFF' && powerState !== 'BOOT' && powerState !== 'PIN';
 
-        // Only include our own unit in the active list if the radio is turned ON & logged in, or if RLC view is open
         if (radioLoggedIn || rlcActive) {
             const myUnitObj = {
                 tactical: window.MY_TACTICAL,
@@ -3215,11 +3555,8 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
                 isLocal: true
             };
             const existingIdx = units.findIndex(u => u.tactical === window.MY_TACTICAL);
-            if (existingIdx >= 0) {
-                units[existingIdx] = { ...units[existingIdx], ...myUnitObj };
-            } else {
-                units.unshift(myUnitObj);
-            }
+            if (existingIdx >= 0) units[existingIdx] = { ...units[existingIdx], ...myUnitObj };
+            else units.unshift(myUnitObj);
         } else {
             units = units.filter(u => u.tactical !== window.MY_TACTICAL);
         }
@@ -3262,19 +3599,11 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     window.toggleOnlineUnitsModal = function() {
         const m = document.getElementById('onlineUnitsModal');
         if (!m) return;
-        if (m.style.display === 'flex') {
-            m.style.display = 'none';
-        } else {
-            renderOnlineUnitsModalList();
-            m.style.display = 'flex';
-        }
+        if (m.style.display === 'flex') m.style.display = 'none';
+        else { renderOnlineUnitsModalList(); m.style.display = 'flex'; }
     };
 
-    // RLC Map & Console Logic
-    let rlcMap = null;
-    let rlcTileLayer = null;
-    let rlcUnitMarkers = {};
-    let rlcHrMarkers = [];
+    let rlcMap = null, rlcTileLayer = null, rlcUnitMarkers = {}, rlcHrMarkers = [];
     let selectedHrCoords = { lat: 55.6050, lng: 13.0038 };
     let rlcSelectedTxTg = "IGV PO1 MPU";
     let rlcMonitoredTgs = [
@@ -3284,7 +3613,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         "Insats 1 MPU",
         "Insats 11 MPU",
         "Insats 12 MPU",
-        "LPO Centrum",
+        "RAPS 1 Syd",
         "Alla DMO 1"
     ];
     let rlcMonitoredTgsSet = new Set(rlcMonitoredTgs);
@@ -3323,7 +3652,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         if (!rlcMonitoredTgs.includes(newTg)) {
             rlcMonitoredTgs.push(newTg);
             rlcMonitoredTgsSet.add(newTg);
-            appendRlcLog(`➕ Talgrupp ${newTg} tillagd på RLC-radiobordet med aktiv passning.`);
+            appendRlcLog(`➕ Talgrupp ${newTg} tillagd på RLC-radiobordet.`);
             renderRlcTgGrid();
             updateRlcHeaderIndicator();
         }
@@ -3367,20 +3696,15 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         if (rlcMap) return;
         const container = document.getElementById('rlcMapContainer');
         if (!container || typeof L === 'undefined') return;
-
         rlcMap = L.map('rlcMapContainer', {
             center: [window.MY_LAT || 55.6050, window.MY_LNG || 13.0038],
             zoom: 13
         });
-
         window.setRlcMapLayer('roadmap');
-
         rlcMap.on('click', (e) => {
             selectedHrCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
             const addrInput = document.getElementById('rlcHrAddressInput');
-            if (addrInput) {
-                addrInput.value = `Koord: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
-            }
+            if (addrInput) addrInput.value = `Koord: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
             appendRlcLog(`📍 Kartposition vald för nytt HR: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`);
         });
     }
@@ -3389,21 +3713,11 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         if (!rlcMap) return;
         if (rlcTileLayer) rlcMap.removeLayer(rlcTileLayer);
         if (mode === 'hybrid') {
-            rlcTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                maxZoom: 20,
-                attribution: '© Google Maps'
-            });
+            rlcTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: '© Google Maps' });
         } else if (mode === 'dark') {
-            rlcTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                maxZoom: 20,
-                className: 'leaflet-dark-tiles',
-                attribution: '© Google Maps'
-            });
+            rlcTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, className: 'leaflet-dark-tiles', attribution: '© Google Maps' });
         } else {
-            rlcTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                maxZoom: 20,
-                attribution: '© Google Maps'
-            });
+            rlcTileLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: '© Google Maps' });
         }
         rlcTileLayer.addTo(rlcMap);
     };
@@ -3412,9 +3726,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         if (!rlcMap) return;
         const pts = Object.values(rlcUnitMarkers).map(m => m.getLatLng());
         rlcHrMarkers.forEach(m => pts.push(m.getLatLng()));
-        if (pts.length > 0) {
-            rlcMap.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 15 });
-        }
+        if (pts.length > 0) rlcMap.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 15 });
     };
 
     function getStatusPillClass(status) {
@@ -3422,7 +3734,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const s = status.toLowerCase();
         if (s.includes('nödlarm') || s.includes('16')) return 'status-alarm';
         if (s.includes('anropsbegäran')) return 'status-warn';
-        if (s.includes('påbörjat') || s.includes('framme') || s.includes('utgår') || s.includes('rlc')) return 'status-busy';
+        if (s.includes('påbörjat') || s.includes('framme') || s.includes('utgår') || s.includes('upptagen') || s.includes('rapport') || s.includes('rlc')) return 'status-busy';
         return 'status-free';
     }
 
@@ -3431,7 +3743,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const badge = document.getElementById('rlcUnitCountBadge');
         if (badge) badge.innerText = `${units.length} aktiva`;
 
-        // Gateway Bridge Box
         const gw = window.getAnyActiveGateway();
         const gwBox = document.getElementById('rlcGatewayStatusBox');
         const gwTxt = document.getElementById('rlcGatewayStatusText');
@@ -3444,7 +3755,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             }
         }
 
-        // Render Patrol Cards
         const listEl = document.getElementById('rlcUnitsList');
         if (listEl) {
             listEl.innerHTML = units.map(u => {
@@ -3452,6 +3762,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
                 const isEmerg = pillClass === 'status-alarm';
                 const isReq = pillClass === 'status-warn';
                 const aliasLabel = u.alias ? ` • <span style="color:#7cc4fa;">${u.alias}</span>` : '';
+                const dmoIsolated = (u.mode === 'DMO') && !(gw.active && u.tg === gw.dmo);
                 return `<div class="rlc-unit-card ${isEmerg ? 'emergency' : ''} ${isReq ? 'req-call' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <span style="font-weight:bold;font-size:13px;color:#fff;">🚔 ${u.tactical}${aliasLabel}</span>
@@ -3459,7 +3770,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
                         <span>👥 TG: <b style="color:#e2e8f0;">${u.tg}</b></span>
-                        <span>Läge: <b>${u.mode || 'TMO'}${u.gwActive ? '+GW' : ''}</b></span>
+                        <span>Läge: <b style="color:${dmoIsolated ? '#f39c12' : '#2ecc71'};">${u.mode || 'TMO'}${u.gwActive || (u.mode==='DMO' && gw.active && u.tg===gw.dmo) ? '+GW' : (dmoIsolated ? ' (Ej nät)' : '')}</b></span>
                     </div>
                     <div style="display:flex;gap:5px;margin-top:2px;">
                         <button class="rlc-btn-sm" onclick="rlcFocusUnitOnMap('${u.tactical}')">📍 Karta</button>
@@ -3470,37 +3781,23 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             }).join('');
         }
 
-        // Update HR Target Dropdown
         const targetSelect = document.getElementById('rlcHrTargetUnit');
         if (targetSelect) {
             const currentVal = targetSelect.value;
             targetSelect.innerHTML = `<option value="ALL">Till: Alla patruller (Utlarmning)</option>` +
                 units.map(u => `<option value="${u.tactical}">Till: ${u.tactical}${u.alias ? ' (' + u.alias + ')' : ''}</option>`).join('');
-            if ([...targetSelect.options].some(o => o.value === currentVal)) {
-                targetSelect.value = currentVal;
-            }
+            if ([...targetSelect.options].some(o => o.value === currentVal)) targetSelect.value = currentVal;
         }
 
-        // Update Map Markers
         if (rlcMap) {
             const activeIds = new Set(units.map(u => u.tactical));
             Object.keys(rlcUnitMarkers).forEach(k => {
-                if (!activeIds.has(k)) {
-                    rlcMap.removeLayer(rlcUnitMarkers[k]);
-                    delete rlcUnitMarkers[k];
-                }
+                if (!activeIds.has(k)) { rlcMap.removeLayer(rlcUnitMarkers[k]); delete rlcUnitMarkers[k]; }
             });
-
             units.forEach(u => {
-                const lat = u.lat || 55.6050;
-                const lng = u.lng || 13.0038;
+                const lat = u.lat || 55.6050, lng = u.lng || 13.0038;
                 const labelTxt = `🚔 ${u.tactical}${u.alias ? ' • ' + u.alias : ''} (${u.tg})`;
-                const icon = L.divIcon({
-                    className: '',
-                    html: `<div class="map-unit-label">${labelTxt}</div>`,
-                    iconSize: [140, 24],
-                    iconAnchor: [70, 12]
-                });
+                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [140, 24], iconAnchor: [70, 12] });
                 if (rlcUnitMarkers[u.tactical]) {
                     rlcUnitMarkers[u.tactical].setLatLng([lat, lng]);
                     rlcUnitMarkers[u.tactical].setIcon(icon);
@@ -3509,7 +3806,6 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
                 }
             });
         }
-
         renderRlcTgGrid();
     };
 
@@ -3522,11 +3818,11 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             const isMon = rlcMonitoredTgsSet.has(tg);
             const isGwBridged = gw.active && (tg === gw.tmo || tg === gw.dmo);
             return `<div class="rlc-tg-chip ${isSel ? 'selected-tx' : ''} ${isMon ? 'monitored' : 'muted'}" id="rlc-chip-${tg.replace(/\s+/g, '_')}">
-                <div class="rlc-tg-name" onclick="rlcSelectTxTg('${tg}')" title="Klicka för att välja som sändningskanal (TX)">
+                <div class="rlc-tg-name" onclick="rlcSelectTxTg('${tg}')">
                     <span>${isSel ? '🎙️ ' : ''}${tg}</span>
                     ${isGwBridged ? '<span style="color:#2ecc71;font-size:9px;margin-left:2px;">🔄GW</span>' : ''}
                 </div>
-                <button class="rlc-mon-btn ${isMon ? 'active' : ''}" onclick="rlcToggleMonitorTg('${tg}', event)" title="${isMon ? 'Klicka för att stänga av medlyssning' : 'Klicka för att medlyssna'}">
+                <button class="rlc-mon-btn ${isMon ? 'active' : ''}" onclick="rlcToggleMonitorTg('${tg}', event)">
                     ${isMon ? '👂 På' : '🔇 Av'}
                 </button>
             </div>`;
@@ -3536,19 +3832,24 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     window.rlcSelectTxTg = function(tgName) {
         unlockBrowserAudio();
         rlcSelectedTxTg = tgName;
-        rlcMonitoredTgsSet.add(tgName); // Sändningskanalen passas alltid automatiskt
+        rlcMonitoredTgsSet.add(tgName);
         updateRlcHeaderIndicator();
         renderRlcTgGrid();
     };
 
     window.rlcFocusUnitOnMap = function(tactical) {
         const u = getCombinedUnitsList().find(x => x.tactical === tactical);
-        if (u && rlcMap) {
-            rlcMap.setView([u.lat || 55.6050, u.lng || 13.0038], 15);
-        }
+        if (u && rlcMap) rlcMap.setView([u.lat || 55.6050, u.lng || 13.0038], 15);
     };
 
     window.rlcRingPatrol = function(tactical) {
+        const u = getCombinedUnitsList().find(x => x.tactical === tactical);
+        const gw = window.getAnyActiveGateway();
+        if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`❌ Kan ej ringa ${tactical}: Patrullen är i DMO (${u.tg}) utan aktiv Gateway!`, true);
+            return;
+        }
         appendRlcLog(`📞 RLC 9-7 ringer individanrop till ${tactical}...`);
         if (window.dbSendSds) {
             window.dbSendSds(tactical, "Inkommande individanrop från RLC 9-7", { type: "RLC_RING", rlcCode: "9-7", fromOverride: "RLC 9-7" });
@@ -3559,6 +3860,13 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     };
 
     window.rlcSendDirectSds = function(tactical) {
+        const u = getCombinedUnitsList().find(x => x.tactical === tactical);
+        const gw = window.getAnyActiveGateway();
+        if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`❌ Kan ej nå ${tactical} med SDS: Patrullen är i DMO utan aktiv Gateway!`, true);
+            return;
+        }
         askInput(`Skicka direkt SDS till ${tactical}:`, "", (msg) => {
             if (msg) {
                 if (window.dbSendSds) window.dbSendSds(tactical, msg, { fromOverride: "RLC 9-7", ttsText: msg });
@@ -3570,8 +3878,8 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
 
     window.addSimulatedDemoPatrol = function() {
         const names = ["Andersson", "Lindberg", "Svensson", "Nilsson", "Bergström"];
-        const tgs = ["IGV PO1 MPU", "Insats 12 MPU", "Alla DMO 1", "LPO Centrum"];
-        const statuses = ["Klar, ledig", "Påbörjat uppdrag", "Framme på plats"];
+        const tgs = ["IGV PO1 MPU", "Insats 12 MPU", "Alla DMO 1", "RAPS 1 Syd"];
+        const statuses = ["Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Disponibel"];
         const randFour = String(Math.floor(2000 + Math.random() * 7000));
         const newPatrol = {
             tactical: `97-${randFour}`,
@@ -3580,7 +3888,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
             issi: `17${randFour}`,
             tg: tgs[window.simulatedPatrols.length % tgs.length],
             status: statuses[window.simulatedPatrols.length % statuses.length],
-            mode: (window.simulatedPatrols.length % 3 === 2) ? "DMO" : "TMO",
+            mode: (window.simulatedPatrols.length % 4 === 2) ? "DMO" : "TMO",
             gwActive: (window.simulatedPatrols.length === 1),
             gwTmo: "Insats 12 MPU",
             gwDmo: "Alla DMO 1",
@@ -3590,7 +3898,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         window.simulatedPatrols.push(newPatrol);
         window.updateOnlinePillUI();
         window.refreshRlcDashboard();
-        appendRlcLog(`➕ Övningspatrull ${newPatrol.tactical} (${newPatrol.alias}) tillagd på kartan.`);
+        appendRlcLog(`➕ Övningspatrull ${newPatrol.tactical} (${newPatrol.alias}) tillagd.`);
     };
 
     window.clearSimulatedPatrols = function() {
@@ -3600,12 +3908,17 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         appendRlcLog(`🗑️ Demo-patruller rensade.`);
     };
 
-    // RLC Console PTT & Voice Broadcast
     let isRlcConsolePtt = false;
     window.startRlcConsolePtt = async function(e) {
         if (e) e.preventDefault();
         unlockBrowserAudio();
         if (isRlcConsolePtt) return;
+        const gw = window.getAnyActiveGateway();
+        if (DMO_TG_NAMES.has(rlcSelectedTxTg) && !(gw.active && rlcSelectedTxTg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`❌ RLC kan ej sända direkt på ${rlcSelectedTxTg} utan aktiv Gateway!`, true);
+            return;
+        }
         isRlcConsolePtt = true;
         if (window.markLocalMachineTransmitting) window.markLocalMachineTransmitting();
         document.getElementById('rlcPttBtn')?.classList.add('transmitting');
@@ -3618,9 +3931,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         pcmChunks = [];
         isCapturingPcm = true;
         const ok = await ensureMicAccess();
-        if (!ok) {
-            isCapturingPcm = false;
-        }
+        if (!ok) isCapturingPcm = false;
     };
 
     window.stopRlcConsolePtt = function(e) {
@@ -3628,10 +3939,8 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         if (!isRlcConsolePtt) return;
         isRlcConsolePtt = false;
         document.getElementById('rlcPttBtn')?.classList.remove('transmitting');
-        const ind = document.getElementById('rlcTxIndicator');
-        if (ind) { ind.style.color = '#2ecc71'; ind.innerText = `● MEDLYSSNAR ALLA`; }
+        updateRlcHeaderIndicator();
         soundPttRelease();
-
         finishAndSendPcmRecording();
         appendRlcLog(`🎙️ RLC 9-7 sände röst på ${rlcSelectedTxTg}`);
     };
@@ -3639,6 +3948,12 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     window.sendRlcVoiceBroadcast = function() {
         const inp = document.getElementById('rlcQuickTtsInput');
         if (!inp || !inp.value.trim()) return;
+        const gw = window.getAnyActiveGateway();
+        if (DMO_TG_NAMES.has(rlcSelectedTxTg) && !(gw.active && rlcSelectedTxTg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`❌ RLC kan ej ropa ut på ${rlcSelectedTxTg} (DMO) utan aktiv Gateway!`, true);
+            return;
+        }
         const text = inp.value.trim();
         inp.value = "";
         appendRlcLog(`🔊 RLC 9-7 (${rlcSelectedTxTg}): "${text}"`);
@@ -3666,17 +3981,14 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
     window.generateAiHrForConsole = async function() {
         const desc = document.getElementById('rlcHrDescInput');
         const addr = document.getElementById('rlcHrAddressInput');
-        if (desc) desc.value = "Genererar realistiskt HR-förslag...";
         const samples = [
             { a: "Amiralsgatan 22, Malmö", d: "Larm från butik. Gärningsperson har lämnat platsen till fots i mörk jacka mot Nobeltorget." },
             { a: "Inre Ringvägen / Trafikplats Sunnanå", d: "Singelolycka med personbil i mitträcket. Föraren är ute ur fordonet." },
             { a: "Stortorget 4, Malmö", d: "Ordningsvakter begär biträde med utåtagerande person vid uteservering." }
         ];
         const pick = samples[Math.floor(Math.random() * samples.length)];
-        setTimeout(() => {
-            if (addr) addr.value = pick.a;
-            if (desc) desc.value = pick.d;
-        }, 300);
+        if (addr) addr.value = pick.a;
+        if (desc) desc.value = pick.d;
     };
 
     window.dispatchHrFromConsole = function() {
@@ -3686,8 +3998,19 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         const desc = document.getElementById('rlcHrDescInput')?.value || "";
         const target = document.getElementById('rlcHrTargetUnit')?.value || "ALL";
 
+        if (target !== "ALL") {
+            const u = getCombinedUnitsList().find(x => x.tactical === target);
+            const gw = window.getAnyActiveGateway();
+            if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+                soundError();
+                appendRlcLog(`❌ Kan ej larma ${target}: Patrullen är i DMO utan aktiv Gateway!`, true);
+                return;
+            }
+        }
+
         const hrText = `🚨 HR: ${type} | Plats: ${addr} | TG: ${tg} | ${desc}`;
-        const spokenDispatch = `Utlarmning från 9-7. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`;
+        const targetLabel = target === "ALL" ? "samtliga patruller" : target;
+        const spokenDispatch = `${targetLabel} från 9-7. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`;
         if (window.dbSendSds) {
             window.dbSendSds(target, hrText, {
                 fromOverride: "RLC 9-7",
@@ -3697,14 +4020,8 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         }
 
         if (rlcMap) {
-            const hrIcon = L.divIcon({
-                className: '',
-                html: `<div class="map-hr-label">🚨 ${type} (${tg})</div>`,
-                iconSize: [160, 24],
-                iconAnchor: [80, 12]
-            });
-            const m = L.marker([selectedHrCoords.lat, selectedHrCoords.lng], { icon: hrIcon }).addTo(rlcMap);
-            rlcHrMarkers.push(m);
+            const hrIcon = L.divIcon({ className: '', html: `<div class="map-hr-label">🚨 ${type} (${tg})</div>`, iconSize: [160, 24], iconAnchor: [80, 12] });
+            rlcHrMarkers.push(L.marker([selectedHrCoords.lat, selectedHrCoords.lng], { icon: hrIcon }).addTo(rlcMap));
         }
 
         appendRlcLog(`🚨 Utlarmat HR (${type} @ ${addr}) till ${target} på ${tg}`);
@@ -3734,10 +4051,7 @@ Använd korrekta uttryck som "Uppfattat", "Framkom", "Målsägande", "Gärningsp
         appendRlcLog(`✉️ SDS från ${data.from_issi} ➔ ${data.to_issi}: "${data.msg}"`);
     };
 
-    // Clock & initial render
-    setInterval(() => {
-        if (powerState === 'IDLE') updateScreenDisplay();
-    }, 15000);
+    setInterval(() => { if (powerState === 'IDLE') updateScreenDisplay(); }, 15000);
 
     document.addEventListener('DOMContentLoaded', () => {
         updateBadgeAndToastText();
