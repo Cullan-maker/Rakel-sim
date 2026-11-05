@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Rakel SC21">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#002855">
+    <link rel="manifest" href="manifest.json">
     <title>Sepura SC21 - Rakel Utbildningssimulator & RLC</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -4410,41 +4411,11 @@
             }
             appleLink.href = icon192;
 
-            // Skapa inbäddat Web App Manifest
-            const manifestObj = {
-                name: "Sepura SC21 - Rakel & RLC Utbildningssimulator",
-                short_name: "Rakel SC21",
-                description: "Interaktiv Rakel Sepura SC21 handterminal, SRG3900 Gateway och RLC-ledningscentral.",
-                start_url: window.location.href,
-                display: "standalone",
-                orientation: "any",
-                background_color: "#16202a",
-                theme_color: "#002855",
-                icons: [
-                    { src: icon192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
-                    { src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
-                ]
-            };
-            const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
-            const manifestUrl = URL.createObjectURL(manifestBlob);
-            let manifestLink = document.querySelector("link[rel='manifest']");
-            if (!manifestLink) {
-                manifestLink = document.createElement('link');
-                manifestLink.rel = 'manifest';
-                document.head.appendChild(manifestLink);
-            }
-            manifestLink.href = manifestUrl;
-
-            // Registrera inbäddad Service Worker om miljön tillåter det
+            // Registrera fysisk Service Worker (sw.js) för Android, iOS & Desktop PWA
             if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
-                const swCode = `
-                    self.addEventListener('install', (e) => self.skipWaiting());
-                    self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
-                    self.addEventListener('fetch', (e) => {});
-                `;
-                const swBlob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(swBlob);
-                navigator.serviceWorker.register(swUrl).catch(() => {});
+                navigator.serviceWorker.register('./sw.js').catch((swErr) => {
+                    console.warn("Service Worker (sw.js) registrering:", swErr);
+                });
             }
         } catch (err) {
             console.warn("PWA init info:", err);

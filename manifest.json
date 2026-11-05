@@ -1,0 +1,26 @@
+{
+  "id": "./index.html",
+  "name": "Sepura SC21 - Rakel & RLC Utbildningssimulator",
+  "short_name": "Rakel SC21",
+  "description": "Interaktiv Rakel Sepura SC21 handterminal, SRG3900 Gateway och RLC-ledningscentral.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#16202a",
+  "theme_color": "#002855",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' width='192' height='192'%3E%3Crect width='192' height='192' rx='40' fill='%23002855'/%3E%3Crect x='116' y='13' width='13' height='36' rx='6' fill='%23222222'/%3E%3Crect x='66' y='31' width='16' height='13' rx='3' fill='%23333333'/%3E%3Crect x='91' y='36' width='15' height='7' rx='2' fill='%23ff3b30'/%3E%3Crect x='44' y='73' width='10' height='37' rx='4' fill='%23ff8c00'/%3E%3Crect x='52' y='40' width='88' height='136' rx='13' fill='%23282c34' stroke='%23000000' stroke-width='2.5'/%3E%3Ccircle cx='70' cy='48' r='2.5' fill='%232ecc71'/%3E%3Crect x='60' y='55' width='72' height='50' rx='4' fill='%23080a0c'/%3E%3Crect x='63' y='58' width='66' height='44' rx='2' fill='%23ffffff'/%3E%3Crect x='63' y='58' width='66' height='9' fill='%23002855'/%3E%3Ctext x='96' y='65' fill='%23ffffff' font-family='Arial,sans-serif' font-size='5.5' font-weight='bold' text-anchor='middle'%3ERAKEL TMO%3C/text%3E%3Ctext x='96' y='78' fill='%23002855' font-family='Arial,sans-serif' font-size='11' font-weight='bold' text-anchor='middle'%3ESC21%3C/text%3E%3Ctext x='96' y='88' fill='%231e8449' font-family='Arial,sans-serif' font-size='6.5' font-weight='bold' text-anchor='middle'%3EIGV PO1 MPU%3C/text%3E%3Crect x='63' y='94' width='66' height='8' fill='%23002b66'/%3E%3Ccircle cx='96' cy='125' r='12' fill='%23111111' stroke='%23555555' stroke-width='1.5'/%3E%3Crect x='64' y='118' width='13' height='11' rx='3' fill='%232ecc71'/%3E%3Crect x='115' y='118' width='13' height='11' rx='3' fill='%23e74c3c'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'%3E%3Crect width='512' height='512' rx='108' fill='%23002855'/%3E%3Crect x='310' y='34' width='34' height='95' rx='16' fill='%23222222'/%3E%3Crect x='175' y='84' width='44' height='34' rx='8' fill='%23333333'/%3E%3Crect x='242' y='96' width='40' height='18' rx='6' fill='%23ff3b30'/%3E%3Crect x='118' y='195' width='26' height='98' rx='10' fill='%23ff8c00'/%3E%3Crect x='140' y='108' width='232' height='362' rx='34' fill='%23282c34' stroke='%23000000' stroke-width='6'/%3E%3Ccircle cx='185' cy='128' r='6' fill='%232ecc71'/%3E%3Crect x='160' y='146' width='192' height='134' rx='10' fill='%23080a0c'/%3E%3Crect x='168' y='154' width='176' height='118' rx='4' fill='%23ffffff'/%3E%3Crect x='168' y='154' width='176' height='22' fill='%23002855'/%3E%3Ctext x='256' y='170' fill='%23ffffff' font-family='Arial,sans-serif' font-size='13' font-weight='bold' text-anchor='middle'%3ERAKEL TMO%3C/text%3E%3Ctext x='256' y='206' fill='%23002855' font-family='Arial,sans-serif' font-size='28' font-weight='bold' text-anchor='middle'%3ESC21%3C/text%3E%3Ctext x='256' y='232' fill='%231e8449' font-family='Arial,sans-serif' font-size='17' font-weight='bold' text-anchor='middle'%3EIGV PO1 MPU%3C/text%3E%3Crect x='168' y='250' width='176' height='22' fill='%23002b66'/%3E%3Ccircle cx='256' cy='332' r='32' fill='%23111111' stroke='%23555555' stroke-width='4'/%3E%3Crect x='172' y='316' width='34' height='30' rx='7' fill='%232ecc71'/%3E%3Crect x='306' y='316' width='34' height='30' rx='7' fill='%23e74c3c'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
