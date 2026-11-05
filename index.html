@@ -632,7 +632,7 @@
 </div>
 
 <!-- STEP 2: RLC COMMAND CENTER VIEW -->
-<div class="rlc-dashboard" id="rlcDashboard">
+    <div class="rlc-dashboard" id="rlcDashboard">
     <div class="rlc-panel">
         <div class="rlc-panel-header">
             <span>🚔 Uppkopplade Patruller (Live)</span>
@@ -674,14 +674,14 @@
             <div style="display:flex;align-items:center;gap:6px;">
                 <span>🎙️ RLC</span>
                 <select id="rlcRegionSelect" class="rlc-form-select" style="width:auto;padding:2px 6px;font-size:11px;font-weight:bold;background:#0b111a;color:#7cc4fa;border-color:#3b5270;" onchange="changeActiveRlcRegion(this.value)">
-                    <option value="9-7">9-7 (Syd)</option>
-                    <option value="9-6">9-6 (Väst)</option>
-                    <option value="9-5">9-5 (Öst)</option>
-                    <option value="9-4">9-4 (Bergslagen)</option>
-                    <option value="9-3">9-3 (Stockholm)</option>
-                    <option value="9-2">9-2 (Mitt)</option>
-                    <option value="9-1">9-1 (Nord)</option>
-                    <option value="9-0">9-0 (NLC)</option>
+                    <option value="7">7 (Syd)</option>
+                    <option value="5">5 (Väst)</option>
+                    <option value="6">6 (Öst)</option>
+                    <option value="4">4 (Bergslagen)</option>
+                    <option value="3">3 (Stockholm)</option>
+                    <option value="2">2 (Mitt)</option>
+                    <option value="1">1 (Nord)</option>
+                    <option value="0">0 (NLC)</option>
                 </select>
             </div>
             <span id="rlcTxIndicator" style="color:#2ecc71;font-size:11px;">● MEDLYSSNAR ALLA</span>
@@ -734,6 +734,7 @@
             <div style="display:flex;gap:5px;">
                 <input type="text" id="rlcQuickTtsInput" class="rlc-form-input" placeholder="Skriv röstutrop till patruller (t.ex. 97-2410 från 9-7, kom)..." style="flex:1;">
                 <button class="rlc-btn-sm hr" onclick="sendRlcVoiceBroadcast()">🔊 Ropa ut</button>
+                <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()" title="Testa ljud och högtalare">🔊 Testljud</button>
             </div>
 
             <div style="border-top:1px solid #26354a;margin:4px 0;"></div>
@@ -1617,37 +1618,40 @@
     const SILENT_WAV_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
     let speechInited = false, htmlAudioPrimed = false;
 
-    function unlockBrowserAudio() {
-        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    async function unlockBrowserAudio() {
         try {
-            const buf = audioCtx.createBuffer(1, 1, 22050);
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            const buf = audioCtx.createBuffer(1, 220, 22050);
             const src = audioCtx.createBufferSource();
             src.buffer = buf;
             src.connect(audioCtx.destination);
             src.start(0);
         } catch (e) {}
+
         if (!htmlAudioPrimed) {
-            globalAudioPlayer.src = SILENT_WAV_URI;
-            globalAudioPlayer.volume = 0.01;
-            globalAudioPlayer.play().then(() => {
+            try {
+                globalAudioPlayer.src = SILENT_WAV_URI;
+                globalAudioPlayer.volume = 0.01;
+                await globalAudioPlayer.play();
                 htmlAudioPrimed = true;
                 globalAudioPlayer.pause();
                 globalAudioPlayer.volume = 1.0;
-            }).catch(() => {});
+            } catch (e) {}
         }
-        if (!speechInited) {
-            if ('speechSynthesis' in window) {
-                try {
-                    let u = new SpeechSynthesisUtterance("");
-                    u.volume = 0; u.lang = 'sv-SE';
-                    window.speechSynthesis.speak(u);
-                } catch (e) {}
-            }
+
+        if (!speechInited && 'speechSynthesis' in window) {
+            try {
+                let u = new SpeechSynthesisUtterance(" ");
+                u.volume = 0; u.lang = 'sv-SE';
+                window.speechSynthesis.speak(u);
+            } catch (e) {}
             speechInited = true;
         }
     }
 
-    ['touchend', 'click', 'pointerdown'].forEach(evtName => {
+    ['touchend', 'click', 'pointerdown', 'keydown'].forEach(evtName => {
         document.addEventListener(evtName, () => {
             if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
             if (!htmlAudioPrimed || !speechInited) unlockBrowserAudio();
@@ -1825,11 +1829,12 @@
     }
 
     async function speakSwedish(text, callback, senderLabel, customTgLabel, options = {}) {
+        await unlockBrowserAudio();
         receivingSender = senderLabel || `RLC ${activeRlcCode}`;
         receivingTgName = customTgLabel || window.getActiveTxTalkgroupName();
         const rlcActive = window.isRlcViewActive();
         const formattedSpeechText = window.formatSwedishRadioSpeech(text);
-        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+        if (audioCtx.state === 'suspended') await audioCtx.resume().catch(() => {});
 
         const canPlayAudio = rlcActive || (volumeLevel > 0 && !speakerMuted && currentProfile !== "Tyst");
 
@@ -4370,12 +4375,9 @@ Regler för radiokommunikation:
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
                         <span>👥 TG: <b style="color:#e2e8f0;">${u.tg}</b></span>
-                        <span>📍 Plats: <b style="color:#cbd5e1;">${u.locationName || 'Storgatan'}</b></span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
                         <span>Läge: <b style="color:${dmoIsolated ? '#f39c12' : '#2ecc71'};">${tmoBlocked ? '📵 TMO-SPÄRR' : (u.mode || 'TMO')}${u.gwActive || (u.mode==='DMO' && gw.active && u.tg===gw.dmo) ? '+GW' : (dmoIsolated ? ' (Ej nät)' : '')}</b></span>
-                        ${u.isSimulated ? `<span style="color:#a78bfa;font-weight:bold;">[Övningspatrull]</span>` : ''}
                     </div>
+                    ${u.isSimulated ? `<div style="font-size:10px;color:#a78bfa;font-weight:bold;">[Övningspatrull]</div>` : ''}
                     ${isReq ? `<button class="rlc-btn-sm call" style="width:100%;padding:6px;background:#d35400;border-color:#f39c12;" onclick="event.stopPropagation();rlcAnswerCallRequest('${u.tactical}')">📞 SVARA ANROPSBEGÄRAN (${formattedUnitCall})</button>` : ''}
                     <div style="display:flex;align-items:center;gap:6px;background:#101824;padding:4px 6px;border-radius:6px;border:1px solid #26354a;" onclick="event.stopPropagation()">
                         <span style="font-size:10px;color:#8bbfff;font-weight:bold;white-space:nowrap;">Sätt status:</span>
@@ -4411,8 +4413,8 @@ Regler för radiokommunikation:
             });
             units.forEach(u => {
                 const lat = u.lat || 55.6050, lng = u.lng || 13.0038;
-                const labelTxt = `🚔 ${window.formatPatrolCallsignPairs(u.tactical)}${u.alias ? ' • ' + u.alias : ''} [${u.locationName || 'Storgatan'}]`;
-                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [185, 24], iconAnchor: [92, 12] });
+                const labelTxt = `🚔 ${window.formatPatrolCallsignPairs(u.tactical)}${u.alias ? ' • ' + u.alias : ''}`;
+                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [160, 24], iconAnchor: [80, 12] });
                 if (rlcUnitMarkers[u.tactical]) {
                     rlcUnitMarkers[u.tactical].setLatLng([lat, lng]);
                     rlcUnitMarkers[u.tactical].setIcon(icon);
