@@ -341,7 +341,7 @@
         if (auth && auth.currentUser && data.senderId === auth.currentUser.uid) return true;
         if (data.txId && window.localSentTxIds.has(data.txId)) return true;
         if (data.fromTactical && data.fromTactical === window.MY_TACTICAL) return true;
-        if (window.isRlcViewActive && window.isRlcViewActive() && data.fromTactical === "RLC 9-7") return true;
+        if (window.isRlcViewActive && window.isRlcViewActive() && data.fromTactical && data.fromTactical.startsWith("RLC ")) return true;
         let lastLocalTx = window.lastSameMachineTxTime || 0;
         try {
             const stored = Number(localStorage.getItem('rakel_last_machine_tx') || 0);
@@ -384,6 +384,8 @@
                         if (isNotFromMe && (data.to_issi === window.MY_ISSI || data.to_issi === window.MY_MSISDN || data.to_issi === window.MY_TACTICAL || data.to_issi === "ALL")) {
                             if (data.type === "RLC_RING") {
                                 if (window.triggerIncomingRlcRingFromConsole) window.triggerIncomingRlcRingFromConsole(data.rlcCode || "9-7");
+                            } else if (data.type === "RLC_HANGUP") {
+                                if (window.handleRemoteCallHangup) window.handleRemoteCallHangup();
                             } else if (data.type === "RLC_SET_STATUS" && data.newStatus) {
                                 if (window.applyStatusFromRlcConsole) window.applyStatusFromRlcConsole(data.newStatus, data.rlcCode || "9-7");
                             } else {
@@ -479,20 +481,22 @@
             const radioOn = window.getPowerState && window.getPowerState() !== 'OFF' && window.getPowerState() !== 'BOOT' && window.getPowerState() !== 'PIN';
             if (auth && auth.currentUser && window.getActiveTxTalkgroupName) {
                 if (radioOn || rlcActive) {
+                    const curRlc = window.getActiveRlcCode ? window.getActiveRlcCode() : "9-7";
                     await setDoc(doc(db, 'presence', auth.currentUser.uid), {
                         uid: auth.currentUser.uid,
                         issi: window.MY_ISSI,
                         msisdn: window.MY_MSISDN,
                         tactical: window.MY_TACTICAL,
-                        alias: window.MY_ALIAS || (rlcActive ? "RLC Operatör" : ""),
+                        alias: window.MY_ALIAS || (rlcActive ? `RLC ${curRlc} Operatör` : ""),
                         tg: window.getActiveTxTalkgroupName(),
-                        status: rlcActive ? "RLC 9-7" : (window.getRadioStatus ? window.getRadioStatus() : "Klar, ledig"),
+                        status: rlcActive ? `RLC ${curRlc}` : (window.getNetworkStatusForRlc ? window.getNetworkStatusForRlc() : "Klar, ledig"),
                         mode: window.getRadioMode ? window.getRadioMode() : "TMO",
                         gwActive: window.getGatewayState ? window.getGatewayState().active : false,
                         gwTmo: window.getGatewayState ? window.getGatewayState().tmo : "",
                         gwDmo: window.getGatewayState ? window.getGatewayState().dmo : "",
                         lat: window.MY_LAT || 55.6050,
                         lng: window.MY_LNG || 13.0038,
+                        locationName: window.MY_LOCATION_NAME || "Storgatan, Malmö",
                         timestamp: Date.now()
                     });
                 } else {
@@ -666,17 +670,38 @@
     </div>
 
     <div class="rlc-panel">
-        <div class="rlc-panel-header">
-            <span>🎙️ RLC 9-7 Radiobord & Utlarmning</span>
+        <div class="rlc-panel-header" style="gap:6px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span>🎙️ RLC</span>
+                <select id="rlcRegionSelect" class="rlc-form-select" style="width:auto;padding:2px 6px;font-size:11px;font-weight:bold;background:#0b111a;color:#7cc4fa;border-color:#3b5270;" onchange="changeActiveRlcRegion(this.value)">
+                    <option value="9-7">9-7 (Syd)</option>
+                    <option value="9-6">9-6 (Väst)</option>
+                    <option value="9-5">9-5 (Öst)</option>
+                    <option value="9-4">9-4 (Bergslagen)</option>
+                    <option value="9-3">9-3 (Stockholm)</option>
+                    <option value="9-2">9-2 (Mitt)</option>
+                    <option value="9-1">9-1 (Nord)</option>
+                    <option value="9-0">9-0 (NLC)</option>
+                </select>
+            </div>
             <span id="rlcTxIndicator" style="color:#2ecc71;font-size:11px;">● MEDLYSSNAR ALLA</span>
         </div>
         <div class="rlc-panel-body">
+            <!-- Aktivt samtal / uppringningsruta med avslutningsknapp -->
+            <div id="rlcActiveCallBanner" style="display:none;background:linear-gradient(135deg,#1e3a2f,#11221b);border:1.5px solid #2ecc71;border-radius:8px;padding:8px 10px;align-items:center;justify-content:space-between;gap:8px;">
+                <div>
+                    <div style="font-size:10px;color:#82e0aa;font-weight:bold;text-transform:uppercase;">📞 Aktivt Individsamtal (RLC)</div>
+                    <div id="rlcActiveCallTargetText" style="font-size:13px;font-weight:bold;color:#fff;">Samtal med 97-6510</div>
+                </div>
+                <button class="rlc-btn-sm" style="background:#c0392b;border-color:#ff6b6b;color:#fff;padding:6px 10px;" onclick="rlcEndActiveCall()">🔴 Avsluta samtal</button>
+            </div>
+
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
                 <span style="font-size:11px;font-weight:bold;color:#94a3b8;">1. FLERKANALSPASSNING & SÄNDNING:</span>
                 <div style="display:flex;gap:4px;">
                     <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(true)">👂 Alla</button>
                     <button class="rlc-btn-sm" onclick="rlcSetAllMonitoring(false)">🎯 Endast TX</button>
-                    <button class="rlc-btn-sm" onclick="testRlcSpeakerAudio()">🔊 Test</button>
+                    <button class="rlc-btn-sm" onclick="triggerSimulatedRapsTraffic()" title="Simulera samverkansanrop från Ambulans/Räddningstjänst på RAPS">🚑 RAPS-trafik</button>
                 </div>
             </div>
             <div class="rlc-tg-grid" id="rlcTgSelectorGrid"></div>
@@ -707,7 +732,7 @@
             </div>
 
             <div style="display:flex;gap:5px;">
-                <input type="text" id="rlcQuickTtsInput" class="rlc-form-input" placeholder="Eller skriv röstutrop för RLC 9-7..." style="flex:1;">
+                <input type="text" id="rlcQuickTtsInput" class="rlc-form-input" placeholder="Skriv röstutrop till patruller (t.ex. 97-2410 från 9-7, kom)..." style="flex:1;">
                 <button class="rlc-btn-sm hr" onclick="sendRlcVoiceBroadcast()">🔊 Ropa ut</button>
             </div>
 
@@ -715,14 +740,20 @@
 
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:11px;font-weight:bold;color:#94a3b8;">2. SKAPA & LARMA UT HR (ÄRENDE):</span>
-                <button class="rlc-btn-sm" onclick="generateAiHrForConsole()">🤖 Förslag</button>
+                <button class="rlc-btn-sm" onclick="generateAiHrForConsole()">🤖 Slumpa scenario</button>
             </div>
             <select id="rlcHrTypeSelect" class="rlc-form-select" onchange="prefillHrTemplate()">
                 <option value="Pågående inbrott">Pågående inbrott (Prio 1)</option>
                 <option value="Trafikolycka personskada">Trafikolycka personskada (Prio 1)</option>
+                <option value="Större trafikolycka / Flerfordonskrock (RAPS)">Större trafikolycka / Flerfordon (RAPS Samverkan)</option>
+                <option value="Byggnadsbrand / Kraftig rökutveckling (RAPS)">Byggnadsbrand / Rökutveckling (RAPS Samverkan)</option>
+                <option value="Farligt utsläpp / Kemolycka (RAPS)">Farligt utsläpp / Kemolycka (RAPS Samverkan)</option>
                 <option value="Pågående misshandel / bråk">Pågående misshandel / bråk (Prio 1)</option>
-                <option value="Misstänkt rattfylleri">Misstänkt rattfylleri (Prio 2)</option>
                 <option value="Farligt föremål / person med vapen">Person med vapen (Prio 1)</option>
+                <option value="Pågående personrån / butiksrån">Pågående personrån / butiksrån (Prio 1)</option>
+                <option value="Misstänkt rattfylleri">Misstänkt rattfylleri (Prio 2)</option>
+                <option value="Försvunnen person / Efterforskning">Försvunnen person / Efterforskning (Prio 2)</option>
+                <option value="Ordningsstörning / Supporterbråk">Ordningsstörning / Supporterbråk (Prio 2)</option>
             </select>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
                 <input type="text" id="rlcHrAddressInput" class="rlc-form-input" value="Storgatan 15, Malmö">
@@ -732,6 +763,8 @@
                     <option value="Insats 12 MPU">TG: Insats 12 MPU</option>
                     <option value="Insats 1 MPU">TG: Insats 1 MPU</option>
                     <option value="RAPS 1 Syd">TG: RAPS 1 Syd</option>
+                    <option value="RAPS 2 Syd">TG: RAPS 2 Syd</option>
+                    <option value="SAMV Pol">TG: SAMV Pol</option>
                     <option value="Alla DMO 1">TG: Alla DMO 1 (GW)</option>
                 </select>
             </div>
@@ -1302,7 +1335,38 @@
     let currentMode = "TMO";
     let currentProfile = "Normal ljud";
     let radioStatus = "Klar, ledig";
+    let previousNormalStatus = "Klar, ledig";
+    let hasPendingCallRequest = false;
     let activeRlcCode = "9-7";
+    let rlcActiveCallTarget = null;
+    let channelCheckinTimer = null;
+    let awaitingChannelCheckinTg = null;
+
+    // Lista över gator och platser för realistisk patrullrörelse och geografiska AI-svar
+    const PATROL_STREETS = [
+        { name: "Storgatan", lat: 55.6052, lng: 13.0035 },
+        { name: "Amiralsgatan", lat: 55.5968, lng: 13.0185 },
+        { name: "Inre Ringvägen", lat: 55.5815, lng: 13.0420 },
+        { name: "drottningtorget", lat: 55.6075, lng: 13.0110 },
+        { name: "Triangeln", lat: 55.5935, lng: 13.0005 },
+        { name: "Bergsgatan", lat: 55.5910, lng: 13.0060 },
+        { name: "Regementsgatan", lat: 55.5990, lng: 12.9890 },
+        { name: "Nobelvägen", lat: 55.5920, lng: 13.0210 },
+        { name: "Värnhemstorget", lat: 55.6058, lng: 13.0235 },
+        { name: "Limhamnsvägen", lat: 55.5880, lng: 12.9610 }
+    ];
+    window.MY_LOCATION_NAME = "Storgatan";
+
+    // Olika operatörsröster på RLC samt olika patrullröster
+    const RLC_OPERATOR_VOICES = ["Aoede", "Kore", "Leda", "Callirrhoe", "Zephyr", "Despina"];
+    const PATROL_AI_VOICES = ["Puck", "Charon", "Fenrir", "Orus", "Zephyr", "Kore"];
+    let rlcOperatorIndex = 0;
+
+    function getNextRlcOperatorVoice() {
+        const v = RLC_OPERATOR_VOICES[rlcOperatorIndex % RLC_OPERATOR_VOICES.length];
+        rlcOperatorIndex++;
+        return v;
+    }
 
     let navFolderIndex = 0;
     let navTgIndex = 0;
@@ -1407,6 +1471,8 @@
 
     window.getPowerState = () => powerState;
     window.getRadioStatus = () => radioStatus;
+    window.getNetworkStatusForRlc = () => hasPendingCallRequest ? "Anropsbegäran" : radioStatus;
+    window.getActiveRlcCode = () => activeRlcCode;
     window.getRadioMode = () => currentMode;
     window.getGatewayState = () => ({
         active: vehicleGatewayActive,
@@ -1414,26 +1480,42 @@
         dmo: vehicleGwDmoTg.name
     });
 
+    window.changeActiveRlcRegion = function(newRlcCode) {
+        if (!newRlcCode) return;
+        activeRlcCode = newRlcCode;
+        const pttBtn = document.getElementById('rlcPttBtn');
+        if (pttBtn && !isRlcConsolePtt) {
+            pttBtn.innerText = `🎙️ HÅLL IN FÖR ATT SÄNDA SOM RLC ${activeRlcCode} (PTT ELLER MELLANSLAG)`;
+        }
+        const quickInp = document.getElementById('rlcQuickTtsInput');
+        if (quickInp) {
+            quickInp.placeholder = `Skriv röstutrop för RLC ${activeRlcCode} (t.ex. 97-2410 från ${activeRlcCode}, kom)...`;
+        }
+        appendRlcLog(`🏛️ Aktiv ledningscentral ändrad till <b>RLC ${activeRlcCode}</b>.`);
+        updateScreenDisplay();
+        if (window.syncPresenceNow) window.syncPresenceNow();
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+    };
+
     window.getAnyActiveGateway = function() {
         if (vehicleGatewayActive) {
             return { active: true, tmo: vehicleGwTmoTg.name, dmo: vehicleGwDmoTg.name, owner: window.MY_TACTICAL };
         }
-        const allUnits = [...(window.liveConnectedUnits || []), ...(window.simulatedPatrols || [])];
-        const gwUnit = allUnits.find(u => u.gwActive);
-        if (gwUnit) {
-            return {
-                active: true,
-                tmo: gwUnit.gwTmo || "Insats 12 MPU",
-                dmo: gwUnit.gwDmo || "Alla DMO 1",
-                owner: gwUnit.tactical
-            };
+        const all = [
+            ...(window.liveConnectedUnits || []),
+            ...(window.simulatedPatrols || [])
+        ];
+        const remoteGw = all.find(u => u && u.gwActive && u.gwTmo && u.gwDmo);
+        if (remoteGw) {
+            return { active: true, tmo: remoteGw.gwTmo, dmo: remoteGw.gwDmo, owner: remoteGw.tactical };
         }
         return { active: false, tmo: "", dmo: "", owner: "" };
     };
 
     // Checks if the radio can reach RLC right now (TMO always can; DMO ONLY if Gateway is active on current DMO TG)
+    window.localTmoBlocked = false;
     window.canReachRlcNetwork = function() {
-        if (currentMode === "TMO") return true;
+        if (currentMode === "TMO") return !window.localTmoBlocked;
         const gw = window.getAnyActiveGateway();
         const myCurrentTg = window.getActiveTxTalkgroupName();
         return Boolean(gw && gw.active && myCurrentTg === gw.dmo);
@@ -1503,19 +1585,25 @@
         return pairStr;
     }
 
-    // Formats RLC ("9-7" -> "nio sju") and Patrol numbers ("97-6510" -> "97 65 10")
+    // Formaterar patrullnummer som "97-54 20" för text och tvåsiffriga par i tal ("97 54 20")
+    window.formatPatrolCallsignPairs = function(callsignStr) {
+        if (!callsignStr) return "";
+        return String(callsignStr).replace(/\b(\d{2})-(\d{2})(\d{2})\b/g, "$1-$2 $3");
+    };
+
+    // Formats RLC ("9-7" -> "nio sju") and Patrol numbers ("97-6510" or "97-65 10" -> "97 65 10")
     window.formatSwedishRadioSpeech = function(rawText) {
         if (!rawText) return "";
         let txt = String(rawText);
 
-        // 1. Replace "RLC" with "R L C" or keep natural flow, and replace RLC codes like 9-7, 9-6, 9-5, 9-3, 9-1, 9-0 with single digits ("nio sju")
+        // 1. Replace RLC codes like 9-7, 9-6, 9-5, 9-4, 9-3, 9-2, 9-1, 9-0 with single digits ("nio sju")
         txt = txt.replace(/\b9-([0-9])\b/g, (_, d) => `nio ${DIGIT_WORDS_SV[d] || d}`);
 
-        // 2. Replace Patrol numbers like 97-6510 or 976510 with two-digit groups: "97 65 10"
-        txt = txt.replace(/\b(\d{2})-(\d{2})(\d{2})\b/g, (_, p1, p2, p3) => {
+        // 2. Replace Patrol numbers like 97-6510, 97-65 10, 34-57 76, 24-10 80 with two-digit groups: "97 65 10"
+        txt = txt.replace(/\b(\d{2})-(\d{2})\s*(\d{2})\b/g, (_, p1, p2, p3) => {
             return `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`;
         });
-        txt = txt.replace(/\b(97)(\d{2})(\d{2})\b/g, (_, p1, p2, p3) => {
+        txt = txt.replace(/\b(97|34|24)(\d{2})(\d{2})\b/g, (_, p1, p2, p3) => {
             return `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`;
         });
 
@@ -1696,20 +1784,22 @@
         });
     }
 
-    async function speakWithGeminiCloudVoice(formattedSpeechText) {
+    async function speakWithGeminiCloudVoice(formattedSpeechText, customVoiceName = null, roleDescription = null) {
         const apiKey = (window.GEMINI_API_KEY || "").trim();
+        const voiceToUse = customVoiceName || getNextRlcOperatorVoice();
+        const roleInstruction = roleDescription || "en erfaren, tydlig och naturlig RLC-operatör hos polisen";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
         const payload = {
             contents: [{
                 parts: [{
-                    text: `Läs upp följande svenska polisradiomeddelande med en naturlig, lugn, varm och professionell kvinnlig röst som en erfaren RLC-operatör: "${formattedSpeechText}"`
+                    text: `Läs upp följande svenska polisradiomeddelande som ${roleInstruction}: "${formattedSpeechText}"`
                 }]
             }],
             generationConfig: {
                 responseModalities: ["AUDIO"],
                 speechConfig: {
                     voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: window.AI_FEMALE_VOICE || "Aoede" }
+                        prebuiltVoiceConfig: { voiceName: voiceToUse }
                     }
                 }
             }
@@ -1734,7 +1824,7 @@
         await playCloudTtsPcmBase64(audioData, sampleRate);
     }
 
-    async function speakSwedish(text, callback, senderLabel, customTgLabel) {
+    async function speakSwedish(text, callback, senderLabel, customTgLabel, options = {}) {
         receivingSender = senderLabel || `RLC ${activeRlcCode}`;
         receivingTgName = customTgLabel || window.getActiveTxTalkgroupName();
         const rlcActive = window.isRlcViewActive();
@@ -1743,13 +1833,13 @@
 
         const canPlayAudio = rlcActive || (volumeLevel > 0 && !speakerMuted && currentProfile !== "Tyst");
 
-        // 1. Försök först med full kvinnlig molnröst (Gemini 2.5 Flash TTS)
+        // 1. Försök först med molnröst (Gemini 2.5 Flash TTS) med varierande operatörs-/patrullröst
         if (canPlayAudio && (window.GEMINI_API_KEY || "").trim() !== "") {
             try {
                 isReceivingReal = true;
                 setLed('right', 'green');
                 updateScreenDisplay();
-                await speakWithGeminiCloudVoice(formattedSpeechText);
+                await speakWithGeminiCloudVoice(formattedSpeechText, options.voiceName || null, options.roleDesc || null);
                 isReceivingReal = false;
                 setLed('right', '');
                 soundPttRelease();
@@ -1761,7 +1851,7 @@
             }
         }
 
-        // 2. Fallback: Web Speech API (prioriterar kvinnliga svenska röster: Alva, Klara, Sofie)
+        // 2. Fallback: Web Speech API (varierar pitch/röst för att simulera olika operatörer och patruller)
         if ('speechSynthesis' in window && canPlayAudio) {
             try {
                 window.speechSynthesis.cancel();
@@ -1771,10 +1861,14 @@
                 msg.volume = 1.0;
                 let voices = window.speechSynthesis.getVoices();
                 let svVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().includes('sv') || v.name.toLowerCase().includes('swed')));
-                let femaleSvVoice = svVoices.find(v => /alva|klara|sofie|hedvig|astrid|natural|female|google/i.test(v.name)) || svVoices[0];
-                if (femaleSvVoice) msg.voice = femaleSvVoice;
-                msg.pitch = 1.06;
-                msg.rate = 0.99;
+                if (svVoices.length > 0) {
+                    const vIdx = rlcOperatorIndex % svVoices.length;
+                    msg.voice = svVoices[vIdx];
+                }
+                const pitches = [0.95, 1.04, 1.12, 0.90, 1.08];
+                msg.pitch = options.pitch || pitches[rlcOperatorIndex % pitches.length];
+                rlcOperatorIndex++;
+                msg.rate = 1.0;
 
                 let finished = false;
                 const finishOnce = () => {
@@ -1803,10 +1897,10 @@
         }, 2500);
     }
 
-    // Tvåvägs AI-rösttolkning: Lyssnar på din PTT-sändning och svarar som kvinnlig RLC-operatör
-    window.processAiRlcVoiceTurn = async function(wavDataUrl, tgName) {
-        if (!window.aiRlcEnabled || window.isRlcViewActive() || isAiProcessingVoice) return;
-        if (!window.canReachRlcNetwork()) return;
+    // Tvåvägs AI-rösttolkning: Lyssnar på din PTT-sändning (eller RLC-utrop) och svarar med olika röster, rätt sifferpar och RAPS-disciplin
+    window.processAiRlcVoiceTurn = async function(wavDataUrl, tgName, isFromRlcConsole = false) {
+        if (!window.aiRlcEnabled || isAiProcessingVoice) return;
+        if (!isFromRlcConsole && !window.canReachRlcNetwork()) return;
         const apiKey = (window.GEMINI_API_KEY || "").trim();
         if (!apiKey) return;
 
@@ -1815,22 +1909,97 @@
 
         isAiProcessingVoice = true;
         try {
-            const systemInstruction = `Du är en erfaren, lugn och naturlig kvinnlig RLC-operatör vid Polisen Region Syd med anropssignal "9-7" (uttalas "nio sju").
-Du sitter vid radiobordet och lyssnar på talgruppen "${tgName}".
-Patrullen som sänder har anropsnummer "${window.MY_TACTICAL}"${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''} och nuvarande status "${radioStatus}".
+            const formattedMyTactical = window.formatPatrolCallsignPairs(window.MY_TACTICAL);
+            const isRapsChannel = tgName.toUpperCase().includes("RAPS");
 
-Regler för polisens radiokommunikation:
-1. Riktningsregeln: Nämn alltid mottagaren före sändaren, t.ex. "${window.MY_TACTICAL} från 9-7, kom." eller "${window.MY_TACTICAL} från 9-7, det är uppfattat, slut 9-7."
-2. Om patrullen bara ropar upp ("nio sju från ${window.MY_TACTICAL}, kom"), svara kort: "${window.MY_TACTICAL} från 9-7, kom."
-3. Om patrullen begär slagning på person eller fordon (t.ex. registreringsnummer eller personnummer), ge ett realistiskt, naturligt svar i tal och lägg även detaljerna i fältet "sdsFollowUp".
-4. Om patrullen anmäler en ny status muntligt (t.ex. "vi är framme på plats", "vi är klara lediga", "vi påbörjar uppdrag", "vi önskar biträde"), sätt fältet "newStatus" till exakt en av: "Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Upptagen", "Disponibel", "16 Biträde önskas" (annars tom sträng "").
-5. Håll svaret koncist, naturligt och autentiskt på svenska.`;
+            if (isFromRlcConsole) {
+                // När du sänder som RLC i RLC-vyn: Patrullerna (eller Ambulans/Räddning på RAPS) svarar med sin geografiska position!
+                const simUnits = (window.simulatedPatrols && window.simulatedPatrols.length > 0)
+                    ? window.simulatedPatrols
+                    : [{ tactical: "97-5420", alias: "Andersson", locationName: "Storgatan", tg: tgName }];
+                const unitsContext = simUnits.map(u => `${window.formatPatrolCallsignPairs(u.tactical)} (${u.alias || 'Patrull'}, befinner sig på ${u.locationName || 'Storgatan'})`).join("; ");
+
+                const rlcConsoleSysInstruction = `Du simulerar polispatruller (samt räddningstjänst "räddning 24-10 80" och ambulans "ambulans 34-57 76" om kanalen är RAPS) som lyssnar på talgruppen "${tgName}".
+Operatören på RLC ${activeRlcCode} har precis sänt ett röstmeddelande.
+Tillgängliga patruller i området: ${unitsContext}.
+Regler:
+1. Skriv ALLTID ut patrullnummer med två siffror i taget med mellanslag (t.ex. "97-54 20" eller "34-57 76").
+2. När en patrull blir uppropad av RLC ska patrullen svara med sitt anropsnummer och sin aktuella geografiska gata/plats, t.ex.: "${window.formatPatrolCallsignPairs(simUnits[0].tactical)}, ${simUnits[0].locationName || 'Storgatan'}, kom." eller bekräfta ordern med sin position.
+3. Om sändningen sker på en RAPS-kanal ska enheten inleda med funktion + anropsnummer, t.ex. "polis 97-54 20" eller "ambulans 34-57 76".`;
+
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: "Lyssna på RLC-operatörens anrop och svara som den tilltalade patrullen/enheten med geografisk plats i JSON." },
+                            { inlineData: { mimeType: "audio/wav", data: base64Audio } }
+                        ]
+                    }],
+                    systemInstruction: { parts: [{ text: rlcConsoleSysInstruction }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                transcript: { type: "STRING" },
+                                responderCallsign: { type: "STRING" },
+                                spokenResponse: { type: "STRING" }
+                            },
+                            required: ["transcript", "responderCallsign", "spokenResponse"]
+                        }
+                    }
+                };
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response || !response.ok) return;
+                const result = await response.json();
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonText) return;
+                const parsed = JSON.parse(jsonText);
+                if (parsed.transcript) {
+                    appendRlcLog(`🎙️ RLC ${activeRlcCode} (${tgName}): "${parsed.transcript}"`);
+                }
+                if (parsed.spokenResponse) {
+                    const patrolVoice = PATROL_AI_VOICES[Math.floor(Math.random() * PATROL_AI_VOICES.length)];
+                    const senderTag = parsed.responderCallsign || window.formatPatrolCallsignPairs(simUnits[0].tactical);
+                    appendRlcLog(`🚔 ${senderTag} (${tgName}): "${parsed.spokenResponse}"`);
+                    soundPttGrant();
+                    await speakSwedish(parsed.spokenResponse, null, senderTag, tgName, {
+                        voiceName: patrolVoice,
+                        roleDesc: "en svensk polispatrull ute i fält"
+                    });
+                }
+                return;
+            }
+
+            // När patrullen sänder från Rakel-handterminalen:
+            if (awaitingChannelCheckinTg && awaitingChannelCheckinTg === tgName) {
+                clearTimeout(channelCheckinTimer);
+                awaitingChannelCheckinTg = null;
+            }
+
+            const systemInstruction = `Du är operatör vid Polisen Regionledningscentral RLC "${activeRlcCode}" (uttalas siffra för siffra, t.ex. "nio sju").
+Du lyssnar på talgruppen "${tgName}".
+Patrullen som sänder har anropsnummer "${formattedMyTactical}"${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''}, befinner sig vid "${window.MY_LOCATION_NAME || 'Storgatan'}" och har status "${radioStatus}".
+
+Regler för radiokommunikation:
+1. ALLA patrullnummer ska skrivas och läsas med två siffror åt gången, t.ex. "${formattedMyTactical}, kom" (aldrig 6510 i en klump).
+2. Riktningsregeln: Nämn alltid mottagaren före sändaren, t.ex. "${formattedMyTactical} från ${activeRlcCode}, kom."
+3. Om patrullen anmäler sig på en insats- eller samverkanskanal (t.ex. "${formattedMyTactical} anmäler sig på insatsen, kom"), svara direkt och bekräfta att de är noterade på kanalen!
+4. ${isRapsChannel ? 'Eftersom detta är en RAPS-samverkanskanal (Räddning, Ambulans, Polis): Om patrullen anropar ambulans (t.ex. "ambulans 34-57 76 från polis ' + formattedMyTactical + '") eller räddningstjänst ("räddning 24-10 80"), svara i rollen som den anropade ambulansen eller räddningsenheten och börja svaret med t.ex. "polis ' + formattedMyTactical + ' från ambulans 34-57 76, kom"!' : 'Svara som RLC ' + activeRlcCode + '.'}
+5. Om patrullen begär slagning på person eller fordon, ge ett realistiskt svar i tal och lägg detaljerna i "sdsFollowUp".
+6. Om patrullen anmäler en ny status muntligt, sätt "newStatus" till en av: "Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Upptagen", "Disponibel", "16 Biträde önskas" (annars "").`;
 
             const payload = {
                 contents: [{
                     role: "user",
                     parts: [
-                        { text: "Lyssna på patrullens radiosändning och svara som RLC 9-7 i JSON-format." },
+                        { text: "Lyssna på patrullens radiosändning och svara enligt reglerna i JSON-format." },
                         { inlineData: { mimeType: "audio/wav", data: base64Audio } }
                     ]
                 }],
@@ -1842,6 +2011,7 @@ Regler för polisens radiokommunikation:
                         properties: {
                             transcript: { type: "STRING" },
                             shouldReply: { type: "BOOLEAN" },
+                            responderLabel: { type: "STRING" },
                             spokenResponse: { type: "STRING" },
                             sdsFollowUp: { type: "STRING" },
                             newStatus: { type: "STRING" }
@@ -1865,18 +2035,21 @@ Regler för polisens radiokommunikation:
 
             const parsed = JSON.parse(jsonText);
             if (parsed.transcript) {
-                appendRlcLog(`🎤 ${window.MY_TACTICAL} (${tgName}): "${parsed.transcript}"`);
+                appendRlcLog(`🎤 ${formattedMyTactical} (${tgName}): "${parsed.transcript}"`);
             }
             if (parsed.newStatus && statusMenuOptions.includes(parsed.newStatus)) {
                 radioStatus = parsed.newStatus;
+                previousNormalStatus = parsed.newStatus;
                 if (window.syncPresenceNow) window.syncPresenceNow();
                 if (window.refreshRlcDashboard) window.refreshRlcDashboard();
                 updateScreenDisplay();
             }
             if (parsed.shouldReply && parsed.spokenResponse) {
-                appendRlcLog(`👩‍✈️ AI-RLC 9-7 (${tgName}): "${parsed.spokenResponse}"`);
+                const senderName = parsed.responderLabel || `RLC ${activeRlcCode}`;
+                const operatorVoice = getNextRlcOperatorVoice();
+                appendRlcLog(`🎧 ${senderName} (${tgName}): "${parsed.spokenResponse}"`);
                 soundPttGrant();
-                await speakSwedish(parsed.spokenResponse, null, `RLC ${activeRlcCode}`, tgName);
+                await speakSwedish(parsed.spokenResponse, null, senderName, tgName, { voiceName: operatorVoice });
             }
             if (parsed.sdsFollowUp && parsed.sdsFollowUp.trim() !== "") {
                 sdsInbox.push({ from: `RLC ${activeRlcCode}`, text: parsed.sdsFollowUp.trim(), time: getTime() });
@@ -1909,13 +2082,13 @@ Regler för polisens radiokommunikation:
         scan: `<svg class="sep-svg" width="16" height="13" viewBox="0 0 16 13"><rect x="1" y="3" width="4" height="9" fill="#444" stroke="#fff" stroke-width="0.8"/><polygon points="5,5 10,2 10,11 5,8" fill="#f1c40f" opacity="0.85"/><rect x="11" y="3" width="4" height="9" fill="#444" stroke="#fff" stroke-width="0.8"/></svg>`,
         gw: `<svg class="sep-svg" width="16" height="13" viewBox="0 0 16 13"><circle cx="8" cy="6.5" r="5.5" fill="none" stroke="#2ecc71" stroke-width="1.6"/></svg>`,
         dmo: `<svg class="sep-svg" width="16" height="13" viewBox="0 0 16 13"><line x1="3" y1="2" x2="3" y2="11" stroke="#f39c12" stroke-width="1.5"/><line x1="13" y1="2" x2="13" y2="11" stroke="#f39c12" stroke-width="1.5"/><path d="M5 6.5 L11 6.5" stroke="#fff" stroke-width="1.2"/></svg>`,
-        speakerOff: `<svg class="sep-svg" width="13" height="13" viewBox="0 0 13 13"><polygon points="2,4 5,4 9,1 9,12 5,9 2,9" fill="#e74c3c"/></svg>`,
-        keyLock: `<svg class="sep-svg" width="13" height="13" viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="4" fill="none" stroke="#f1c40f" stroke-width="1.5"/></svg>`,
-        battery: `<svg class="sep-svg" width="16" height="10" viewBox="0 0 16 10"><rect x="1" y="1" width="12" height="8" rx="1" fill="none" stroke="#fff" stroke-width="1"/><rect x="2.5" y="2.5" width="2.5" height="5" fill="#2ecc71"/><rect x="6" y="2.5" width="2.5" height="5" fill="#2ecc71"/><rect x="9.5" y="2.5" width="2.5" height="5" fill="#2ecc71"/></svg>`,
-        signalTmo: `<svg class="sep-svg" width="22" height="12" viewBox="0 0 22 12"><rect x="2" y="8" width="3" height="3" fill="#2ecc71"/><rect x="7" y="6" width="3" height="5" fill="#2ecc71"/><rect x="12" y="4" width="3" height="7" fill="#2ecc71"/><rect x="17" y="1" width="3" height="10" fill="#2ecc71"/></svg>`,
-        symMsisdn: `<svg class="sep-svg" width="22" height="14" viewBox="0 0 22 14"><rect x="3" y="2" width="16" height="10" rx="2" fill="#005bb5"/><text x="6" y="10" fill="#fff" font-size="7" font-weight="bold">MS</text></svg>`,
-        symIssi: `<svg class="sep-svg" width="22" height="14" viewBox="0 0 22 14"><rect x="5" y="1" width="12" height="12" rx="2" fill="#1e8449"/><text x="7" y="10" fill="#fff" font-size="7" font-weight="bold">IS</text></svg>`,
-        symTel: `<svg class="sep-svg" width="22" height="14" viewBox="0 0 22 14"><rect x="3" y="2" width="16" height="10" rx="2" fill="#8e44ad"/><text x="5" y="10" fill="#fff" font-size="7" font-weight="bold">TEL</text></svg>`
+        speakerOff: `<svg class="sep-svg" width="15" height="13" viewBox="0 0 15 13"><polygon points="2,4.5 5,4.5 8.5,1.5 8.5,11.5 5,8.5 2,8.5" fill="#aaa"/><line x1="10" y1="3.5" x2="14" y2="9.5" stroke="#ff3b30" stroke-width="1.6"/><line x1="14" y1="3.5" x2="10" y2="9.5" stroke="#ff3b30" stroke-width="1.6"/></svg>`,
+        keyLock: `<svg class="sep-svg" width="13" height="13" viewBox="0 0 13 13"><rect x="2.5" y="6" width="8" height="6" rx="1" fill="#f39c12" stroke="#000" stroke-width="0.6"/><path d="M4.2 6 V4 C4.2 2 8.8 2 8.8 4 V6" fill="none" stroke="#fff" stroke-width="1.3"/></svg>`,
+        battery: `<svg class="sep-svg" width="20" height="13" viewBox="0 0 20 13"><rect x="1" y="2.5" width="16" height="8" rx="1" fill="none" stroke="#fff" stroke-width="1"/><rect x="17.5" y="4.5" width="1.8" height="4" fill="#fff"/><rect x="2.5" y="4" width="3.5" height="5" fill="#2ecc71"/><rect x="6.8" y="4" width="3.5" height="5" fill="#2ecc71"/><rect x="11.1" y="4" width="3.5" height="5" fill="#2ecc71"/></svg>`,
+        signalTmo: `<svg class="sep-svg" width="19" height="13" viewBox="0 0 19 13"><line x1="2.5" y1="2" x2="2.5" y2="11" stroke="#fff" stroke-width="1.1"/><polyline points="0.8,4 2.5,1.5 4.2,4" fill="none" stroke="#fff" stroke-width="1"/><rect x="5.5" y="8.5" width="2.2" height="3" fill="#2ecc71"/><rect x="8.7" y="6.5" width="2.2" height="5" fill="#2ecc71"/><rect x="11.9" y="4" width="2.2" height="7.5" fill="#2ecc71"/><rect x="15.1" y="1.5" width="2.2" height="10" fill="#2ecc71"/></svg>`,
+        symMsisdn: `<svg class="sep-svg" width="20" height="16" viewBox="0 0 20 16"><circle cx="6.5" cy="5.5" r="3" fill="#002855"/><path d="M1.5 14 C1.5 9.5 11.5 9.5 11.5 14 Z" fill="#002855"/><rect x="12.5" y="2.5" width="5.5" height="10.5" rx="1" fill="#1e8449" stroke="#000" stroke-width="0.8"/><rect x="13.5" y="4" width="3.5" height="3" fill="#d4efdf"/></svg>`,
+        symIssi: `<svg class="sep-svg" width="20" height="16" viewBox="0 0 20 16"><rect x="5" y="2.5" width="9" height="12" rx="1.5" fill="#283747" stroke="#000" stroke-width="1"/><line x1="12" y1="0.5" x2="12" y2="2.5" stroke="#000" stroke-width="1.6"/><rect x="6.5" y="4" width="6" height="4.5" fill="#85c1e9"/></svg>`,
+        symTel: `<svg class="sep-svg" width="20" height="16" viewBox="0 0 20 16"><path d="M4 3 C6 1.5 8 3 8.5 4.5 L7 6.5 C8 8.5 10.5 10.5 12.5 11.5 L14.5 10 C16 10.5 17.5 12.5 16 14.5 C13.5 16.5 3.5 9 4 3 Z" fill="#1e8449" stroke="#000" stroke-width="0.8"/></svg>`
     };
 
     function getTime() {
@@ -2215,7 +2388,7 @@ Regler för polisens radiokommunikation:
             if (menuState === "SCAN_EDIT") {
                 const list = scanListsData[selectedScanListIdx] || scanListsData[0];
                 const scanOpts = list.editable
-                    ? ["+ Lägg till talgrupp", "Ändra prio (▼/■)", "Välj till display (🔵)", "- Ta bort talgrupp", "✔ Spara & Aktivera"]
+                    ? ["+ Lägg till talgrupp", "Ändra prio (▼/▲)", "Välj till display (🔵)", "- Ta bort talgrupp", "✔ Spara & Aktivera"]
                     : ["✔ Aktivera lista"];
                 const popupHtml = scanPopupOpen ? `
                     <div style="position:absolute;left:18px;top:20px;width:168px;background:#fff;border:2px solid #001f4d;box-shadow:3px 4px 10px rgba(0,0,0,0.5);z-index:30;font-size:11px;">
@@ -2230,7 +2403,7 @@ Regler för polisens radiokommunikation:
                         <div class="menu-list">
                             ${list.tgs.map((t, idx) => {
                                 const triSvg = t.prio === 'high'
-                                    ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><rect x="2" y="2" width="10" height="10" fill="#e74c3c" stroke="#641e16" stroke-width="1.2"/></svg>`
+                                    ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><polygon points="7,1 13,13 1,13" fill="#e74c3c" stroke="#641e16" stroke-width="1.1"/></svg>`
                                     : `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><polygon points="1,2 13,2 7,13" fill="#27ae60" stroke="#145a32" stroke-width="1.1"/></svg>`;
                                 const dotSvg = t.displayed
                                     ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;" onclick="setScanRowDisplayed(${idx}, event)"><circle cx="7" cy="7" r="5.5" fill="#1da1f2" stroke="#000" stroke-width="1.3"/></svg>`
@@ -2284,6 +2457,8 @@ Regler för polisens radiokommunikation:
         const aliasStr = window.MY_ALIAS ? ` • ${window.MY_ALIAS}` : "";
         const gwInfo = window.getAnyActiveGateway();
         const dmoBridged = currentMode === "DMO" && gwInfo.active && tgName === gwInfo.dmo;
+        // Visa aldrig texten "Anropsbegäran" på Rakel-skärmens grundvy (visar ordinarie status)
+        const displayStatusOnScreen = (radioStatus === "Anropsbegäran") ? previousNormalStatus : radioStatus;
 
         let statusBannerHtml = "";
         if (isPttActive) {
@@ -2298,7 +2473,7 @@ Regler för polisens radiokommunikation:
                     <div>
                         <div style="font-size:12px;font-weight:bold;color:#000;">RAKEL (${currentMode}${dmoBridged || (currentMode==='TMO' && gwInfo.active) ? '+GW' : ''})</div>
                         <div class="idle-net-label">${window.MY_TACTICAL}${aliasStr}</div>
-                        <div style="font-size:11px;font-weight:bold;color:#002855;">${radioStatus}</div>
+                        <div style="font-size:11px;font-weight:bold;color:#002855;">${displayStatusOnScreen}</div>
                     </div>
                     <div class="idle-clock-box">
                         <div class="idle-time">${getTime()}</div>
@@ -2315,7 +2490,7 @@ Regler för polisens radiokommunikation:
                 </div>
                 <div class="idle-folder-row">
                     <span>📁 ${currentMode === 'DMO' ? 'DMO DIREKT' : activeSelection.folderName}</span>
-                    <span style="font-size:10px;color:${window.canReachRlcNetwork() ? '#555' : '#c0392b'};">${window.canReachRlcNetwork() ? 'RLC ' + activeRlcCode : 'Ej nät (DMO)'}</span>
+                    <span style="font-size:10px;color:${window.canReachRlcNetwork() ? '#555' : '#c0392b'};">${window.canReachRlcNetwork() ? 'RLC ' + activeRlcCode : (window.localTmoBlocked && currentMode === 'TMO' ? '📵 TMO-spärr' : 'Ej nät (DMO)')}</span>
                 </div>
             </div>`;
         updateSoftkeys("Meny", "Grupper", "Inkorg");
@@ -2379,22 +2554,52 @@ Regler för polisens radiokommunikation:
         updateScreenDisplay();
         if (window.syncPresenceNow) window.syncPresenceNow();
         if (window.refreshRlcDashboard) window.refreshRlcDashboard();
-        showTempMsg(`Vald talgrupp:<br><span style="color:#005bb5;font-size:15px;">${window.getActiveTxTalkgroupName()}</span>`, 1400);
+        const activeTgName = window.getActiveTxTalkgroupName();
+        showTempMsg(`Vald talgrupp:<br><span style="color:#005bb5;font-size:15px;">${activeTgName}</span>`, 1400);
+
+        // Punkt 7: Kanalbyte till Insats / RAPS / SAMV -> Förvänta anmälan på kanalen, annars ropar RLC efter 20 sek
+        scheduleChannelCheckinPrompt(activeTgName);
+    }
+
+    function scheduleChannelCheckinPrompt(tgName) {
+        clearTimeout(channelCheckinTimer);
+        awaitingChannelCheckinTg = null;
+        if (!tgName) return;
+        const upper = tgName.toUpperCase();
+        const isInsatsOrSamv = upper.includes("INSATS") || upper.includes("RAPS") || upper.includes("SAMV");
+        if (!isInsatsOrSamv) return;
+
+        awaitingChannelCheckinTg = tgName;
+        appendRlcLog(`📻 ${window.MY_TACTICAL} bytte till ${tgName} (inväntar anmälan på kanalen...)`);
+        channelCheckinTimer = setTimeout(() => {
+            if (awaitingChannelCheckinTg === tgName && powerState === 'IDLE' && !window.isRlcViewActive() && window.canReachRlcNetwork()) {
+                awaitingChannelCheckinTg = null;
+                const formattedCallsign = window.formatPatrolCallsignPairs(window.MY_TACTICAL);
+                const promptText = `${formattedCallsign} från ${activeRlcCode}, passar ni kanalen ${tgName}, kom?`;
+                appendRlcLog(`🎧 RLC ${activeRlcCode} (${tgName}): "${promptText}"`, true);
+                soundPttGrant();
+                speakSwedish(promptText, null, `RLC ${activeRlcCode}`, tgName, { voiceName: getNextRlcOperatorVoice() });
+            }
+        }, 20000);
     }
 
     function findTalkgroupByIndex(idxStr) {
+        const clean = String(idxStr || "").trim();
+        if (!clean) return null;
         for (const f of folderSystem) {
             for (const t of f.tgs) {
-                if (t.index === idxStr) return { tg: t, folder: f.name };
+                if (t.index === clean) return { tg: t, folder: f.name };
             }
         }
         return null;
     }
 
     function findTalkgroupByName(nameStr) {
+        const clean = String(nameStr || "").trim().toLowerCase();
+        if (!clean) return null;
         for (const f of folderSystem) {
             for (const t of f.tgs) {
-                if (t.name === nameStr) return { tg: t, folder: f.name };
+                if (t.name.toLowerCase() === clean) return { tg: t, folder: f.name };
             }
         }
         return null;
@@ -2411,6 +2616,38 @@ Regler för polisens radiokommunikation:
         menuIndex = rowIdx;
         list.tgs[rowIdx].prio = (list.tgs[rowIdx].prio === 'high') ? 'low' : 'high';
         updateScreenDisplay();
+    };
+
+    function endActiveCall(notifyRemote = true) {
+        clearInterval(ringingInterval);
+        clearTimeout(rlcCallTimeout);
+        const wasConnectedOrRinging = (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC');
+        powerState = 'IDLE';
+        hasPendingCallRequest = false;
+        if (radioStatus === "Anropsbegäran") {
+            radioStatus = previousNormalStatus || "Klar, ledig";
+        }
+        soundPttRelease();
+        updateScreenDisplay();
+        if (window.syncPresenceNow) window.syncPresenceNow();
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+        if (notifyRemote && wasConnectedOrRinging && window.dbSendSds) {
+            window.dbSendSds("ALL", "Samtal avslutat", { type: "RLC_HANGUP", rlcCode: activeRlcCode });
+        }
+        const banner = document.getElementById('rlcActiveCallBanner');
+        if (banner) banner.style.display = 'none';
+        rlcActiveCallTarget = null;
+        showTempMsg(`Samtal avslutat<br><span style="font-size:11px;color:#005bb5;">Åter i passning: ${window.getActiveTxTalkgroupName()}</span>`, 1400);
+    }
+
+    window.handleRemoteCallHangup = function() {
+        if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') {
+            endActiveCall(false);
+        }
+        const banner = document.getElementById('rlcActiveCallBanner');
+        if (banner) banner.style.display = 'none';
+        rlcActiveCallTarget = null;
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
     };
 
     window.setScanRowDisplayed = function(rowIdx, evt) {
@@ -3283,15 +3520,6 @@ Regler för polisens radiokommunikation:
         }
     }
 
-    function endActiveCall() {
-        clearInterval(ringingInterval);
-        clearTimeout(rlcCallTimeout);
-        powerState = 'IDLE';
-        soundPttRelease();
-        updateScreenDisplay();
-        showTempMsg("Samtal avslutat", 1300);
-    }
-
     let greenHoldTimer = null, greenLongFired = false;
     window.pressGreen = function() {
         if (powerState === 'OFF' || powerState === 'PIN') return;
@@ -3317,11 +3545,16 @@ Regler för polisens radiokommunikation:
         if (greenLongFired || powerState === 'OFF' || powerState === 'PIN' || isLocked) return;
         if (powerState === 'RINGING_RLC') {
             clearInterval(ringingInterval);
+            hasPendingCallRequest = false;
+            if (radioStatus === "Anropsbegäran") radioStatus = previousNormalStatus || "Klar, ledig";
             powerState = 'RLC_CONNECTED';
             updateScreenDisplay();
+            if (window.syncPresenceNow) window.syncPresenceNow();
+            if (window.refreshRlcDashboard) window.refreshRlcDashboard();
             setTimeout(() => {
                 soundPttGrant();
-                speakSwedish(`${window.MY_TACTICAL} från ${activeRlcCode}, kom.`, null, `RLC ${activeRlcCode}`, "Individanrop");
+                const formattedCall = window.formatPatrolCallsignPairs(window.MY_TACTICAL);
+                speakSwedish(`${formattedCall} från ${activeRlcCode}, kom.`, null, `RLC ${activeRlcCode}`, "Individanrop", { voiceName: getNextRlcOperatorVoice() });
             }, 400);
             return;
         }
@@ -3412,31 +3645,28 @@ Regler för polisens radiokommunikation:
     function requestCallFromRlc() {
         if (!window.canReachRlcNetwork()) {
             soundError();
-            showTempMsg("❌ Ej kontakt med RLC i DMO!<br><span style='font-size:11px;'>Kräver aktiv Gateway eller Nätläge (TMO)</span>", 2200);
+            showTempMsg("❌ Ej kontakt med RLC!<br><span style='font-size:11px;'>Kräver aktiv Gateway eller Nätläge (TMO)</span>", 2200);
             return;
         }
-        radioStatus = "Anropsbegäran";
+        if (radioStatus !== "Anropsbegäran") {
+            previousNormalStatus = radioStatus;
+        }
+        hasPendingCallRequest = true;
         soundStatusDelivered();
         if (window.syncPresenceNow) window.syncPresenceNow();
         if (window.refreshRlcDashboard) window.refreshRlcDashboard();
-        appendRlcLog(`📞 Anropsbegäran från ${window.MY_TACTICAL}${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''} till RLC ${activeRlcCode}`, true);
-        showTempMsg(`Anropsbegäran skickad<br>till <b>RLC ${activeRlcCode}</b>`, 2000);
-        clearTimeout(rlcCallTimeout);
-        rlcCallTimeout = setTimeout(() => {
-            if (powerState === 'IDLE' && !window.isRlcViewActive() && window.canReachRlcNetwork()) {
-                window.triggerIncomingRlcRingFromConsole(activeRlcCode);
-            }
-        }, 3200);
+        appendRlcLog(`📞 Anropsbegäran från ${window.formatPatrolCallsignPairs(window.MY_TACTICAL)}${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''} till RLC ${activeRlcCode} (Klicka på patrullen för att svara)`, true);
+        updateScreenDisplay();
     }
 
     window.triggerIncomingRlcRingFromConsole = function(rlcCodeStr = "9-7") {
         if (powerState === 'OFF' || powerState === 'PIN') return;
-        // Strict DMO block: Cannot receive call from RLC in DMO unless Gateway is active on current DMO talkgroup
         if (!window.canReachRlcNetwork()) {
-            appendRlcLog(`⚠️ Samtal till ${window.MY_TACTICAL} nådde ej fram (Enheten är i DMO utan Gateway).`, true);
+            appendRlcLog(`⚠️ Samtal till ${window.MY_TACTICAL} nådde ej fram (Enheten saknar nätkontakt / Gateway).`, true);
             return;
         }
         activeRlcCode = rlcCodeStr;
+        hasPendingCallRequest = false;
         powerState = 'RINGING_RLC';
         updateScreenDisplay();
         soundRingIncoming();
@@ -3541,11 +3771,30 @@ Regler för polisens radiokommunikation:
         const wavDataUrl = encodeWavFromPcmChunks(pcmChunks, audioCtx.sampleRate || 44100, 12000);
         pcmChunks = [];
         const targetTg = currentTxTgOverride || window.getActiveTxTalkgroupName();
+        const isRlcTx = Boolean(currentTxSenderOverride && currentTxSenderOverride.startsWith("RLC"));
         if (wavDataUrl && window.dbSendAudio) {
             window.dbSendAudio(wavDataUrl, targetTg, currentTxSenderOverride);
         }
-        if (wavDataUrl && !currentTxSenderOverride && window.processAiRlcVoiceTurn) {
-            window.processAiRlcVoiceTurn(wavDataUrl, targetTg);
+        if (wavDataUrl && !isRlcTx) {
+            // Om patrullen anmäler sig muntligt på en insats-/samverkanskanal (även utan API-nyckel)
+            if (awaitingChannelCheckinTg && awaitingChannelCheckinTg === targetTg) {
+                clearTimeout(channelCheckinTimer);
+                awaitingChannelCheckinTg = null;
+                if (!(window.GEMINI_API_KEY || "").trim()) {
+                    const formattedCall = window.formatPatrolCallsignPairs(window.MY_TACTICAL);
+                    const reply = `${formattedCall} från ${activeRlcCode}, ni är noterade på ${targetTg}, kom.`;
+                    setTimeout(() => {
+                        appendRlcLog(`🎧 RLC ${activeRlcCode} (${targetTg}): "${reply}"`);
+                        soundPttGrant();
+                        speakSwedish(reply, null, `RLC ${activeRlcCode}`, targetTg, { voiceName: getNextRlcOperatorVoice() });
+                    }, 900);
+                }
+            }
+            if (window.processAiRlcVoiceTurn) {
+                window.processAiRlcVoiceTurn(wavDataUrl, targetTg, false);
+            }
+        } else if (wavDataUrl && isRlcTx && window.processAiRlcVoiceTurn) {
+            window.processAiRlcVoiceTurn(wavDataUrl, targetTg, true);
         }
     }
 
@@ -3730,14 +3979,14 @@ Regler för polisens radiokommunikation:
         if (!forced && (!spontaneousDispatchEnabled || radioStatus !== "Klar, ledig")) return;
 
         const missions = [
-            `${window.MY_TACTICAL} från ${activeRlcCode}. Pågående inbrott på Storgatan 15. Vi lägger ut HR, byter till Insats 11 MPU, kom.`,
-            `${window.MY_TACTICAL} från ${activeRlcCode}. Trafikolycka med personskada på Inre Ringvägen. Åk dit och samverka på IGV PO1 MPU, kom.`,
-            `${window.MY_TACTICAL} från ${activeRlcCode}. Larm om pågående bråk vid Centralstationen, målsägande kvar på plats, kom.`
+            `${window.formatPatrolCallsignPairs(window.MY_TACTICAL)} från ${activeRlcCode}. Pågående inbrott på Storgatan 15. Vi lägger ut HR, byter till Insats 11 MPU, kom.`,
+            `${window.formatPatrolCallsignPairs(window.MY_TACTICAL)} från ${activeRlcCode}. Större trafikolycka med flera fordon på Inre Ringvägen. Räddningstjänst och ambulans är på väg, samverkan sker på RAPS 1 Syd, kom.`,
+            `${window.formatPatrolCallsignPairs(window.MY_TACTICAL)} från ${activeRlcCode}. Larm om pågående bråk vid Centralstationen, målsägande kvar på plats, kom.`
         ];
         const chosen = missions[Math.floor(Math.random() * missions.length)];
         sdsInbox.push({ from: `RLC ${activeRlcCode}`, text: chosen, time: getTime() });
         soundPttGrant();
-        speakSwedish(chosen, null, `RLC ${activeRlcCode}`, "Order PO1 MPU");
+        speakSwedish(chosen, null, `RLC ${activeRlcCode}`, "Order PO1 MPU", { voiceName: getNextRlcOperatorVoice() });
     };
 
     setInterval(() => {
@@ -3769,14 +4018,18 @@ Regler för polisens radiokommunikation:
     window.sendStatusToRlc = function(statusText) {
         if (!window.canReachRlcNetwork()) {
             soundError();
-            showTempMsg("❌ Ej kontakt med RLC i DMO!<br><span style='font-size:11px;'>Status kräver TMO eller aktiv Gateway</span>", 2100);
+            showTempMsg("❌ Ej kontakt med RLC!<br><span style='font-size:11px;'>Status kräver TMO eller aktiv Gateway</span>", 2100);
             return;
         }
         radioStatus = statusText;
+        if (statusText !== "Anropsbegäran") {
+            previousNormalStatus = statusText;
+            hasPendingCallRequest = false;
+        }
         soundStatusDelivered();
         if (window.syncPresenceNow) window.syncPresenceNow();
         if (window.refreshRlcDashboard) window.refreshRlcDashboard();
-        appendRlcLog(`📟 Status från ${window.MY_TACTICAL}${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''}: ${statusText}`);
+        appendRlcLog(`📟 Status från ${window.formatPatrolCallsignPairs(window.MY_TACTICAL)}${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''}: ${statusText}`);
         updateScreenDisplay();
         showTempMsg(`Status skickad:<br><b>${statusText}</b><br><span style="color:#27ae60;font-size:11px;">✔ Kvitterad av RLC ${activeRlcCode}</span>`, 1700);
     };
@@ -3785,6 +4038,10 @@ Regler för polisens radiokommunikation:
         if (powerState === 'OFF' || powerState === 'PIN') return;
         if (!window.canReachRlcNetwork()) return;
         radioStatus = newStatus;
+        if (newStatus !== "Anropsbegäran") {
+            previousNormalStatus = newStatus;
+            hasPendingCallRequest = false;
+        }
         soundStatusDelivered();
         if (window.syncPresenceNow) window.syncPresenceNow();
         if (window.refreshRlcDashboard) window.refreshRlcDashboard();
@@ -3872,18 +4129,20 @@ Regler för polisens radiokommunikation:
         if (radioLoggedIn || rlcActive) {
             const myUnitObj = {
                 tactical: window.MY_TACTICAL,
-                alias: window.MY_ALIAS || (rlcActive ? "RLC Operatör" : ""),
+                alias: window.MY_ALIAS || (rlcActive ? `RLC ${activeRlcCode} Operatör` : ""),
                 msisdn: window.MY_MSISDN,
                 issi: window.MY_ISSI,
                 tg: window.getActiveTxTalkgroupName(),
-                status: rlcActive ? "RLC 9-7" : radioStatus,
+                status: rlcActive ? `RLC ${activeRlcCode}` : (hasPendingCallRequest ? "Anropsbegäran" : radioStatus),
                 mode: currentMode,
                 gwActive: vehicleGatewayActive,
                 gwTmo: vehicleGwTmoTg.name,
                 gwDmo: vehicleGwDmoTg.name,
                 lat: window.MY_LAT,
                 lng: window.MY_LNG,
-                isLocal: true
+                locationName: window.MY_LOCATION_NAME || "Storgatan",
+                isLocal: true,
+                isSimulated: false
             };
             const existingIdx = units.findIndex(u => u.tactical === window.MY_TACTICAL);
             if (existingIdx >= 0) units[existingIdx] = { ...units[existingIdx], ...myUnitObj };
@@ -4094,31 +4353,44 @@ Regler för polisens radiokommunikation:
                 const curStatus = u.status || 'Klar, ledig';
                 const pillClass = getStatusPillClass(curStatus);
                 const isEmerg = pillClass === 'status-alarm';
-                const isReq = pillClass === 'status-warn';
+                const isReq = pillClass === 'status-warn' || curStatus === 'Anropsbegäran';
                 const aliasLabel = u.alias ? ` • <span style="color:#7cc4fa;">${u.alias}</span>` : '';
-                const dmoIsolated = (u.mode === 'DMO') && !(gw.active && u.tg === gw.dmo);
+                const tmoBlocked = Boolean(u.tmoBlocked);
+                const dmoIsolated = ((u.mode === 'DMO') && !(gw.active && u.tg === gw.dmo)) || (u.mode === 'TMO' && tmoBlocked);
                 const statusSelectOptions = statusMenuOptions.map(st =>
                     `<option value="${st}" ${curStatus === st ? 'selected' : ''}>${st}</option>`
                 ).join('');
-                return `<div class="rlc-unit-card ${isEmerg ? 'emergency' : ''} ${isReq ? 'req-call' : ''}">
+                const isInCallWithRlc = rlcActiveCallTarget === u.tactical;
+                const formattedUnitCall = window.formatPatrolCallsignPairs(u.tactical);
+
+                return `<div class="rlc-unit-card ${isEmerg ? 'emergency' : ''} ${isReq ? 'req-call' : ''}" ${isReq ? `onclick="rlcAnswerCallRequest('${u.tactical}')" style="cursor:pointer;" title="Klicka för att besvara anropsbegäran"` : ''}>
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
-                        <span style="font-weight:bold;font-size:13px;color:#fff;">🚔 ${u.tactical}${aliasLabel}</span>
+                        <span style="font-weight:bold;font-size:13px;color:#fff;">🚔 ${formattedUnitCall}${aliasLabel}</span>
                         <span class="rlc-status-pill ${pillClass}">📟 ${curStatus}</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
                         <span>👥 TG: <b style="color:#e2e8f0;">${u.tg}</b></span>
-                        <span>Läge: <b style="color:${dmoIsolated ? '#f39c12' : '#2ecc71'};">${u.mode || 'TMO'}${u.gwActive || (u.mode==='DMO' && gw.active && u.tg===gw.dmo) ? '+GW' : (dmoIsolated ? ' (Ej nät)' : '')}</b></span>
+                        <span>📍 Plats: <b style="color:#cbd5e1;">${u.locationName || 'Storgatan'}</b></span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:6px;background:#101824;padding:4px 6px;border-radius:6px;border:1px solid #26354a;">
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
+                        <span>Läge: <b style="color:${dmoIsolated ? '#f39c12' : '#2ecc71'};">${tmoBlocked ? '📵 TMO-SPÄRR' : (u.mode || 'TMO')}${u.gwActive || (u.mode==='DMO' && gw.active && u.tg===gw.dmo) ? '+GW' : (dmoIsolated ? ' (Ej nät)' : '')}</b></span>
+                        ${u.isSimulated ? `<span style="color:#a78bfa;font-weight:bold;">[Övningspatrull]</span>` : ''}
+                    </div>
+                    ${isReq ? `<button class="rlc-btn-sm call" style="width:100%;padding:6px;background:#d35400;border-color:#f39c12;" onclick="event.stopPropagation();rlcAnswerCallRequest('${u.tactical}')">📞 SVARA ANROPSBEGÄRAN (${formattedUnitCall})</button>` : ''}
+                    <div style="display:flex;align-items:center;gap:6px;background:#101824;padding:4px 6px;border-radius:6px;border:1px solid #26354a;" onclick="event.stopPropagation()">
                         <span style="font-size:10px;color:#8bbfff;font-weight:bold;white-space:nowrap;">Sätt status:</span>
                         <select class="rlc-form-select" style="padding:3px 6px;font-size:11px;height:24px;" onchange="rlcSetPatrolStatus('${u.tactical}', this.value)">
                             ${statusSelectOptions}
                         </select>
                     </div>
-                    <div style="display:flex;gap:5px;margin-top:2px;">
+                    <div style="display:flex;gap:5px;margin-top:2px;flex-wrap:wrap;" onclick="event.stopPropagation()">
                         <button class="rlc-btn-sm" onclick="rlcFocusUnitOnMap('${u.tactical}')">📍 Karta</button>
-                        <button class="rlc-btn-sm call" onclick="rlcRingPatrol('${u.tactical}')">📞 Ring upp</button>
+                        ${isInCallWithRlc
+                            ? `<button class="rlc-btn-sm" style="background:#c0392b;border-color:#ff6b6b;color:#fff;" onclick="rlcEndActiveCall()">🔴 Avsluta</button>`
+                            : `<button class="rlc-btn-sm call" onclick="rlcRingPatrol('${u.tactical}')">📞 Ring upp</button>`
+                        }
                         <button class="rlc-btn-sm hr" onclick="rlcSendDirectSds('${u.tactical}')">✉️ SDS</button>
+                        ${u.isSimulated ? `<button class="rlc-btn-sm" style="background:${tmoBlocked ? '#922b21' : '#34495e'};border-color:${tmoBlocked ? '#ff6b6b' : '#64748b'};color:#fff;" onclick="rlcTogglePatrolTmoBlock('${u.tactical}')" title="Sätt TMO-spärr på övningspatrull för Gateway-övning">${tmoBlocked ? '🔓 Häva spärr' : '📵 TMO-spärr'}</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -4128,7 +4400,7 @@ Regler för polisens radiokommunikation:
         if (targetSelect) {
             const currentVal = targetSelect.value;
             targetSelect.innerHTML = `<option value="ALL">Till: Alla patruller (Utlarmning)</option>` +
-                units.map(u => `<option value="${u.tactical}">Till: ${u.tactical}${u.alias ? ' (' + u.alias + ')' : ''} — [${u.status || 'Klar, ledig'}]</option>`).join('');
+                units.map(u => `<option value="${u.tactical}">Till: ${window.formatPatrolCallsignPairs(u.tactical)}${u.alias ? ' (' + u.alias + ')' : ''} — [${u.status || 'Klar, ledig'}]</option>`).join('');
             if ([...targetSelect.options].some(o => o.value === currentVal)) targetSelect.value = currentVal;
         }
 
@@ -4139,8 +4411,8 @@ Regler för polisens radiokommunikation:
             });
             units.forEach(u => {
                 const lat = u.lat || 55.6050, lng = u.lng || 13.0038;
-                const labelTxt = `🚔 ${u.tactical}${u.alias ? ' • ' + u.alias : ''} [${u.status || 'Klar, ledig'}]`;
-                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [165, 24], iconAnchor: [82, 12] });
+                const labelTxt = `🚔 ${window.formatPatrolCallsignPairs(u.tactical)}${u.alias ? ' • ' + u.alias : ''} [${u.locationName || 'Storgatan'}]`;
+                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [185, 24], iconAnchor: [92, 12] });
                 if (rlcUnitMarkers[u.tactical]) {
                     rlcUnitMarkers[u.tactical].setLatLng([lat, lng]);
                     rlcUnitMarkers[u.tactical].setIcon(icon);
@@ -4179,13 +4451,13 @@ Regler för polisens radiokommunikation:
             window.dbSendSds(tactical, `Status ändrad till: ${newStatus}`, {
                 type: "RLC_SET_STATUS",
                 newStatus: newStatus,
-                rlcCode: "9-7",
-                fromOverride: "RLC 9-7"
+                rlcCode: activeRlcCode,
+                fromOverride: `RLC ${activeRlcCode}`
             });
         }
 
         soundStatusDelivered();
-        appendRlcLog(`📟 RLC 9-7 satte status på <b>${tactical}</b> till: <b>${newStatus}</b>`);
+        appendRlcLog(`📟 RLC ${activeRlcCode} satte status på <b>${window.formatPatrolCallsignPairs(tactical)}</b> till: <b>${newStatus}</b>`);
         window.updateOnlinePillUI();
         window.refreshRlcDashboard();
     };
@@ -4223,70 +4495,195 @@ Regler för polisens radiokommunikation:
         if (u && rlcMap) rlcMap.setView([u.lat || 55.6050, u.lng || 13.0038], 15);
     };
 
+    window.rlcAnswerCallRequest = function(tactical) {
+        const simUnit = (window.simulatedPatrols || []).find(x => x.tactical === tactical);
+        if (simUnit && simUnit.status === "Anropsbegäran") simUnit.status = "Klar, ledig";
+        const liveUnit = (window.liveConnectedUnits || []).find(x => x.tactical === tactical);
+        if (liveUnit && liveUnit.status === "Anropsbegäran") liveUnit.status = "Klar, ledig";
+        if (tactical === window.MY_TACTICAL) {
+            hasPendingCallRequest = false;
+            if (radioStatus === "Anropsbegäran") radioStatus = previousNormalStatus || "Klar, ledig";
+        }
+        if (window.dbSetPatrolStatusFromRlc) window.dbSetPatrolStatusFromRlc(tactical, "Klar, ledig");
+        window.rlcRingPatrol(tactical);
+    };
+
     window.rlcRingPatrol = function(tactical) {
         const u = getCombinedUnitsList().find(x => x.tactical === tactical);
         const gw = window.getAnyActiveGateway();
-        if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+        if (u && ((u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) || u.tmoBlocked)) {
             soundError();
-            appendRlcLog(`❌ Kan ej ringa ${tactical}: Patrullen är i DMO (${u.tg}) utan aktiv Gateway!`, true);
+            appendRlcLog(`❌ Kan ej ringa ${window.formatPatrolCallsignPairs(tactical)}: Patrullen har TMO-spärr eller är i DMO utan aktiv Gateway!`, true);
             return;
         }
-        appendRlcLog(`📞 RLC 9-7 ringer individanrop till ${tactical}...`);
+        rlcActiveCallTarget = tactical;
+        const banner = document.getElementById('rlcActiveCallBanner');
+        const bannerTxt = document.getElementById('rlcActiveCallTargetText');
+        const formattedCall = window.formatPatrolCallsignPairs(tactical);
+        if (banner && bannerTxt) {
+            banner.style.display = 'flex';
+            bannerTxt.innerText = `Samtal med ${formattedCall}${u?.alias ? ' (' + u.alias + ')' : ''}`;
+        }
+        appendRlcLog(`📞 RLC ${activeRlcCode} kopplar individanrop till ${formattedCall}...`);
         if (window.dbSendSds) {
-            window.dbSendSds(tactical, "Inkommande individanrop från RLC 9-7", { type: "RLC_RING", rlcCode: "9-7", fromOverride: "RLC 9-7" });
+            window.dbSendSds(tactical, `Inkommande individanrop från RLC ${activeRlcCode}`, { type: "RLC_RING", rlcCode: activeRlcCode, fromOverride: `RLC ${activeRlcCode}` });
         }
         if (tactical === window.MY_TACTICAL) {
-            window.triggerIncomingRlcRingFromConsole("9-7");
+            window.triggerIncomingRlcRingFromConsole(activeRlcCode);
+        } else if (u && u.isSimulated) {
+            // Övningspatrull svarar automatiskt med sin geografiska position och egen patrullröst!
+            setTimeout(() => {
+                if (rlcActiveCallTarget !== tactical) return;
+                const patrolVoice = u.voiceName || PATROL_AI_VOICES[0];
+                const reply = `${formattedCall} svarar, vi befinner oss på ${u.locationName || 'Storgatan'}, kom.`;
+                appendRlcLog(`🚔 ${formattedCall} (Individanrop): "${reply}"`);
+                soundPttGrant();
+                speakSwedish(reply, null, formattedCall, "Individanrop", {
+                    voiceName: patrolVoice,
+                    roleDesc: "en svensk polispatrull som svarar på individanrop"
+                });
+            }, 1200);
         }
+        window.refreshRlcDashboard();
+    };
+
+    window.rlcEndActiveCall = function() {
+        const target = rlcActiveCallTarget;
+        rlcActiveCallTarget = null;
+        const banner = document.getElementById('rlcActiveCallBanner');
+        if (banner) banner.style.display = 'none';
+        if (target) {
+            appendRlcLog(`🔴 RLC ${activeRlcCode} avslutade individsamtalet med ${window.formatPatrolCallsignPairs(target)}. Återgår till ordinarie passning.`);
+            if (window.dbSendSds) {
+                window.dbSendSds(target, "Samtal avslutat av RLC", { type: "RLC_HANGUP", rlcCode: activeRlcCode, fromOverride: `RLC ${activeRlcCode}` });
+            }
+        }
+        if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') {
+            endActiveCall(false);
+        } else {
+            soundPttRelease();
+            window.refreshRlcDashboard();
+        }
+    };
+
+    // Punkt 10: Sätt/häv TMO-spärr på övningspatrull för att öva Gateway-procedur
+    window.rlcTogglePatrolTmoBlock = function(tactical) {
+        const simUnit = (window.simulatedPatrols || []).find(x => x.tactical === tactical);
+        if (!simUnit) return;
+        simUnit.tmoBlocked = !simUnit.tmoBlocked;
+        if (simUnit.tmoBlocked) {
+            simUnit.mode = "DMO";
+            simUnit.tg = "Alla DMO 1";
+            appendRlcLog(`📵 TMO-spärr aktiverad på övningspatrull <b>${window.formatPatrolCallsignPairs(tactical)}</b>! Enheten har gått över till <b>Alla DMO 1</b> och kräver nu aktiv Gateway för att nå RLC.`, true);
+        } else {
+            simUnit.mode = "TMO";
+            simUnit.tg = "IGV PO1 MPU";
+            appendRlcLog(`🔓 TMO-spärr hävd på övningspatrull <b>${window.formatPatrolCallsignPairs(tactical)}</b> (åter i TMO).`);
+        }
+        window.refreshRlcDashboard();
     };
 
     window.rlcSendDirectSds = function(tactical) {
         const u = getCombinedUnitsList().find(x => x.tactical === tactical);
         const gw = window.getAnyActiveGateway();
-        if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+        if (u && ((u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) || u.tmoBlocked)) {
             soundError();
-            appendRlcLog(`❌ Kan ej nå ${tactical} med SDS: Patrullen är i DMO utan aktiv Gateway!`, true);
+            appendRlcLog(`❌ Kan ej nå ${window.formatPatrolCallsignPairs(tactical)} med SDS: Patrullen saknar TMO/Gateway-brygga!`, true);
             return;
         }
-        askInput(`Skicka direkt SDS till ${tactical}:`, "", (msg) => {
+        askInput(`Skicka direkt SDS till ${window.formatPatrolCallsignPairs(tactical)}:`, "", (msg) => {
             if (msg) {
-                if (window.dbSendSds) window.dbSendSds(tactical, msg, { fromOverride: "RLC 9-7", ttsText: msg });
-                if (tactical === window.MY_TACTICAL) window.receiveSds("RLC 9-7", msg, msg);
-                appendRlcLog(`✉️ SDS till ${tactical}: "${msg}"`);
+                if (window.dbSendSds) window.dbSendSds(tactical, msg, { fromOverride: `RLC ${activeRlcCode}`, ttsText: msg });
+                if (tactical === window.MY_TACTICAL && !window.isRlcViewActive()) window.receiveSds(`RLC ${activeRlcCode}`, msg, msg);
+                appendRlcLog(`✉️ SDS till ${window.formatPatrolCallsignPairs(tactical)}: "${msg}"`);
             }
         });
     };
 
     window.addSimulatedDemoPatrol = function() {
         const names = ["Andersson", "Lindberg", "Svensson", "Nilsson", "Bergström"];
-        const tgs = ["IGV PO1 MPU", "Insats 12 MPU", "Alla DMO 1", "RAPS 1 Syd"];
+        const tgs = ["IGV PO1 MPU", "Insats 12 MPU", "RAPS 1 Syd", "Alla DMO 1"];
         const statuses = ["Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Disponibel"];
+        const idx = window.simulatedPatrols.length;
+        const streetObj = PATROL_STREETS[idx % PATROL_STREETS.length];
         const randFour = String(Math.floor(2000 + Math.random() * 7000));
         const newPatrol = {
             tactical: `97-${randFour}`,
-            alias: names[window.simulatedPatrols.length % names.length],
+            alias: names[idx % names.length],
             msisdn: `197${randFour}`,
             issi: `17${randFour}`,
-            tg: tgs[window.simulatedPatrols.length % tgs.length],
-            status: statuses[window.simulatedPatrols.length % statuses.length],
-            mode: (window.simulatedPatrols.length % 4 === 2) ? "DMO" : "TMO",
-            gwActive: (window.simulatedPatrols.length === 1),
+            tg: tgs[idx % tgs.length],
+            status: statuses[idx % statuses.length],
+            mode: (idx % 4 === 3) ? "DMO" : "TMO",
+            gwActive: (idx === 1),
             gwTmo: "Insats 12 MPU",
             gwDmo: "Alla DMO 1",
-            lat: 55.6050 + (Math.random() - 0.5) * 0.03,
-            lng: 13.0038 + (Math.random() - 0.5) * 0.04
+            lat: streetObj.lat + (Math.random() - 0.5) * 0.004,
+            lng: streetObj.lng + (Math.random() - 0.5) * 0.004,
+            headingLat: (Math.random() - 0.5) * 0.00055,
+            headingLng: (Math.random() - 0.5) * 0.00075,
+            locationName: streetObj.name,
+            voiceName: PATROL_AI_VOICES[idx % PATROL_AI_VOICES.length],
+            isSimulated: true,
+            tmoBlocked: false
         };
         window.simulatedPatrols.push(newPatrol);
         window.updateOnlinePillUI();
         window.refreshRlcDashboard();
-        appendRlcLog(`➕ Övningspatrull ${newPatrol.tactical} (${newPatrol.alias}) tillagd.`);
+        appendRlcLog(`➕ Övningspatrull ${window.formatPatrolCallsignPairs(newPatrol.tactical)} (${newPatrol.alias}) tillagd vid ${newPatrol.locationName}.`);
     };
+
+    // Punkt 11: Realistisk patrullrörelse på kartan som om de körde i verkligheten
+    function findNearestStreetName(lat, lng) {
+        let best = PATROL_STREETS[0].name;
+        let minDist = Infinity;
+        for (const s of PATROL_STREETS) {
+            const d = Math.hypot(s.lat - lat, s.lng - lng);
+            if (d < minDist) { minDist = d; best = s.name; }
+        }
+        return best;
+    }
+
+    setInterval(() => {
+        if (!window.simulatedPatrols || window.simulatedPatrols.length === 0) return;
+        window.simulatedPatrols.forEach(p => {
+            if (!p.headingLat) p.headingLat = (Math.random() - 0.5) * 0.0005;
+            if (!p.headingLng) p.headingLng = (Math.random() - 0.5) * 0.0007;
+            // Byt riktning mjukt ibland för att följa vägnätet runt Malmö
+            if (Math.random() < 0.25) {
+                p.headingLat += (Math.random() - 0.5) * 0.00025;
+                p.headingLng += (Math.random() - 0.5) * 0.00035;
+            }
+            p.lat += p.headingLat;
+            p.lng += p.headingLng;
+            if (p.lat > 55.622 || p.lat < 55.572) p.headingLat *= -1;
+            if (p.lng > 13.055 || p.lng < 12.955) p.headingLng *= -1;
+            p.locationName = findNearestStreetName(p.lat, p.lng);
+        });
+        if (window.isRlcViewActive() && window.refreshRlcDashboard) {
+            window.refreshRlcDashboard();
+        }
+    }, 3500);
 
     window.clearSimulatedPatrols = function() {
         window.simulatedPatrols = [];
         window.updateOnlinePillUI();
         window.refreshRlcDashboard();
-        appendRlcLog(`🗑️ Demo-patruller rensade.`);
+        appendRlcLog("🗑️ Alla övningspatruller borttagna.");
+    };
+
+    function appendRlcLog(htmlMsg, isAlert = false) {
+        const box = document.getElementById('rlcEventLogBox');
+        if (!box) return;
+        const row = document.createElement('div');
+        row.style.color = isAlert ? '#ff6b6b' : '#cbd5e1';
+        row.innerHTML = `<span style="color:#64748b;">[${getTime()}]</span> ${htmlMsg}`;
+        box.prepend(row);
+    }
+
+    window.onRlcAudioMonitor = function(data) {
+        if (!data) return;
+        appendRlcLog(`🔊 Radiotrafik på <b>${data.tg}</b> från <b>${data.fromMsisdn || data.fromTactical || 'Enhet'}</b>`);
     };
 
     let isRlcConsolePtt = false;
@@ -4297,17 +4694,23 @@ Regler för polisens radiokommunikation:
         const gw = window.getAnyActiveGateway();
         if (DMO_TG_NAMES.has(rlcSelectedTxTg) && !(gw.active && rlcSelectedTxTg === gw.dmo)) {
             soundError();
-            appendRlcLog(`❌ RLC kan ej sända direkt på ${rlcSelectedTxTg} utan aktiv Gateway!`, true);
+            appendRlcLog(`❌ Kan ej sända på ${rlcSelectedTxTg} (DMO) utan aktiv Gateway!`, true);
             return;
         }
-        isRlcConsolePtt = true;
         if (window.markLocalMachineTransmitting) window.markLocalMachineTransmitting();
-        document.getElementById('rlcPttBtn')?.classList.add('transmitting');
+        isRlcConsolePtt = true;
+        const pttBtn = document.getElementById('rlcPttBtn');
         const ind = document.getElementById('rlcTxIndicator');
-        if (ind) { ind.style.color = '#ff6b6b'; ind.innerText = `● SÄNDER PÅ ${rlcSelectedTxTg}`; }
+        if (pttBtn) {
+            pttBtn.classList.add('transmitting');
+            pttBtn.innerText = `🔴 SÄNDER SOM RLC ${activeRlcCode} PÅ ${rlcSelectedTxTg}...`;
+        }
+        if (ind) {
+            ind.style.color = '#ff6b6b';
+            ind.innerText = `🔴 SÄNDER: ${rlcSelectedTxTg}`;
+        }
         soundPttGrant();
-
-        currentTxSenderOverride = "RLC 9-7";
+        currentTxSenderOverride = `RLC ${activeRlcCode}`;
         currentTxTgOverride = rlcSelectedTxTg;
         pcmChunks = [];
         isCapturingPcm = true;
@@ -4319,41 +4722,42 @@ Regler för polisens radiokommunikation:
         if (e) e.preventDefault();
         if (!isRlcConsolePtt) return;
         isRlcConsolePtt = false;
-        document.getElementById('rlcPttBtn')?.classList.remove('transmitting');
+        const pttBtn = document.getElementById('rlcPttBtn');
+        if (pttBtn) {
+            pttBtn.classList.remove('transmitting');
+            pttBtn.innerText = `🎙️ HÅLL IN FÖR ATT SÄNDA SOM RLC ${activeRlcCode} (PTT ELLER MELLANSLAG)`;
+        }
         updateRlcHeaderIndicator();
         soundPttRelease();
         finishAndSendPcmRecording();
-        appendRlcLog(`🎙️ RLC 9-7 sände röst på ${rlcSelectedTxTg}`);
+        appendRlcLog(`🎙️ RLC ${activeRlcCode} sände röst på ${rlcSelectedTxTg}`);
     };
 
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' || e.key === ' ') {
-            if (!window.isRlcViewActive()) return;
-            const tag = document.activeElement?.tagName;
+    // Stöd för Mellanslag (Spacebar) som PTT i både RLC-vy och Handterminal
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.repeat) {
+            const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             e.preventDefault();
-            if (e.repeat) return;
-            if (!isRlcConsolePtt) {
+            if (window.isRlcViewActive()) {
                 window.startRlcConsolePtt(e);
+            } else {
+                window.startPtt(e);
             }
         }
     });
 
-    window.addEventListener('keyup', (e) => {
-        if (e.code === 'Space' || e.key === ' ') {
-            if (!window.isRlcViewActive()) return;
-            const tag = document.activeElement?.tagName;
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             e.preventDefault();
             if (isRlcConsolePtt) {
                 window.stopRlcConsolePtt(e);
             }
-        }
-    });
-
-    window.addEventListener('blur', () => {
-        if (isRlcConsolePtt) {
-            window.stopRlcConsolePtt();
+            if (isPttActive) {
+                window.stopPtt(e);
+            }
         }
     });
 
@@ -4368,38 +4772,158 @@ Regler för polisens radiokommunikation:
         }
         const text = inp.value.trim();
         inp.value = "";
-        appendRlcLog(`🔊 RLC 9-7 (${rlcSelectedTxTg}): "${text}"`);
+        appendRlcLog(`🔊 RLC ${activeRlcCode} (${rlcSelectedTxTg}): "${text}"`);
         if (window.dbSendSds) {
             window.dbSendSds("ALL", `[${rlcSelectedTxTg}] ${text}`, {
-                fromOverride: "RLC 9-7",
+                fromOverride: `RLC ${activeRlcCode}`,
                 ttsText: text,
                 tg: rlcSelectedTxTg
             });
         }
-        speakSwedish(text, null, "RLC 9-7", rlcSelectedTxTg);
+        // Punkt 2 & 4: Spela INTE upp RLC:s egen röst i RLC-vyn! Däremot svarar anropad övningspatrull med sin geografiska position!
+        triggerSimulatedPatrolGeographicReply(text, rlcSelectedTxTg);
     };
+
+    function triggerSimulatedPatrolGeographicReply(rlcSpokenText, tgName) {
+        const allPatrols = (window.simulatedPatrols && window.simulatedPatrols.length > 0)
+            ? window.simulatedPatrols
+            : [{ tactical: "97-5420", alias: "Andersson", locationName: "Storgatan", tg: tgName, voiceName: "Puck", mode: "TMO" }];
+
+        const gw = window.getAnyActiveGateway();
+        // Kolla om en specifik patrull nämndes i utropet, annars välj en patrull på kanalen
+        let responder = allPatrols.find(p => {
+            const digits = p.tactical.replace('-', '');
+            const pairDigits = window.formatPatrolCallsignPairs(p.tactical);
+            return rlcSpokenText.includes(p.tactical) || rlcSpokenText.includes(pairDigits) || rlcSpokenText.includes(digits.slice(-4));
+        }) || allPatrols.find(p => p.tg === tgName) || allPatrols[0];
+
+        if (!responder) return;
+        if (responder.tmoBlocked && !(gw.active && responder.tg === gw.dmo)) {
+            appendRlcLog(`⚠️ ${window.formatPatrolCallsignPairs(responder.tactical)} har TMO-spärr och saknar Gateway – inget svar.`, true);
+            return;
+        }
+
+        setTimeout(() => {
+            const formattedCall = window.formatPatrolCallsignPairs(responder.tactical);
+            const isRaps = tgName.toUpperCase().includes("RAPS");
+            const prefix = isRaps ? `polis ${formattedCall}` : formattedCall;
+            const replyText = `${prefix} från ${responder.locationName || 'Storgatan'}, vi lyssnar på ${tgName}, kom.`;
+            appendRlcLog(`🚔 ${formattedCall} (${tgName}): "${replyText}"`);
+            soundPttGrant();
+            speakSwedish(replyText, null, formattedCall, tgName, {
+                voiceName: responder.voiceName || PATROL_AI_VOICES[0],
+                roleDesc: "en svensk polispatrull som svarar med sin geografiska position"
+            });
+        }, 1100);
+    }
+
+    // Punkt 8: Simulerad radiotrafik och samverkan på RAPS-kanalen (Räddningstjänst & Ambulans med autentiska anropssignaler)
+    const RAPS_DIALOGUES = [
+        {
+            sender: "Räddning 24-10 80",
+            voice: "Charon",
+            tg: "RAPS 1 Syd",
+            text: "Polis 97-45 47 och ambulans 34-57 76 från räddning 24-10 80 på RAPS 1 Syd. Vi är framme vid skadeplatsen på Inre Ringvägen och spärrar av höger körfält, kom."
+        },
+        {
+            sender: "Ambulans 34-57 76",
+            voice: "Fenrir",
+            tg: "RAPS 1 Syd",
+            text: "Räddning 24-10 80 och polis 97-45 47 från ambulans 34-57 76. Vi tar hand om två skadade personer i personbilen och begär att polisen håller vägen fri för avtransport, kom."
+        },
+        {
+            sender: "Räddning 24-20 10",
+            voice: "Orus",
+            tg: "RAPS 1 Syd",
+            text: "Polis från räddning 24-20 10. Kraftig rökutveckling från fastigheten på Amiralsgatan, vi behöver polisens hjälp med att utrymma innergården, kom."
+        },
+        {
+            sender: "Ambulans 34-61 20",
+            voice: "Puck",
+            tg: "RAPS 1 Syd",
+            text: "Polis från ambulans 34-61 20. Är framkomligheten säkrad fram till brytpunkten vid Storgatan, kom?"
+        }
+    ];
+    let rapsDialogueIdx = 0;
+
+    window.triggerSimulatedRapsTraffic = function() {
+        const item = RAPS_DIALOGUES[rapsDialogueIdx % RAPS_DIALOGUES.length];
+        rapsDialogueIdx++;
+        appendRlcLog(`🚑 [RAPS Samverkan] <b>${item.sender}</b> (${item.tg}): "${item.text}"`);
+        if (window.shouldReceiveTransmission(item.tg, false) || window.isRlcViewActive()) {
+            soundPttGrant();
+            speakSwedish(item.text, null, item.sender, item.tg, {
+                voiceName: item.voice,
+                roleDesc: "en operativ blåljusenhet (räddningstjänst eller ambulans) på samverkanskanalen RAPS"
+            });
+        }
+    };
+
+    // Automatisk RAPS-bakgrundstrafik när patrullen passar en RAPS-kanal
+    setInterval(() => {
+        const curTg = window.getActiveTxTalkgroupName();
+        if (powerState === 'IDLE' && !isPttActive && !isReceivingReal && curTg.toUpperCase().includes("RAPS") && Math.random() < 0.30) {
+            window.triggerSimulatedRapsTraffic();
+        }
+    }, 42000);
 
     window.prefillHrTemplate = function() {
         const type = document.getElementById('rlcHrTypeSelect')?.value || "";
         const desc = document.getElementById('rlcHrDescInput');
+        const tgSel = document.getElementById('rlcHrAssignTg');
         if (!desc) return;
-        if (type.includes("inbrott")) desc.value = "Väktare på plats ser två gärningspersoner inne i butiken. Målsägande möter upp vid entrén.";
-        else if (type.includes("Trafikolycka")) desc.value = "Två personbilar i kollision. Vägbanan delvis blockerad, ambulans är på väg.";
-        else if (type.includes("misshandel")) desc.value = "Flera personer i slagsmål utomhus enligt inringare. En person blöder från ansiktet.";
-        else if (type.includes("rattfylleri")) desc.value = "Vinglig färd med mörk kombi, senast sedd i riktning mot centrum.";
-        else if (type.includes("vapen")) desc.value = "Inringare uppger att en person visat upp ett pistolliknande föremål. Iaktta försiktighet.";
+        if (type.includes("inbrott")) {
+            desc.value = "Väktare på plats ser två gärningspersoner inne i butiken. Målsägande möter upp vid entrén.";
+            if (tgSel) tgSel.value = "Insats 11 MPU";
+        } else if (type.includes("Flerfordonskrock")) {
+            desc.value = "Större krock med tre bilar och lastbil. Räddning 24-10 80 och ambulans 34-57 76 på väg. Samverkan på RAPS 1 Syd.";
+            if (tgSel) tgSel.value = "RAPS 1 Syd";
+        } else if (type.includes("Byggnadsbrand")) {
+            desc.value = "Fullt utvecklad lägenhetsbrand. Räddning 24-20 10 och ambulans 34-61 20 larmade. Samverkan kring avspärrning på RAPS 1 Syd.";
+            if (tgSel) tgSel.value = "RAPS 1 Syd";
+        } else if (type.includes("Kemolycka")) {
+            desc.value = "Läckage från tankbil. Räddningstjänst begär omedelbar avspärrning 300 meter. Samverkan på RAPS 1 Syd.";
+            if (tgSel) tgSel.value = "RAPS 1 Syd";
+        } else if (type.includes("Trafikolycka")) {
+            desc.value = "Två personbilar i kollision. Vägbanan delvis blockerad, ambulans är på väg.";
+            if (tgSel) tgSel.value = "IGV PO1 MPU";
+        } else if (type.includes("misshandel")) {
+            desc.value = "Flera personer i slagsmål utomhus enligt inringare. En person blöder från ansiktet.";
+            if (tgSel) tgSel.value = "IGV PO1 MPU";
+        } else if (type.includes("rån")) {
+            desc.value = "Gärningsperson har hotat personal och lämnat till fots mot Triangeln. Signalement: svart jacka, röd ryggsäck.";
+            if (tgSel) tgSel.value = "Insats 12 MPU";
+        } else if (type.includes("rattfylleri")) {
+            desc.value = "Vinglig färd med mörk kombi, senast sedd i riktning mot centrum.";
+            if (tgSel) tgSel.value = "IGV PO1 MPU";
+        } else if (type.includes("Försvunnen")) {
+            desc.value = "82-årig man med demens saknad sedan 2 timmar. Klädd i blå vindjacka och keps.";
+            if (tgSel) tgSel.value = "Insats 1 MPU";
+        } else if (type.includes("Supporterbråk")) {
+            desc.value = "Stökigt med bengaler och flaskkastning vid kollektivtrafikknutpunkt. Flera patruller beordras.";
+            if (tgSel) tgSel.value = "Insats 11 MPU";
+        } else if (type.includes("vapen")) {
+            desc.value = "Inringare uppger att en person visat upp ett pistolliknande föremål. Iaktta försiktighet.";
+            if (tgSel) tgSel.value = "Insats 11 MPU";
+        }
     };
 
     window.generateAiHrForConsole = async function() {
         const desc = document.getElementById('rlcHrDescInput');
         const addr = document.getElementById('rlcHrAddressInput');
+        const typeSel = document.getElementById('rlcHrTypeSelect');
+        const tgSel = document.getElementById('rlcHrAssignTg');
         const samples = [
-            { a: "Amiralsgatan 22, Malmö", d: "Larm från butik. Gärningsperson har lämnat platsen till fots i mörk jacka mot Nobeltorget." },
-            { a: "Inre Ringvägen / Trafikplats Sunnanå", d: "Singelolycka med personbil i mitträcket. Föraren är ute ur fordonet." },
-            { a: "Stortorget 4, Malmö", d: "Ordningsvakter begär biträde med utåtagerande person vid uteservering." }
+            { t: "Större trafikolycka / Flerfordonskrock (RAPS)", a: "Inre Ringvägen / Trafikplats Sunnanå", tg: "RAPS 1 Syd", d: "Tre personbilar i seriekrock. Räddning 24-10 80 och ambulans 34-57 76 är på väg. Samverkan sker på RAPS 1 Syd." },
+            { t: "Byggnadsbrand / Kraftig rökutveckling (RAPS)", a: "Amiralsgatan 22, Malmö", tg: "RAPS 1 Syd", d: "Kraftig rökutveckling från flerfamiljshus. Räddning 24-20 10 och ambulans 34-61 20 på plats. Samverka på RAPS 1 Syd." },
+            { t: "Pågående personrån / butiksrån", a: "Bergsgatan 14, Malmö", tg: "Insats 11 MPU", d: "Två maskerade personer har tilltvingat sig kontanter och springer mot Möllevångstorget." },
+            { t: "Farligt föremål / person med vapen", a: "Värnhemstorget, Malmö", tg: "Insats 12 MPU", d: "Inringare ser en man med stickvapen vid bussläget. Uppträder agiterat." },
+            { t: "Pågående misshandel / bråk", a: "Stortorget 4, Malmö", tg: "IGV PO1 MPU", d: "Ordningsvakter begär biträde med utåtagerande personer vid uteservering." }
         ];
         const pick = samples[Math.floor(Math.random() * samples.length)];
+        if (typeSel) typeSel.value = pick.t;
         if (addr) addr.value = pick.a;
+        if (tgSel) tgSel.value = pick.tg;
         if (desc) desc.value = pick.d;
     };
 
@@ -4413,19 +4937,19 @@ Regler för polisens radiokommunikation:
         if (target !== "ALL") {
             const u = getCombinedUnitsList().find(x => x.tactical === target);
             const gw = window.getAnyActiveGateway();
-            if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+            if (u && ((u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) || u.tmoBlocked)) {
                 soundError();
-                appendRlcLog(`❌ Kan ej larma ${target}: Patrullen är i DMO utan aktiv Gateway!`, true);
+                appendRlcLog(`❌ Kan ej larma ${window.formatPatrolCallsignPairs(target)}: Patrullen har TMO-spärr eller är i DMO utan aktiv Gateway!`, true);
                 return;
             }
         }
 
         const hrText = `🚨 HR: ${type} | Plats: ${addr} | TG: ${tg} | ${desc}`;
-        const targetLabel = target === "ALL" ? "samtliga patruller" : target;
-        const spokenDispatch = `${targetLabel} från 9-7. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`;
+        const targetLabel = target === "ALL" ? "samtliga patruller" : window.formatPatrolCallsignPairs(target);
+        const spokenDispatch = `${targetLabel} från ${activeRlcCode}. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`;
         if (window.dbSendSds) {
             window.dbSendSds(target, hrText, {
-                fromOverride: "RLC 9-7",
+                fromOverride: `RLC ${activeRlcCode}`,
                 ttsText: spokenDispatch,
                 tg: tg
             });
@@ -4436,26 +4960,15 @@ Regler för polisens radiokommunikation:
             rlcHrMarkers.push(L.marker([selectedHrCoords.lat, selectedHrCoords.lng], { icon: hrIcon }).addTo(rlcMap));
         }
 
-        appendRlcLog(`🚨 Utlarmat HR (${type} @ ${addr}) till ${target} på ${tg}`);
-        speakSwedish(spokenDispatch, null, "RLC 9-7", tg);
-    };
-
-    function appendRlcLog(text, isAlert = false) {
-        const box = document.getElementById('rlcEventLogBox');
-        if (!box) return;
-        const line = document.createElement('div');
-        line.style.color = isAlert ? '#ff6b6b' : '#cbd5e1';
-        line.innerHTML = `<span style="color:#64748b;">[${getTime()}]</span> ${text}`;
-        box.prepend(line);
-    }
-
-    window.onRlcAudioMonitor = function(data) {
-        appendRlcLog(`🔊 Sändning på <b>${data.tg}</b> från ${data.fromMsisdn}`);
-        const chipId = `rlc-chip-${(data.tg || '').replace(/\s+/g, '_')}`;
-        const chip = document.getElementById(chipId);
-        if (chip) {
-            chip.classList.add('rx-active');
-            setTimeout(() => chip.classList.remove('rx-active'), 3000);
+        appendRlcLog(`🚨 RLC ${activeRlcCode} larmade ut HR (${type} @ ${addr}) till ${targetLabel} på ${tg}`);
+        // Om man sitter i RLC-vyn vill man inte höra sig själv ropa ut, utan istället höra patrullen (och ev. RAPS-enheter) svara!
+        if (!window.isRlcViewActive()) {
+            speakSwedish(spokenDispatch, null, `RLC ${activeRlcCode}`, tg, { voiceName: getNextRlcOperatorVoice() });
+        } else {
+            triggerSimulatedPatrolGeographicReply(spokenDispatch, tg);
+            if (tg.toUpperCase().includes("RAPS")) {
+                setTimeout(() => window.triggerSimulatedRapsTraffic(), 5500);
+            }
         }
     };
 
