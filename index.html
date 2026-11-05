@@ -1356,7 +1356,7 @@
         { name: "Värnhemstorget", lat: 55.6058, lng: 13.0235 },
         { name: "Limhamnsvägen", lat: 55.5880, lng: 12.9610 }
     ];
-    window.MY_LOCATION_NAME = "Malmö";
+    window.MY_LOCATION_NAME = "Storgatan";
 
     // Olika operatörsröster på RLC samt olika patrullröster
     const RLC_OPERATOR_VOICES = ["Aoede", "Kore", "Leda", "Callirrhoe", "Zephyr", "Despina"];
@@ -4399,7 +4399,209 @@ Regler för radiokommunikation:
         }
 
         const targetSelect = document.getElementById('rlcHrTargetUnit');
-<!-- ... existing code ... %>
+        if (targetSelect) {
+            const currentVal = targetSelect.value;
+            targetSelect.innerHTML = `<option value="ALL">Till: Alla patruller (Utlarmning)</option>` +
+                units.map(u => `<option value="${u.tactical}">Till: ${window.formatPatrolCallsignPairs(u.tactical)}${u.alias ? ' (' + u.alias + ')' : ''} — [${u.status || 'Klar, ledig'}]</option>`).join('');
+            if ([...targetSelect.options].some(o => o.value === currentVal)) targetSelect.value = currentVal;
+        }
+
+        if (rlcMap) {
+            const activeIds = new Set(units.map(u => u.tactical));
+            Object.keys(rlcUnitMarkers).forEach(k => {
+                if (!activeIds.has(k)) { rlcMap.removeLayer(rlcUnitMarkers[k]); delete rlcUnitMarkers[k]; }
+            });
+            units.forEach(u => {
+                const lat = u.lat || 55.6050, lng = u.lng || 13.0038;
+                const labelTxt = `🚔 ${window.formatPatrolCallsignPairs(u.tactical)}${u.alias ? ' • ' + u.alias : ''}`;
+                const icon = L.divIcon({ className: '', html: `<div class="map-unit-label">${labelTxt}</div>`, iconSize: [160, 24], iconAnchor: [80, 12] });
+                if (rlcUnitMarkers[u.tactical]) {
+                    rlcUnitMarkers[u.tactical].setLatLng([lat, lng]);
+                    rlcUnitMarkers[u.tactical].setIcon(icon);
+                } else {
+                    rlcUnitMarkers[u.tactical] = L.marker([lat, lng], { icon }).addTo(rlcMap);
+                }
+            });
+        }
+        renderRlcTgGrid();
+    };
+
+    window.rlcSetPatrolStatus = function(tactical, newStatus) {
+        if (!tactical || !newStatus) return;
+        const all = getCombinedUnitsList();
+        const u = all.find(x => x.tactical === tactical);
+        const gw = window.getAnyActiveGateway();
+        if (u && u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`⚠️ ${tactical} är i DMO utan Gateway – status satt i RLC men når ej radion förrän den är i TMO/GW.`, true);
+        }
+
+        const simUnit = (window.simulatedPatrols || []).find(x => x.tactical === tactical);
+        if (simUnit) simUnit.status = newStatus;
+
+        const liveUnit = (window.liveConnectedUnits || []).find(x => x.tactical === tactical);
+        if (liveUnit) liveUnit.status = newStatus;
+
+        if (tactical === window.MY_TACTICAL) {
+            radioStatus = newStatus;
+            updateScreenDisplay();
+            if (window.syncPresenceNow) window.syncPresenceNow();
+        }
+
+        if (window.dbSetPatrolStatusFromRlc) window.dbSetPatrolStatusFromRlc(tactical, newStatus);
+        if (window.dbSendSds) {
+            window.dbSendSds(tactical, `Status ändrad till: ${newStatus}`, {
+                type: "RLC_SET_STATUS",
+                newStatus: newStatus,
+                rlcCode: activeRlcCode,
+                fromOverride: `RLC ${activeRlcCode}`
+            });
+        }
+
+        soundStatusDelivered();
+        appendRlcLog(`📟 RLC ${activeRlcCode} satte status på <b>${window.formatPatrolCallsignPairs(tactical)}</b> till: <b>${newStatus}</b>`);
+        window.updateOnlinePillUI();
+        window.refreshRlcDashboard();
+    };
+
+    function renderRlcTgGrid() {
+        const grid = document.getElementById('rlcTgSelectorGrid');
+        if (!grid) return;
+        const gw = window.getAnyActiveGateway();
+        grid.innerHTML = rlcMonitoredTgs.map(tg => {
+            const isSel = rlcSelectedTxTg === tg;
+            const isMon = rlcMonitoredTgsSet.has(tg);
+            const isGwBridged = gw.active && (tg === gw.tmo || tg === gw.dmo);
+            return `<div class="rlc-tg-chip ${isSel ? 'selected-tx' : ''} ${isMon ? 'monitored' : 'muted'}" id="rlc-chip-${tg.replace(/\s+/g, '_')}">
+                <div class="rlc-tg-name" onclick="rlcSelectTxTg('${tg}')">
+                    <span>${isSel ? '🎙️ ' : ''}${tg}</span>
+                    ${isGwBridged ? '<span style="color:#2ecc71;font-size:9px;margin-left:2px;">🔄GW</span>' : ''}
+                </div>
+                <button class="rlc-mon-btn ${isMon ? 'active' : ''}" onclick="rlcToggleMonitorTg('${tg}', event)">
+                    ${isMon ? '👂 På' : '🔇 Av'}
+                </button>
+            </div>`;
+        }).join('');
+    }
+
+    window.rlcSelectTxTg = function(tgName) {
+        unlockBrowserAudio();
+        rlcSelectedTxTg = tgName;
+        rlcMonitoredTgsSet.add(tgName);
+        updateRlcHeaderIndicator();
+        renderRlcTgGrid();
+    };
+
+    window.rlcFocusUnitOnMap = function(tactical) {
+        const u = getCombinedUnitsList().find(x => x.tactical === tactical);
+        if (u && rlcMap) rlcMap.setView([u.lat || 55.6050, u.lng || 13.0038], 15);
+    };
+
+    window.rlcAnswerCallRequest = function(tactical) {
+        const simUnit = (window.simulatedPatrols || []).find(x => x.tactical === tactical);
+        if (simUnit && simUnit.status === "Anropsbegäran") simUnit.status = "Klar, ledig";
+        const liveUnit = (window.liveConnectedUnits || []).find(x => x.tactical === tactical);
+        if (liveUnit && liveUnit.status === "Anropsbegäran") liveUnit.status = "Klar, ledig";
+        if (tactical === window.MY_TACTICAL) {
+            hasPendingCallRequest = false;
+            if (radioStatus === "Anropsbegäran") radioStatus = previousNormalStatus || "Klar, ledig";
+        }
+        if (window.dbSetPatrolStatusFromRlc) window.dbSetPatrolStatusFromRlc(tactical, "Klar, ledig");
+        window.rlcRingPatrol(tactical);
+    };
+
+    window.rlcRingPatrol = function(tactical) {
+        const u = getCombinedUnitsList().find(x => x.tactical === tactical);
+        const gw = window.getAnyActiveGateway();
+        if (u && ((u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) || u.tmoBlocked)) {
+            soundError();
+            appendRlcLog(`❌ Kan ej ringa ${window.formatPatrolCallsignPairs(tactical)}: Patrullen har TMO-spärr eller är i DMO utan aktiv Gateway!`, true);
+            return;
+        }
+        rlcActiveCallTarget = tactical;
+        const banner = document.getElementById('rlcActiveCallBanner');
+        const bannerTxt = document.getElementById('rlcActiveCallTargetText');
+        const formattedCall = window.formatPatrolCallsignPairs(tactical);
+        if (banner && bannerTxt) {
+            banner.style.display = 'flex';
+            bannerTxt.innerText = `Samtal med ${formattedCall}${u?.alias ? ' (' + u.alias + ')' : ''}`;
+        }
+        appendRlcLog(`📞 RLC ${activeRlcCode} kopplar individanrop till ${formattedCall}...`);
+        if (window.dbSendSds) {
+            window.dbSendSds(tactical, `Inkommande individanrop från RLC ${activeRlcCode}`, { type: "RLC_RING", rlcCode: activeRlcCode, fromOverride: `RLC ${activeRlcCode}` });
+        }
+        if (tactical === window.MY_TACTICAL) {
+            window.triggerIncomingRlcRingFromConsole(activeRlcCode);
+        } else if (u && u.isSimulated) {
+            // Övningspatrull svarar automatiskt med sin geografiska position och egen patrullröst!
+            setTimeout(() => {
+                if (rlcActiveCallTarget !== tactical) return;
+                const patrolVoice = u.voiceName || PATROL_AI_VOICES[0];
+                const reply = `${formattedCall} svarar, vi befinner oss på ${u.locationName || 'Storgatan'}, kom.`;
+                appendRlcLog(`🚔 ${formattedCall} (Individanrop): "${reply}"`);
+                soundPttGrant();
+                speakSwedish(reply, null, formattedCall, "Individanrop", {
+                    voiceName: patrolVoice,
+                    roleDesc: "en svensk polispatrull som svarar på individanrop"
+                });
+            }, 1200);
+        }
+        window.refreshRlcDashboard();
+    };
+
+    window.rlcEndActiveCall = function() {
+        const target = rlcActiveCallTarget;
+        rlcActiveCallTarget = null;
+        const banner = document.getElementById('rlcActiveCallBanner');
+        if (banner) banner.style.display = 'none';
+        if (target) {
+            appendRlcLog(`🔴 RLC ${activeRlcCode} avslutade individsamtalet med ${window.formatPatrolCallsignPairs(target)}. Återgår till ordinarie passning.`);
+            if (window.dbSendSds) {
+                window.dbSendSds(target, "Samtal avslutat av RLC", { type: "RLC_HANGUP", rlcCode: activeRlcCode, fromOverride: `RLC ${activeRlcCode}` });
+            }
+        }
+        if (powerState === 'CALL_ACTIVE' || powerState === 'RLC_CONNECTED' || powerState === 'RINGING_RLC') {
+            endActiveCall(false);
+        } else {
+            soundPttRelease();
+            window.refreshRlcDashboard();
+        }
+    };
+
+    // Punkt 10: Sätt/häv TMO-spärr på övningspatrull för att öva Gateway-procedur
+    window.rlcTogglePatrolTmoBlock = function(tactical) {
+        const simUnit = (window.simulatedPatrols || []).find(x => x.tactical === tactical);
+        if (!simUnit) return;
+        simUnit.tmoBlocked = !simUnit.tmoBlocked;
+        if (simUnit.tmoBlocked) {
+            simUnit.mode = "DMO";
+            simUnit.tg = "Alla DMO 1";
+            appendRlcLog(`📵 TMO-spärr aktiverad på övningspatrull <b>${window.formatPatrolCallsignPairs(tactical)}</b>! Enheten har gått över till <b>Alla DMO 1</b> och kräver nu aktiv Gateway för att nå RLC.`, true);
+        } else {
+            simUnit.mode = "TMO";
+            simUnit.tg = "IGV PO1 MPU";
+            appendRlcLog(`🔓 TMO-spärr hävd på övningspatrull <b>${window.formatPatrolCallsignPairs(tactical)}</b> (åter i TMO).`);
+        }
+        window.refreshRlcDashboard();
+    };
+
+    window.rlcSendDirectSds = function(tactical) {
+        const u = getCombinedUnitsList().find(x => x.tactical === tactical);
+        const gw = window.getAnyActiveGateway();
+        if (u && ((u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) || u.tmoBlocked)) {
+            soundError();
+            appendRlcLog(`❌ Kan ej nå ${window.formatPatrolCallsignPairs(tactical)} med SDS: Patrullen saknar TMO/Gateway-brygga!`, true);
+            return;
+        }
+        askInput(`Skicka direkt SDS till ${window.formatPatrolCallsignPairs(tactical)}:`, "", (msg) => {
+            if (msg) {
+                if (window.dbSendSds) window.dbSendSds(tactical, msg, { fromOverride: `RLC ${activeRlcCode}`, ttsText: msg });
+                if (tactical === window.MY_TACTICAL && !window.isRlcViewActive()) window.receiveSds(`RLC ${activeRlcCode}`, msg, msg);
+                appendRlcLog(`✉️ SDS till ${window.formatPatrolCallsignPairs(tactical)}: "${msg}"`);
+            }
+        });
+    };
+
     window.addSimulatedDemoPatrol = function() {
         const names = ["Andersson", "Lindberg", "Svensson", "Nilsson", "Bergström"];
         const tgs = ["IGV PO1 MPU", "Insats 12 MPU", "RAPS 1 Syd", "Alla DMO 1"];
@@ -4420,8 +4622,8 @@ Regler för radiokommunikation:
             gwDmo: "Alla DMO 1",
             lat: streetObj.lat + (Math.random() - 0.5) * 0.004,
             lng: streetObj.lng + (Math.random() - 0.5) * 0.004,
-            headingLat: (Math.random() - 0.5) * 0.0005,
-            headingLng: (Math.random() - 0.5) * 0.0007,
+            headingLat: (Math.random() - 0.5) * 0.00055,
+            headingLng: (Math.random() - 0.5) * 0.00075,
             locationName: streetObj.name,
             voiceName: PATROL_AI_VOICES[idx % PATROL_AI_VOICES.length],
             isSimulated: true,
@@ -4430,15 +4632,164 @@ Regler för radiokommunikation:
         window.simulatedPatrols.push(newPatrol);
         window.updateOnlinePillUI();
         window.refreshRlcDashboard();
-        appendRlcLog(`➕ Övningspatrull ${window.formatPatrolCallsignPairs(newPatrol.tactical)} (${newPatrol.alias}) tillagd.`);
+        appendRlcLog(`➕ Övningspatrull ${window.formatPatrolCallsignPairs(newPatrol.tactical)} (${newPatrol.alias}) tillagd vid ${newPatrol.locationName}.`);
     };
 
     // Punkt 11: Realistisk patrullrörelse på kartan som om de körde i verkligheten
-<!-- ... existing code ... %>
+    function findNearestStreetName(lat, lng) {
+        let best = PATROL_STREETS[0].name;
+        let minDist = Infinity;
+        for (const s of PATROL_STREETS) {
+            const d = Math.hypot(s.lat - lat, s.lng - lng);
+            if (d < minDist) { minDist = d; best = s.name; }
+        }
+        return best;
+    }
+
+    setInterval(() => {
+        if (!window.simulatedPatrols || window.simulatedPatrols.length === 0) return;
+        window.simulatedPatrols.forEach(p => {
+            if (!p.headingLat) p.headingLat = (Math.random() - 0.5) * 0.0005;
+            if (!p.headingLng) p.headingLng = (Math.random() - 0.5) * 0.0007;
+            // Byt riktning mjukt ibland för att följa vägnätet runt Malmö
+            if (Math.random() < 0.25) {
+                p.headingLat += (Math.random() - 0.5) * 0.00025;
+                p.headingLng += (Math.random() - 0.5) * 0.00035;
+            }
+            p.lat += p.headingLat;
+            p.lng += p.headingLng;
+            if (p.lat > 55.622 || p.lat < 55.572) p.headingLat *= -1;
+            if (p.lng > 13.055 || p.lng < 12.955) p.headingLng *= -1;
+            p.locationName = findNearestStreetName(p.lat, p.lng);
+        });
+        if (window.isRlcViewActive() && window.refreshRlcDashboard) {
+            window.refreshRlcDashboard();
+        }
+    }, 3500);
+
+    window.clearSimulatedPatrols = function() {
+        window.simulatedPatrols = [];
+        window.updateOnlinePillUI();
+        window.refreshRlcDashboard();
+        appendRlcLog("🗑️ Alla övningspatruller borttagna.");
+    };
+
+    function appendRlcLog(htmlMsg, isAlert = false) {
+        const box = document.getElementById('rlcEventLogBox');
+        if (!box) return;
+        const row = document.createElement('div');
+        row.style.color = isAlert ? '#ff6b6b' : '#cbd5e1';
+        row.innerHTML = `<span style="color:#64748b;">[${getTime()}]</span> ${htmlMsg}`;
+        box.prepend(row);
+    }
+
+    window.onRlcAudioMonitor = function(data) {
+        if (!data) return;
+        appendRlcLog(`🔊 Radiotrafik på <b>${data.tg}</b> från <b>${data.fromMsisdn || data.fromTactical || 'Enhet'}</b>`);
+    };
+
+    let isRlcConsolePtt = false;
+    window.startRlcConsolePtt = async function(e) {
+        if (e) e.preventDefault();
+        unlockBrowserAudio();
+        if (isRlcConsolePtt) return;
+        const gw = window.getAnyActiveGateway();
+        if (DMO_TG_NAMES.has(rlcSelectedTxTg) && !(gw.active && rlcSelectedTxTg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`❌ Kan ej sända på ${rlcSelectedTxTg} (DMO) utan aktiv Gateway!`, true);
+            return;
+        }
+        if (window.markLocalMachineTransmitting) window.markLocalMachineTransmitting();
+        isRlcConsolePtt = true;
+        const pttBtn = document.getElementById('rlcPttBtn');
+        const ind = document.getElementById('rlcTxIndicator');
+        if (pttBtn) {
+            pttBtn.classList.add('transmitting');
+            pttBtn.innerText = `🔴 SÄNDER SOM RLC ${activeRlcCode} PÅ ${rlcSelectedTxTg}...`;
+        }
+        if (ind) {
+            ind.style.color = '#ff6b6b';
+            ind.innerText = `🔴 SÄNDER: ${rlcSelectedTxTg}`;
+        }
+        soundPttGrant();
+        currentTxSenderOverride = `RLC ${activeRlcCode}`;
+        currentTxTgOverride = rlcSelectedTxTg;
+        pcmChunks = [];
+        isCapturingPcm = true;
+        const ok = await ensureMicAccess();
+        if (!ok) isCapturingPcm = false;
+    };
+
+    window.stopRlcConsolePtt = function(e) {
+        if (e) e.preventDefault();
+        if (!isRlcConsolePtt) return;
+        isRlcConsolePtt = false;
+        const pttBtn = document.getElementById('rlcPttBtn');
+        if (pttBtn) {
+            pttBtn.classList.remove('transmitting');
+            pttBtn.innerText = `🎙️ HÅLL IN FÖR ATT SÄNDA SOM RLC ${activeRlcCode} (PTT ELLER MELLANSLAG)`;
+        }
+        updateRlcHeaderIndicator();
+        soundPttRelease();
+        finishAndSendPcmRecording();
+        appendRlcLog(`🎙️ RLC ${activeRlcCode} sände röst på ${rlcSelectedTxTg}`);
+    };
+
+    // Stöd för Mellanslag (Spacebar) som PTT i både RLC-vy och Handterminal
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.repeat) {
+            const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            e.preventDefault();
+            if (window.isRlcViewActive()) {
+                window.startRlcConsolePtt(e);
+            } else {
+                window.startPtt(e);
+            }
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            e.preventDefault();
+            if (isRlcConsolePtt) {
+                window.stopRlcConsolePtt(e);
+            }
+            if (isPttActive) {
+                window.stopPtt(e);
+            }
+        }
+    });
+
+    window.sendRlcVoiceBroadcast = function() {
+        const inp = document.getElementById('rlcQuickTtsInput');
+        if (!inp || !inp.value.trim()) return;
+        const gw = window.getAnyActiveGateway();
+        if (DMO_TG_NAMES.has(rlcSelectedTxTg) && !(gw.active && rlcSelectedTxTg === gw.dmo)) {
+            soundError();
+            appendRlcLog(`❌ RLC kan ej ropa ut på ${rlcSelectedTxTg} (DMO) utan aktiv Gateway!`, true);
+            return;
+        }
+        const text = inp.value.trim();
+        inp.value = "";
+        appendRlcLog(`🔊 RLC ${activeRlcCode} (${rlcSelectedTxTg}): "${text}"`);
+        if (window.dbSendSds) {
+            window.dbSendSds("ALL", `[${rlcSelectedTxTg}] ${text}`, {
+                fromOverride: `RLC ${activeRlcCode}`,
+                ttsText: text,
+                tg: rlcSelectedTxTg
+            });
+        }
+        // Punkt 2 & 4: Spela INTE upp RLC:s egen röst i RLC-vyn! Däremot svarar anropad övningspatrull med sin geografiska position!
+        triggerSimulatedPatrolGeographicReply(text, rlcSelectedTxTg);
+    };
+
     function triggerSimulatedPatrolGeographicReply(rlcSpokenText, tgName) {
         const allPatrols = (window.simulatedPatrols && window.simulatedPatrols.length > 0)
             ? window.simulatedPatrols
-            : [{ tactical: "97-5420", alias: "Andersson", locationName: "Malmö", tg: tgName, voiceName: "Puck", mode: "TMO" }];
+            : [{ tactical: "97-5420", alias: "Andersson", locationName: "Storgatan", tg: tgName, voiceName: "Puck", mode: "TMO" }];
 
         const gw = window.getAnyActiveGateway();
         // Kolla om en specifik patrull nämndes i utropet, annars välj en patrull på kanalen
@@ -4458,15 +4809,397 @@ Regler för radiokommunikation:
             const formattedCall = window.formatPatrolCallsignPairs(responder.tactical);
             const isRaps = tgName.toUpperCase().includes("RAPS");
             const prefix = isRaps ? `polis ${formattedCall}` : formattedCall;
-            const replyText = `${prefix} från ${responder.locationName || 'Malmö'}, vi lyssnar på ${tgName}, kom.`;
+            const replyText = `${prefix} från ${responder.locationName || 'Storgatan'}, vi lyssnar på ${tgName}, kom.`;
             appendRlcLog(`🚔 ${formattedCall} (${tgName}): "${replyText}"`);
             soundPttGrant();
             speakSwedish(replyText, null, formattedCall, tgName, {
                 voiceName: responder.voiceName || PATROL_AI_VOICES[0],
-                roleDesc: "en svensk polispatrull som svarar på anrop"
+                roleDesc: "en svensk polispatrull som svarar med sin geografiska position"
             });
         }, 1100);
     }
 
     // Punkt 8: Simulerad radiotrafik och samverkan på RAPS-kanalen (Räddningstjänst & Ambulans med autentiska anropssignaler)
-<!-- ... existing code ... %>
+    const RAPS_DIALOGUES = [
+        {
+            sender: "Räddning 24-10 80",
+            voice: "Charon",
+            tg: "RAPS 1 Syd",
+            text: "Polis 97-45 47 och ambulans 34-57 76 från räddning 24-10 80 på RAPS 1 Syd. Vi är framme vid skadeplatsen på Inre Ringvägen och spärrar av höger körfält, kom."
+        },
+        {
+            sender: "Ambulans 34-57 76",
+            voice: "Fenrir",
+            tg: "RAPS 1 Syd",
+            text: "Räddning 24-10 80 och polis 97-45 47 från ambulans 34-57 76. Vi tar hand om två skadade personer i personbilen och begär att polisen håller vägen fri för avtransport, kom."
+        },
+        {
+            sender: "Räddning 24-20 10",
+            voice: "Orus",
+            tg: "RAPS 1 Syd",
+            text: "Polis från räddning 24-20 10. Kraftig rökutveckling från fastigheten på Amiralsgatan, vi behöver polisens hjälp med att utrymma innergården, kom."
+        },
+        {
+            sender: "Ambulans 34-61 20",
+            voice: "Puck",
+            tg: "RAPS 1 Syd",
+            text: "Polis från ambulans 34-61 20. Är framkomligheten säkrad fram till brytpunkten vid Storgatan, kom?"
+        }
+    ];
+    let rapsDialogueIdx = 0;
+
+    window.triggerSimulatedRapsTraffic = function() {
+        const item = RAPS_DIALOGUES[rapsDialogueIdx % RAPS_DIALOGUES.length];
+        rapsDialogueIdx++;
+        appendRlcLog(`🚑 [RAPS Samverkan] <b>${item.sender}</b> (${item.tg}): "${item.text}"`);
+        if (window.shouldReceiveTransmission(item.tg, false) || window.isRlcViewActive()) {
+            soundPttGrant();
+            speakSwedish(item.text, null, item.sender, item.tg, {
+                voiceName: item.voice,
+                roleDesc: "en operativ blåljusenhet (räddningstjänst eller ambulans) på samverkanskanalen RAPS"
+            });
+        }
+    };
+
+    // Automatisk RAPS-bakgrundstrafik när patrullen passar en RAPS-kanal
+    setInterval(() => {
+        const curTg = window.getActiveTxTalkgroupName();
+        if (powerState === 'IDLE' && !isPttActive && !isReceivingReal && curTg.toUpperCase().includes("RAPS") && Math.random() < 0.30) {
+            window.triggerSimulatedRapsTraffic();
+        }
+    }, 42000);
+
+    window.prefillHrTemplate = function() {
+        const type = document.getElementById('rlcHrTypeSelect')?.value || "";
+        const desc = document.getElementById('rlcHrDescInput');
+        const tgSel = document.getElementById('rlcHrAssignTg');
+        if (!desc) return;
+        if (type.includes("inbrott")) {
+            desc.value = "Väktare på plats ser två gärningspersoner inne i butiken. Målsägande möter upp vid entrén.";
+            if (tgSel) tgSel.value = "Insats 11 MPU";
+        } else if (type.includes("Flerfordonskrock")) {
+            desc.value = "Större krock med tre bilar och lastbil. Räddning 24-10 80 och ambulans 34-57 76 på väg. Samverkan på RAPS 1 Syd.";
+            if (tgSel) tgSel.value = "RAPS 1 Syd";
+        } else if (type.includes("Byggnadsbrand")) {
+            desc.value = "Fullt utvecklad lägenhetsbrand. Räddning 24-20 10 och ambulans 34-61 20 larmade. Samverkan kring avspärrning på RAPS 1 Syd.";
+            if (tgSel) tgSel.value = "RAPS 1 Syd";
+        } else if (type.includes("Kemolycka")) {
+            desc.value = "Läckage från tankbil. Räddningstjänst begär omedelbar avspärrning 300 meter. Samverkan på RAPS 1 Syd.";
+            if (tgSel) tgSel.value = "RAPS 1 Syd";
+        } else if (type.includes("Trafikolycka")) {
+            desc.value = "Två personbilar i kollision. Vägbanan delvis blockerad, ambulans är på väg.";
+            if (tgSel) tgSel.value = "IGV PO1 MPU";
+        } else if (type.includes("misshandel")) {
+            desc.value = "Flera personer i slagsmål utomhus enligt inringare. En person blöder från ansiktet.";
+            if (tgSel) tgSel.value = "IGV PO1 MPU";
+        } else if (type.includes("rån")) {
+            desc.value = "Gärningsperson har hotat personal och lämnat till fots mot Triangeln. Signalement: svart jacka, röd ryggsäck.";
+            if (tgSel) tgSel.value = "Insats 12 MPU";
+        } else if (type.includes("rattfylleri")) {
+            desc.value = "Vinglig färd med mörk kombi, senast sedd i riktning mot centrum.";
+            if (tgSel) tgSel.value = "IGV PO1 MPU";
+        } else if (type.includes("Försvunnen")) {
+            desc.value = "82-årig man med demens saknad sedan 2 timmar. Klädd i blå vindjacka och keps.";
+            if (tgSel) tgSel.value = "Insats 1 MPU";
+        } else if (type.includes("Supporterbråk")) {
+            desc.value = "Stökigt med bengaler och flaskkastning vid kollektivtrafikknutpunkt. Flera patruller beordras.";
+            if (tgSel) tgSel.value = "Insats 11 MPU";
+        } else if (type.includes("vapen")) {
+            desc.value = "Inringare uppger att en person visat upp ett pistolliknande föremål. Iaktta försiktighet.";
+            if (tgSel) tgSel.value = "Insats 11 MPU";
+        }
+    };
+
+    window.generateAiHrForConsole = async function() {
+        const desc = document.getElementById('rlcHrDescInput');
+        const addr = document.getElementById('rlcHrAddressInput');
+        const typeSel = document.getElementById('rlcHrTypeSelect');
+        const tgSel = document.getElementById('rlcHrAssignTg');
+        const samples = [
+            { t: "Större trafikolycka / Flerfordonskrock (RAPS)", a: "Inre Ringvägen / Trafikplats Sunnanå", tg: "RAPS 1 Syd", d: "Tre personbilar i seriekrock. Räddning 24-10 80 och ambulans 34-57 76 är på väg. Samverkan sker på RAPS 1 Syd." },
+            { t: "Byggnadsbrand / Kraftig rökutveckling (RAPS)", a: "Amiralsgatan 22, Malmö", tg: "RAPS 1 Syd", d: "Kraftig rökutveckling från flerfamiljshus. Räddning 24-20 10 och ambulans 34-61 20 på plats. Samverka på RAPS 1 Syd." },
+            { t: "Pågående personrån / butiksrån", a: "Bergsgatan 14, Malmö", tg: "Insats 11 MPU", d: "Två maskerade personer har tilltvingat sig kontanter och springer mot Möllevångstorget." },
+            { t: "Farligt föremål / person med vapen", a: "Värnhemstorget, Malmö", tg: "Insats 12 MPU", d: "Inringare ser en man med stickvapen vid bussläget. Uppträder agiterat." },
+            { t: "Pågående misshandel / bråk", a: "Stortorget 4, Malmö", tg: "IGV PO1 MPU", d: "Ordningsvakter begär biträde med utåtagerande personer vid uteservering." }
+        ];
+        const pick = samples[Math.floor(Math.random() * samples.length)];
+        if (typeSel) typeSel.value = pick.t;
+        if (addr) addr.value = pick.a;
+        if (tgSel) tgSel.value = pick.tg;
+        if (desc) desc.value = pick.d;
+    };
+
+    window.dispatchHrFromConsole = function() {
+        const type = document.getElementById('rlcHrTypeSelect')?.value || "HR-Larm";
+        const addr = document.getElementById('rlcHrAddressInput')?.value || "Okänd plats";
+        const tg = document.getElementById('rlcHrAssignTg')?.value || "IGV PO1 MPU";
+        const desc = document.getElementById('rlcHrDescInput')?.value || "";
+        const target = document.getElementById('rlcHrTargetUnit')?.value || "ALL";
+
+        if (target !== "ALL") {
+            const u = getCombinedUnitsList().find(x => x.tactical === target);
+            const gw = window.getAnyActiveGateway();
+            if (u && ((u.mode === "DMO" && !(gw.active && u.tg === gw.dmo)) || u.tmoBlocked)) {
+                soundError();
+                appendRlcLog(`❌ Kan ej larma ${window.formatPatrolCallsignPairs(target)}: Patrullen har TMO-spärr eller är i DMO utan aktiv Gateway!`, true);
+                return;
+            }
+        }
+
+        const hrText = `🚨 HR: ${type} | Plats: ${addr} | TG: ${tg} | ${desc}`;
+        const targetLabel = target === "ALL" ? "samtliga patruller" : window.formatPatrolCallsignPairs(target);
+        const spokenDispatch = `${targetLabel} från ${activeRlcCode}. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`;
+        if (window.dbSendSds) {
+            window.dbSendSds(target, hrText, {
+                fromOverride: `RLC ${activeRlcCode}`,
+                ttsText: spokenDispatch,
+                tg: tg
+            });
+        }
+
+        if (rlcMap) {
+            const hrIcon = L.divIcon({ className: '', html: `<div class="map-hr-label">🚨 ${type} (${tg})</div>`, iconSize: [160, 24], iconAnchor: [80, 12] });
+            rlcHrMarkers.push(L.marker([selectedHrCoords.lat, selectedHrCoords.lng], { icon: hrIcon }).addTo(rlcMap));
+        }
+
+        appendRlcLog(`🚨 RLC ${activeRlcCode} larmade ut HR (${type} @ ${addr}) till ${targetLabel} på ${tg}`);
+        // Om man sitter i RLC-vyn vill man inte höra sig själv ropa ut, utan istället höra patrullen (och ev. RAPS-enheter) svara!
+        if (!window.isRlcViewActive()) {
+            speakSwedish(spokenDispatch, null, `RLC ${activeRlcCode}`, tg, { voiceName: getNextRlcOperatorVoice() });
+        } else {
+            triggerSimulatedPatrolGeographicReply(spokenDispatch, tg);
+            if (tg.toUpperCase().includes("RAPS")) {
+                setTimeout(() => window.triggerSimulatedRapsTraffic(), 5500);
+            }
+        }
+    };
+
+    window.onRlcSdsMonitor = function(data) {
+        appendRlcLog(`✉️ SDS från ${data.from_issi} ➔ ${data.to_issi}: "${data.msg}"`);
+    };
+
+    setInterval(() => { if (powerState === 'IDLE') updateScreenDisplay(); }, 15000);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateBadgeAndToastText();
+        updateScreenDisplay();
+        window.refreshRlcDashboard();
+        if (window.GEMINI_API_KEY) {
+            const btn = document.getElementById('apiKeyBtn');
+            if (btn) { btn.innerText = "🔑 ✔"; btn.classList.add('active-gw'); }
+        }
+        appendRlcLog("RLC 9-7 Sambandscentral redo. Medlyssnar samtliga talgrupper.");
+        initRakelPwa();
+    });
+
+    // =========================================================
+    // 13. INBYGGD PWA (MANIFEST, SERVICE WORKER & APP-IKON)
+    // =========================================================
+    let deferredPwaPrompt = null;
+
+    function generateRakelAppIconDataUrl(size = 512) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const s = size / 512;
+
+        // Bakgrund med rundade hörn och blå metallgradient
+        const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+        bgGrad.addColorStop(0, '#003b7a');
+        bgGrad.addColorStop(0.5, '#002248');
+        bgGrad.addColorStop(1, '#09131f');
+        ctx.fillStyle = bgGrad;
+        ctx.beginPath();
+        ctx.roundRect(0, 0, size, size, 108 * s);
+        ctx.fill();
+
+        // Subtil yttre guld-/blå ram
+        ctx.strokeStyle = 'rgba(102, 163, 255, 0.45)';
+        ctx.lineWidth = 10 * s;
+        ctx.stroke();
+
+        // Antenn (uppe till höger på radion)
+        const antGrad = ctx.createLinearGradient(310 * s, 38 * s, 344 * s, 38 * s);
+        antGrad.addColorStop(0, '#111');
+        antGrad.addColorStop(0.4, '#4a4f57');
+        antGrad.addColorStop(1, '#0a0a0a');
+        ctx.fillStyle = antGrad;
+        ctx.beginPath();
+        ctx.roundRect(310 * s, 34 * s, 34 * s, 95 * s, [16 * s, 16 * s, 0, 0]);
+        ctx.fill();
+
+        // Volymvred (uppe till vänster)
+        ctx.fillStyle = '#25282c';
+        ctx.beginPath();
+        ctx.roundRect(175 * s, 84 * s, 44 * s, 34 * s, [8 * s, 8 * s, 0, 0]);
+        ctx.fill();
+
+        // Röd nödknapp i toppen
+        ctx.fillStyle = '#ff3b30';
+        ctx.beginPath();
+        ctx.roundRect(242 * s, 96 * s, 40 * s, 18 * s, [6 * s, 6 * s, 0, 0]);
+        ctx.fill();
+
+        // Orange PTT-knapp på vänster sida
+        const pttGrad = ctx.createLinearGradient(118 * s, 190 * s, 145 * s, 190 * s);
+        pttGrad.addColorStop(0, '#ff9f1a');
+        pttGrad.addColorStop(1, '#c25e00');
+        ctx.fillStyle = pttGrad;
+        ctx.beginPath();
+        ctx.roundRect(118 * s, 195 * s, 26 * s, 98 * s, [12 * s, 0, 0, 12 * s]);
+        ctx.fill();
+
+        // Sepura SC21 chassi
+        const bodyGrad = ctx.createLinearGradient(140 * s, 108 * s, 372 * s, 468 * s);
+        bodyGrad.addColorStop(0, '#3a3f47');
+        bodyGrad.addColorStop(1, '#17191d');
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.roundRect(140 * s, 108 * s, 232 * s, 362 * s, 34 * s);
+        ctx.fill();
+        ctx.lineWidth = 4 * s;
+        ctx.strokeStyle = '#0a0c0e';
+        ctx.stroke();
+
+        // Grön & Röd LED högst upp på chassit
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.arc(185 * s, 128 * s, 5 * s, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Display-ram
+        ctx.fillStyle = '#07080a';
+        ctx.beginPath();
+        ctx.roundRect(160 * s, 146 * s, 192 * s, 134 * s, 10 * s);
+        ctx.fill();
+
+        // Belyst Rakel-skärm
+        ctx.fillStyle = '#f4f8fb';
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(168 * s, 154 * s, 176 * s, 118 * s, 4 * s);
+        ctx.fill();
+
+        // Topplist i displayen
+        ctx.fillStyle = '#002855';
+        ctx.fillRect(168 * s, 154 * s, 176 * s, 22 * s);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${13 * s}px Arial, sans-serif`;
+        ctx.fillText('RAKEL TMO', 175 * s, 170 * s);
+
+        // Text i displayen
+        ctx.fillStyle = '#002855';
+        ctx.font = `900 ${26 * s}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('SC21', 256 * s, 206 * s);
+
+        ctx.fillStyle = '#1e8449';
+        ctx.font = `bold ${17 * s}px Arial, sans-serif`;
+        ctx.fillText('IGV PO1 MPU', 256 * s, 230 * s);
+
+        // Blå Sepura-footer i displayen
+        ctx.fillStyle = '#002b66';
+        ctx.fillRect(168 * s, 250 * s, 176 * s, 22 * s);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${12 * s}px Arial, sans-serif`;
+        ctx.fillText('Meny   Grupper   Inkorg', 256 * s, 265 * s);
+
+        // D-pad / Navigationshjul
+        ctx.fillStyle = '#101215';
+        ctx.beginPath();
+        ctx.arc(256 * s, 332 * s, 32 * s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#4a5568';
+        ctx.lineWidth = 3 * s;
+        ctx.stroke();
+
+        // Grön lur & Röd lur
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.roundRect(172 * s, 316 * s, 34 * s, 30 * s, 7 * s);
+        ctx.fill();
+
+        ctx.fillStyle = '#e74c3c';
+        ctx.beginPath();
+        ctx.roundRect(306 * s, 316 * s, 34 * s, 30 * s, 7 * s);
+        ctx.fill();
+
+        // Knappsats-rader längst ner
+        ctx.fillStyle = '#2a2e35';
+        const cols = [174, 232, 290];
+        const rows = [376, 404, 432];
+        rows.forEach(ry => {
+            cols.forEach(cx => {
+                ctx.beginPath();
+                ctx.roundRect(cx * s, ry * s, 48 * s, 20 * s, 5 * s);
+                ctx.fill();
+            });
+        });
+
+        return canvas.toDataURL('image/png');
+    }
+
+    function initRakelPwa() {
+        try {
+            const icon192 = generateRakelAppIconDataUrl(192);
+            const icon512 = generateRakelAppIconDataUrl(512);
+
+            // Sätt favicon, Apple Touch Icon och förhandsvisning i modalen
+            const previewImg = document.getElementById('pwaPreviewIcon');
+            if (previewImg) previewImg.src = icon192;
+
+            let favLink = document.querySelector("link[rel='icon']");
+            if (!favLink) {
+                favLink = document.createElement('link');
+                favLink.rel = 'icon';
+                document.head.appendChild(favLink);
+            }
+            favLink.href = icon192;
+
+            let appleLink = document.querySelector("link[rel='apple-touch-icon']");
+            if (!appleLink) {
+                appleLink = document.createElement('link');
+                appleLink.rel = 'apple-touch-icon';
+                document.head.appendChild(appleLink);
+            }
+            appleLink.href = icon192;
+
+            // Registrera fysisk Service Worker (sw.js) för Android, iOS & Desktop PWA
+            if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+                navigator.serviceWorker.register('./sw.js').catch((swErr) => {
+                    console.warn("Service Worker (sw.js) registrering:", swErr);
+                });
+            }
+        } catch (err) {
+            console.warn("PWA init info:", err);
+        }
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        const nativeBox = document.getElementById('pwaNativeInstallBox');
+        if (nativeBox) nativeBox.style.display = 'block';
+    });
+
+    window.installPwaApp = function() {
+        if (!window.requirePinUnlock()) return;
+        const modal = document.getElementById('pwaInstallModal');
+        const nativeBox = document.getElementById('pwaNativeInstallBox');
+        if (nativeBox) nativeBox.style.display = deferredPwaPrompt ? 'block' : 'none';
+        if (modal) modal.style.display = 'flex';
+    };
+
+    window.triggerNativePwaPrompt = async function() {
+        if (!deferredPwaPrompt) return;
+        deferredPwaPrompt.prompt();
+        await deferredPwaPrompt.userChoice;
+        deferredPwaPrompt = null;
+        const nativeBox = document.getElementById('pwaNativeInstallBox');
+        if (nativeBox) nativeBox.style.display = 'none';
+        document.getElementById('pwaInstallModal').style.display = 'none';
+    };
+</script>
+</body>
+</html>
