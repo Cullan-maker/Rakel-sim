@@ -295,6 +295,10 @@
 <!-- FIREBASE MULTIPLAYER & REALTIME SYNC -->
 <script type="module">
     window.GEMINI_API_KEY = "";
+    try {
+        const savedKey = localStorage.getItem('rakel_gemini_api_key');
+        if (savedKey) window.GEMINI_API_KEY = savedKey;
+    } catch (e) {}
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -585,6 +589,7 @@
     <div class="top-bar-group">
         <button class="top-btn" id="rlcViewToggleBtn" onclick="toggleRlcViewMode()" style="background:linear-gradient(to bottom,#8e44ad,#5b2c6f);border-color:#d2b4de;">🖥️ RLC-vy</button>
         <button class="top-btn" id="gwPanelBtn" onclick="toggleVehiclePanel()">🚓 Gateway</button>
+        <button class="top-btn active-gw" id="aiRlcToggleBtn" onclick="toggleAiRlcMode()" title="Slå på/av röststyrd kvinnlig AI-operatör (RLC 9-7)">🤖 AI-röst: PÅ</button>
         <button class="top-btn active-gw" id="spontanBtn" onclick="toggleSpontaneousMode()">🚨 Spontan: PÅ</button>
         <button class="top-btn" onclick="triggerSpontaneousDispatch(true)">⚡ Larma</button>
     </div>
@@ -1613,14 +1618,151 @@
         appendRlcLog("🔊 Ljudtest utfört (uttal: nio sju / 97 65 10).");
     };
 
-    function speakSwedish(text, callback, senderLabel, customTgLabel) {
+    // =========================================================
+    // GEMINI MOLNRÖST (KVINNLIG RLC-OPERATÖR) & RADIOFILTER
+    // =========================================================
+    window.aiRlcEnabled = true;
+    window.AI_FEMALE_VOICE = "Aoede"; // Naturlig kvinnlig röst (Aoede, Kore, Despina, Sulafat)
+    let isAiProcessingVoice = false;
+
+    window.toggleAiRlcMode = function() {
+        if (!window.requirePinUnlock()) return;
+        window.aiRlcEnabled = !window.aiRlcEnabled;
+        const btn = document.getElementById('aiRlcToggleBtn');
+        if (window.aiRlcEnabled) {
+            if (btn) { btn.innerText = "🤖 AI-röst: PÅ"; btn.classList.add('active-gw'); }
+            showTempMsg("🤖 <b>AI-RLC (Kvinnlig molnröst): PÅ</b><br><span style='font-size:11px;'>Håll in PTT och tala med RLC 9-7</span>", 1800);
+        } else {
+            if (btn) { btn.innerText = "🤖 AI-röst: AV"; btn.classList.remove('active-gw'); }
+            showTempMsg("🤖 <b>AI-RLC: AV</b><br><span style='font-size:11px;'>Endast manuell RLC / Multiplayer</span>", 1600);
+        }
+    };
+
+    async function fetchWithRetry(url, options, retries = 3) {
+        const delays = [1000, 2000, 4000];
+        for (let i = 0; i < retries; i++) {
+            try {
+                const res = await fetch(url, options);
+                if (res.status === 429 && i < retries - 1) {
+                    await new Promise(r => setTimeout(r, delays[i]));
+                    continue;
+                }
+                return res;
+            } catch (err) {
+                if (i === retries - 1) throw err;
+                await new Promise(r => setTimeout(r, delays[i]));
+            }
+        }
+    }
+
+    async function playCloudTtsPcmBase64(base64Pcm, sampleRate = 24000) {
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        const binaryStr = atob(base64Pcm);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binaryStr.charCodeAt(i);
+        const int16 = new Int16Array(bytes.buffer);
+
+        const audioBuffer = audioCtx.createBuffer(1, int16.length, sampleRate);
+        const channelData = audioBuffer.getChannelData(0);
+        for (let i = 0; i < int16.length; i++) {
+            channelData[i] = int16[i] / 32768.0;
+        }
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+
+        // Subtilt Rakel-radiofilter som behåller den naturliga kvinnliga rösten men ger äkta Sepura-karaktär
+        const highpass = audioCtx.createBiquadFilter();
+        highpass.type = 'highpass';
+        highpass.frequency.value = 220;
+
+        const lowpass = audioCtx.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = 3800;
+
+        const gainNode = audioCtx.createGain();
+        const rlcActive = window.isRlcViewActive();
+        gainNode.gain.value = rlcActive ? 1.6 : Math.max(0.4, (volumeLevel / 6) * 1.45);
+
+        source.connect(highpass);
+        highpass.connect(lowpass);
+        lowpass.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        return new Promise((resolve) => {
+            source.onended = () => resolve();
+            source.start(0);
+        });
+    }
+
+    async function speakWithGeminiCloudVoice(formattedSpeechText) {
+        const apiKey = (window.GEMINI_API_KEY || "").trim();
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{
+                parts: [{
+                    text: `Läs upp följande svenska polisradiomeddelande med en naturlig, lugn, varm och professionell kvinnlig röst som en erfaren RLC-operatör: "${formattedSpeechText}"`
+                }]
+            }],
+            generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: window.AI_FEMALE_VOICE || "Aoede" }
+                    }
+                }
+            }
+        };
+
+        const response = await fetchWithRetry(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!response || !response.ok) throw new Error("Cloud TTS unavailable");
+        const result = await response.json();
+        const part = result?.candidates?.[0]?.content?.parts?.[0];
+        const audioData = part?.inlineData?.data;
+        const mimeType = part?.inlineData?.mimeType || "";
+        if (!audioData) throw new Error("No audio data returned");
+
+        let sampleRate = 24000;
+        const rateMatch = mimeType.match(/rate=(\d+)/);
+        if (rateMatch && rateMatch[1]) sampleRate = parseInt(rateMatch[1], 10);
+
+        await playCloudTtsPcmBase64(audioData, sampleRate);
+    }
+
+    async function speakSwedish(text, callback, senderLabel, customTgLabel) {
         receivingSender = senderLabel || `RLC ${activeRlcCode}`;
         receivingTgName = customTgLabel || window.getActiveTxTalkgroupName();
         const rlcActive = window.isRlcViewActive();
         const formattedSpeechText = window.formatSwedishRadioSpeech(text);
         if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
 
-        if ('speechSynthesis' in window && (rlcActive || (volumeLevel > 0 && currentProfile !== "Tyst"))) {
+        const canPlayAudio = rlcActive || (volumeLevel > 0 && !speakerMuted && currentProfile !== "Tyst");
+
+        // 1. Försök först med full kvinnlig molnröst (Gemini 2.5 Flash TTS)
+        if (canPlayAudio && (window.GEMINI_API_KEY || "").trim() !== "") {
+            try {
+                isReceivingReal = true;
+                setLed('right', 'green');
+                updateScreenDisplay();
+                await speakWithGeminiCloudVoice(formattedSpeechText);
+                isReceivingReal = false;
+                setLed('right', '');
+                soundPttRelease();
+                updateScreenDisplay();
+                if (callback) callback();
+                return;
+            } catch (cloudErr) {
+                console.warn("Molnröst fallback till Web Speech:", cloudErr.message);
+            }
+        }
+
+        // 2. Fallback: Web Speech API (prioriterar kvinnliga svenska röster: Alva, Klara, Sofie)
+        if ('speechSynthesis' in window && canPlayAudio) {
             try {
                 window.speechSynthesis.cancel();
                 window.speechSynthesis.resume();
@@ -1628,9 +1770,11 @@
                 msg.lang = 'sv-SE';
                 msg.volume = 1.0;
                 let voices = window.speechSynthesis.getVoices();
-                let svVoice = voices.find(v => v.lang && (v.lang.toLowerCase().includes('sv') || v.name.toLowerCase().includes('swed') || v.name.toLowerCase().includes('alva') || v.name.toLowerCase().includes('klara')));
-                if (svVoice) msg.voice = svVoice;
-                msg.rate = 0.98;
+                let svVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().includes('sv') || v.name.toLowerCase().includes('swed')));
+                let femaleSvVoice = svVoices.find(v => /alva|klara|sofie|hedvig|astrid|natural|female|google/i.test(v.name)) || svVoices[0];
+                if (femaleSvVoice) msg.voice = femaleSvVoice;
+                msg.pitch = 1.06;
+                msg.rate = 0.99;
 
                 let finished = false;
                 const finishOnce = () => {
@@ -1658,6 +1802,93 @@
             if (callback) callback();
         }, 2500);
     }
+
+    // Tvåvägs AI-rösttolkning: Lyssnar på din PTT-sändning och svarar som kvinnlig RLC-operatör
+    window.processAiRlcVoiceTurn = async function(wavDataUrl, tgName) {
+        if (!window.aiRlcEnabled || window.isRlcViewActive() || isAiProcessingVoice) return;
+        if (!window.canReachRlcNetwork()) return;
+        const apiKey = (window.GEMINI_API_KEY || "").trim();
+        if (!apiKey) return;
+
+        const base64Audio = wavDataUrl.includes(',') ? wavDataUrl.split(',')[1] : wavDataUrl;
+        if (!base64Audio || base64Audio.length < 600) return;
+
+        isAiProcessingVoice = true;
+        try {
+            const systemInstruction = `Du är en erfaren, lugn och naturlig kvinnlig RLC-operatör vid Polisen Region Syd med anropssignal "9-7" (uttalas "nio sju").
+Du sitter vid radiobordet och lyssnar på talgruppen "${tgName}".
+Patrullen som sänder har anropsnummer "${window.MY_TACTICAL}"${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''} och nuvarande status "${radioStatus}".
+
+Regler för polisens radiokommunikation:
+1. Riktningsregeln: Nämn alltid mottagaren före sändaren, t.ex. "${window.MY_TACTICAL} från 9-7, kom." eller "${window.MY_TACTICAL} från 9-7, det är uppfattat, slut 9-7."
+2. Om patrullen bara ropar upp ("nio sju från ${window.MY_TACTICAL}, kom"), svara kort: "${window.MY_TACTICAL} från 9-7, kom."
+3. Om patrullen begär slagning på person eller fordon (t.ex. registreringsnummer eller personnummer), ge ett realistiskt, naturligt svar i tal och lägg även detaljerna i fältet "sdsFollowUp".
+4. Om patrullen anmäler en ny status muntligt (t.ex. "vi är framme på plats", "vi är klara lediga", "vi påbörjar uppdrag", "vi önskar biträde"), sätt fältet "newStatus" till exakt en av: "Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Upptagen", "Disponibel", "16 Biträde önskas" (annars tom sträng "").
+5. Håll svaret koncist, naturligt och autentiskt på svenska.`;
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: "Lyssna på patrullens radiosändning och svara som RLC 9-7 i JSON-format." },
+                        { inlineData: { mimeType: "audio/wav", data: base64Audio } }
+                    ]
+                }],
+                systemInstruction: { parts: [{ text: systemInstruction }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            transcript: { type: "STRING" },
+                            shouldReply: { type: "BOOLEAN" },
+                            spokenResponse: { type: "STRING" },
+                            sdsFollowUp: { type: "STRING" },
+                            newStatus: { type: "STRING" }
+                        },
+                        required: ["transcript", "shouldReply", "spokenResponse"]
+                    }
+                }
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response || !response.ok) return;
+            const result = await response.json();
+            const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!jsonText) return;
+
+            const parsed = JSON.parse(jsonText);
+            if (parsed.transcript) {
+                appendRlcLog(`🎤 ${window.MY_TACTICAL} (${tgName}): "${parsed.transcript}"`);
+            }
+            if (parsed.newStatus && statusMenuOptions.includes(parsed.newStatus)) {
+                radioStatus = parsed.newStatus;
+                if (window.syncPresenceNow) window.syncPresenceNow();
+                if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+                updateScreenDisplay();
+            }
+            if (parsed.shouldReply && parsed.spokenResponse) {
+                appendRlcLog(`👩‍✈️ AI-RLC 9-7 (${tgName}): "${parsed.spokenResponse}"`);
+                soundPttGrant();
+                await speakSwedish(parsed.spokenResponse, null, `RLC ${activeRlcCode}`, tgName);
+            }
+            if (parsed.sdsFollowUp && parsed.sdsFollowUp.trim() !== "") {
+                sdsInbox.push({ from: `RLC ${activeRlcCode}`, text: parsed.sdsFollowUp.trim(), time: getTime() });
+                soundStatusDelivered();
+                showTempMsg(`✉️ <b>SDS från RLC ${activeRlcCode}:</b><br><span style="font-size:11px;font-weight:normal;">${parsed.sdsFollowUp.trim()}</span>`, 3800);
+            }
+        } catch (err) {
+            console.warn("AI-RLC röstanalys varning:", err);
+        } finally {
+            isAiProcessingVoice = false;
+        }
+    };
 
     // =========================================================
     // 6. SEPURA DISPLAY & ICONS RENDERING
@@ -1984,7 +2215,7 @@
             if (menuState === "SCAN_EDIT") {
                 const list = scanListsData[selectedScanListIdx] || scanListsData[0];
                 const scanOpts = list.editable
-                    ? ["+ Lägg till talgrupp", "Ändra prio (▼/▲)", "Välj till display (🔵)", "- Ta bort talgrupp", "✔ Spara & Aktivera"]
+                    ? ["+ Lägg till talgrupp", "Ändra prio (▼/■)", "Välj till display (🔵)", "- Ta bort talgrupp", "✔ Spara & Aktivera"]
                     : ["✔ Aktivera lista"];
                 const popupHtml = scanPopupOpen ? `
                     <div style="position:absolute;left:18px;top:20px;width:168px;background:#fff;border:2px solid #001f4d;box-shadow:3px 4px 10px rgba(0,0,0,0.5);z-index:30;font-size:11px;">
@@ -1999,8 +2230,8 @@
                         <div class="menu-list">
                             ${list.tgs.map((t, idx) => {
                                 const triSvg = t.prio === 'high'
-                                    ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><polygon points="7,1 13,13 1,13" fill="#ff1a1a" stroke="#00334d" stroke-width="1"/></svg>`
-                                    : `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><polygon points="1,1 13,1 7,13" fill="#469597" stroke="#00334d" stroke-width="1"/></svg>`;
+                                    ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><rect x="2" y="2" width="10" height="10" fill="#e74c3c" stroke="#641e16" stroke-width="1.2"/></svg>`
+                                    : `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;margin-right:4px;" onclick="toggleScanRowPrio(${idx}, event)"><polygon points="1,2 13,2 7,13" fill="#27ae60" stroke="#145a32" stroke-width="1.1"/></svg>`;
                                 const dotSvg = t.displayed
                                     ? `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;" onclick="setScanRowDisplayed(${idx}, event)"><circle cx="7" cy="7" r="5.5" fill="#1da1f2" stroke="#000" stroke-width="1.3"/></svg>`
                                     : `<svg width="13" height="13" viewBox="0 0 14 14" style="vertical-align:middle;" onclick="setScanRowDisplayed(${idx}, event)"><circle cx="7" cy="7" r="5.5" fill="#ffffff" stroke="#000" stroke-width="1.3"/></svg>`;
@@ -3309,9 +3540,12 @@
         isCapturingPcm = false;
         const wavDataUrl = encodeWavFromPcmChunks(pcmChunks, audioCtx.sampleRate || 44100, 12000);
         pcmChunks = [];
+        const targetTg = currentTxTgOverride || window.getActiveTxTalkgroupName();
         if (wavDataUrl && window.dbSendAudio) {
-            const targetTg = currentTxTgOverride || window.getActiveTxTalkgroupName();
             window.dbSendAudio(wavDataUrl, targetTg, currentTxSenderOverride);
+        }
+        if (wavDataUrl && !currentTxSenderOverride && window.processAiRlcVoiceTurn) {
+            window.processAiRlcVoiceTurn(wavDataUrl, targetTg);
         }
     }
 
@@ -3560,14 +3794,15 @@
 
     window.promptApiKey = function() {
         if (!window.requirePinUnlock()) return;
-        askInput("Ange Gemini API-nyckel (valfritt):", window.GEMINI_API_KEY || "", (val) => {
+        askInput("Ange Gemini API-nyckel (sparas för kvinnlig AI-molnröst):", window.GEMINI_API_KEY || "", (val) => {
             if (val !== null) {
                 window.GEMINI_API_KEY = val.trim();
+                try { localStorage.setItem('rakel_gemini_api_key', window.GEMINI_API_KEY); } catch (e) {}
                 const btn = document.getElementById('apiKeyBtn');
                 if (window.GEMINI_API_KEY) {
                     btn.innerText = "🔑 ✔";
                     btn.classList.add('active-gw');
-                    showTempMsg("✔ Gemini API-nyckel sparad!", 1500);
+                    showTempMsg("✔ API-nyckel sparad!<br><span style='font-size:11px;'>Kvinnlig AI-molnröst aktiverad</span>", 1800);
                 } else {
                     btn.innerText = "🔑";
                     btn.classList.remove('active-gw');
@@ -4234,6 +4469,10 @@
         updateBadgeAndToastText();
         updateScreenDisplay();
         window.refreshRlcDashboard();
+        if (window.GEMINI_API_KEY) {
+            const btn = document.getElementById('apiKeyBtn');
+            if (btn) { btn.innerText = "🔑 ✔"; btn.classList.add('active-gw'); }
+        }
         appendRlcLog("RLC 9-7 Sambandscentral redo. Medlyssnar samtliga talgrupper.");
         initRakelPwa();
     });
