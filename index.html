@@ -215,7 +215,8 @@
 
         .nav-cluster { display: grid; grid-template-columns: 1fr 1.55fr 1fr; gap: 8px; align-items: center; margin-bottom: 2px;}
         .side-action-keys { display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .action-btn { background: linear-gradient(to bottom, #32353a, #151515); border: 1px solid #000; border-radius: 8px; width: 100%; height: 44px; box-shadow: 0 3px 6px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.15); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor:pointer; border-bottom: 2px solid #0a0a0a; }
+        .action-btn {
+            touch-action: none; background: linear-gradient(to bottom, #32353a, #151515); border: 1px solid #000; border-radius: 8px; width: 100%; height: 44px; box-shadow: 0 3px 6px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.15); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor:pointer; border-bottom: 2px solid #0a0a0a; }
         .action-btn:active { background: #0a0a0a; transform: translateY(2px); }
 
         .d-pad { display: grid; grid-template-columns: 32px 32px 32px; grid-template-rows: 32px 32px 32px; gap: 2px; justify-content: center; background: linear-gradient(135deg, #151515, #000); padding: 5px; border-radius: 50%; border: 1px solid #222; box-shadow: inset 0 0 10px rgba(0,0,0,1), 0 4px 8px rgba(0,0,0,0.7); margin: 0 auto; }
@@ -1167,15 +1168,9 @@
         const m = document.getElementById('lathundModal');
         m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
     };
-    window.switchKbTab = function(tabId, btnEl) {
-        document.querySelectorAll('.kb-section').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabId)?.classList.add('active');
-        if (btnEl) btnEl.classList.add('active');
-    };
 
     // =========================================================
-    // 3. TALKGROUP & SCAN LIST DATA STRUCTURE
+    // 3. HIERARKISKT MAPPTRÄD (3 NIVÅER) & SKANNINGSLISTOR
     // =========================================================
     const scanListsData = [
         { id: 1, name: "SKAN IGV PO1 MPU", index: "7801", editable: false, tgs: [
@@ -1188,24 +1183,69 @@
             { name: "Order PO1 MPU", index: "7001", prio: "high", displayed: false },
             { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
         ]},
-        { id: 3, name: "SKAN IGV PO2 MPU", index: "7803", editable: false, tgs: [
+        { id: 3, name: "SKAN LPO SORGENFRI", index: "7803", editable: false, tgs: [
+            { name: "LPO Sorgenfri", index: "7102", prio: "low", displayed: true },
+            { name: "Order PO1 MPU", index: "7001", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 4, name: "SKAN IGV PO2 MPU", index: "7804", editable: false, tgs: [
             { name: "IGV PO2 MPU", index: "7012", prio: "low", displayed: true },
             { name: "Order PO2 MPU", index: "7002", prio: "high", displayed: false },
             { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
         ]},
-        { id: 4, name: "SKAN IGV PO3 MPU", index: "7804", editable: false, tgs: [
+        { id: 5, name: "SKAN LPO LINDÄNGEN", index: "7805", editable: false, tgs: [
+            { name: "LPO Lindängen", index: "7201", prio: "low", displayed: true },
+            { name: "Order PO2 MPU", index: "7002", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 6, name: "SKAN IGV OXIE", index: "7806", editable: false, tgs: [
+            { name: "LPO Oxie", index: "7202", prio: "low", displayed: true },
+            { name: "Order PO2 MPU", index: "7002", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 7, name: "SKAN IGV PO3 MPU", index: "7807", editable: false, tgs: [
             { name: "IGV PO3 MPU", index: "7013", prio: "low", displayed: true },
             { name: "Order PO3 MPU", index: "7003", prio: "high", displayed: false },
             { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
         ]},
-        { id: 5, name: "SKAN IGV PO4 MPU", index: "7805", editable: false, tgs: [
+        { id: 8, name: "SKAN LPO KIRSEBERG", index: "7808", editable: false, tgs: [
+            { name: "LPO Kirseberg", index: "7301", prio: "low", displayed: true },
+            { name: "Order PO3 MPU", index: "7003", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 9, name: "SKAN LPO V HAMNEN", index: "7809", editable: false, tgs: [
+            { name: "LPO V Hamnen", index: "7302", prio: "low", displayed: true },
+            { name: "Order PO3 MPU", index: "7003", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 11, name: "SKAN IGV PO4 MPU", index: "7811", editable: false, tgs: [
             { name: "IGV PO4 MPU", index: "7014", prio: "low", displayed: true },
             { name: "Order PO4 MPU", index: "7004", prio: "high", displayed: false },
             { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
         ]},
-        { id: 6, name: "SKAN IGV PO5 MPU", index: "7806", editable: false, tgs: [
+        { id: 12, name: "SKAN IGV LIMHAMN", index: "7812", editable: false, tgs: [
+            { name: "LPO Limhamn", index: "7501", prio: "low", displayed: true },
+            { name: "Order PO5 MPU", index: "7005", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 13, name: "SKAN LPO SLOTTS", index: "7813", editable: false, tgs: [
+            { name: "LPO Slotts", index: "7502", prio: "low", displayed: true },
+            { name: "Order PO5 MPU", index: "7005", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 14, name: "SKAN IGV PO5 MPU", index: "7814", editable: false, tgs: [
             { name: "IGV PO5 MPU", index: "7015", prio: "low", displayed: true },
             { name: "Order PO5 MPU", index: "7005", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 15, name: "SKAN LPO ROSENGÅRD", index: "7815", editable: false, tgs: [
+            { name: "LPO Rosengård", index: "7401", prio: "low", displayed: true },
+            { name: "Order PO4 MPU", index: "7004", prio: "high", displayed: false },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 16, name: "SKAN LPO HUSIE", index: "7816", editable: false, tgs: [
+            { name: "LPO Husie", index: "7402", prio: "low", displayed: true },
+            { name: "Order PO4 MPU", index: "7004", prio: "high", displayed: false },
             { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
         ]},
         { id: 17, name: "17 SKAN 17", index: "7817", editable: true, tgs: [
@@ -1222,111 +1262,311 @@
             { name: "Kom 2 LPU", index: "7902", prio: "low", displayed: true },
             { name: "Order PO3 LPU", index: "7903", prio: "high", displayed: false },
             { name: "Order Reg LPU", index: "7900", prio: "high", displayed: false }
+        ]},
+        { id: 21, name: "21 SKAN 21", index: "7821", editable: true, tgs: [
+            { name: "Insats 21 MPU", index: "721", prio: "low", displayed: true },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
+        ]},
+        { id: 22, name: "22 SKAN 22", index: "7822", editable: true, tgs: [
+            { name: "Insats 22 MPU", index: "722", prio: "low", displayed: true },
+            { name: "Order Reg MPU", index: "700", prio: "high", displayed: false }
         ]}
     ];
 
     const folderSystem = [
-        { name: "SKAN MPU", isScanFolder: true, tgs: [
-            { name: "SKAN IGV PO1 MPU", index: "7801", isScanList: true, scanId: 1 },
-            { name: "SKAN LPO CENTRUM", index: "7802", isScanList: true, scanId: 2 },
-            { name: "SKAN IGV PO2 MPU", index: "7803", isScanList: true, scanId: 3 },
-            { name: "SKAN IGV PO3 MPU", index: "7804", isScanList: true, scanId: 4 },
-            { name: "SKAN IGV PO4 MPU", index: "7805", isScanList: true, scanId: 5 },
-            { name: "SKAN IGV PO5 MPU", index: "7806", isScanList: true, scanId: 6 },
-            { name: "17 SKAN 17", index: "7817", isScanList: true, scanId: 17 },
-            { name: "18 SKAN 18", index: "7818", isScanList: true, scanId: 18 },
-            { name: "19 SKAN 19", index: "7819", isScanList: true, scanId: 19 }
-        ]},
-        { name: "REG MPU", tgs: [
-            { name: "Order Reg MPU", index: "700" },
-            { name: "Insats 1 MPU", index: "701" },
-            { name: "Insats 2 MPU", index: "702" },
-            { name: "Insats 11 MPU", index: "711" },
-            { name: "Insats 12 MPU", index: "712" },
-            { name: "Insats 21 MPU", index: "721" },
-            { name: "Insats 22 MPU", index: "722" },
-            { name: "Övn 1 MPU", index: "731" },
-            { name: "Projekt 1 MPU", index: "741" },
-            { name: "Proj 12 MPU", index: "742" },
-            { name: "VAKTB MPU", index: "799" },
-            { name: "LKC Län", index: "600" }
-        ]},
-        { name: "PO 1 MPU", tgs: [
-            { name: "IGV PO1 MPU", index: "7011" },
-            { name: "LPO Centrum", index: "7101" },
-            { name: "LPO Sorgenfri", index: "7102" },
-            { name: "Order PO1 MPU", index: "7001" }
-        ]},
-        { name: "PO 2 MPU", tgs: [
-            { name: "IGV PO2 MPU", index: "7012" },
-            { name: "LPO Lindängen", index: "7201" },
-            { name: "LPO Oxie", index: "7202" },
-            { name: "Order PO2 MPU", index: "7002" }
-        ]},
-        { name: "PO 3 MPU", tgs: [
-            { name: "IGV PO3 MPU", index: "7013" },
-            { name: "LPO Kirseberg", index: "7301" },
-            { name: "LPO V Hamnen MPU", index: "7302" },
-            { name: "Order PO3 MPU", index: "7003" },
-            { name: "Kom 2 LPU", index: "7902" },
-            { name: "Order PO3 LPU", index: "7903" },
-            { name: "Order Reg LPU", index: "7900" }
-        ]},
-        { name: "PO 4 MPU", tgs: [
-            { name: "IGV PO4 MPU", index: "7014" },
-            { name: "LPO Rosengård", index: "7401" },
-            { name: "LPO Husie", index: "7402" },
-            { name: "Order PO4 MPU", index: "7004" }
-        ]},
-        { name: "PO 5 MPU", tgs: [
-            { name: "IGV PO5 MPU", index: "7015" },
-            { name: "LPO Limhamn", index: "7501" },
-            { name: "LPO Slotts", index: "7502" },
-            { name: "Order PO5 MPU", index: "7005" }
-        ]},
-        { name: "TRAFIK", tgs: [
-            { name: "Trafik 1 MPU", index: "7601" },
-            { name: "Trafik 2 MPU", index: "7602" },
-            { name: "Trafik 3 MPU", index: "7603" },
-            { name: "Gräns 1 MPU", index: "7611" },
-            { name: "Gräns 2 MPU", index: "7612" },
-            { name: "MC MPU", index: "7621" }
-        ]},
-        { name: "POLKON PU", tgs: [
-            { name: "Polkon 1 MPU", index: "7701" },
-            { name: "Polkon 2 MPU", index: "7702" },
-            { name: "Polkon 3 MPU", index: "7703" },
-            { name: "Polkon 4 MPU", index: "7704" }
-        ]},
-        { name: "RLC / NLC", tgs: [
-            { name: "RLC POL MPU", index: "970", rlcCode: "9-7" },
-            { name: "RLC POL LPU", index: "960", rlcCode: "9-6" },
-            { name: "RLC POL BPU", index: "950", rlcCode: "9-5" },
-            { name: "RLC POL SPU", index: "930", rlcCode: "9-3" },
-            { name: "RLC POL UPU", index: "910", rlcCode: "9-1" },
-            { name: "NLC POL", index: "900", rlcCode: "9-0" }
-        ]},
-        { name: "SAMVERKAN / RAPS", tgs: [
-            { name: "SAMV Pol", index: "801" },
-            { name: "SAMV 1 Syd", index: "811" },
-            { name: "RAPS 1 Syd", index: "111" },
-            { name: "RAPS 2 Syd", index: "112" },
-            { name: "RAPS 3 Syd", index: "113" }
-        ]},
-        { name: "DMO DIREKT", isDmoFolder: true, tgs: [
-            { name: "Alla DMO 1", index: "9041", isDmo: true },
-            { name: "Alla DMO 2", index: "9042", isDmo: true },
-            { name: "Pol 1 DMO", index: "9001", isDmo: true },
-            { name: "Pol 2 DMO", index: "9002", isDmo: true },
-            { name: "Pol 3 DMO", index: "9003", isDmo: true },
-            { name: "RAPS DMO 1", index: "9111", isDmo: true }
-        ]}
+        { name: "VERSION", level: 1, tgs: [{ name: "SC21 v4.3-005", index: "005" }] },
+        {
+            name: "SKAN",
+            level: 1,
+            hasSubfolders: true,
+            isScanFolder: true,
+            subfolders: scanListsData.map(s => ({
+                name: s.name,
+                index: s.index,
+                level: 2,
+                isScanList: true,
+                scanId: s.id,
+                tgs: s.tgs
+            }))
+        },
+        {
+            name: "RLC/NLC",
+            level: 1,
+            tgs: [
+                { name: "RLC POL UPU", index: "910", rlcCode: "9-1" },
+                { name: "RLC POL SPU", index: "930", rlcCode: "9-3" },
+                { name: "RLC POL BPU", index: "950", rlcCode: "9-5" },
+                { name: "RLC POL LPU", index: "960", rlcCode: "9-6" },
+                { name: "RLC POL MPU", index: "970", rlcCode: "9-7" },
+                { name: "NLC POL", index: "900", rlcCode: "9-0" }
+            ]
+        },
+        {
+            name: "SAMVPOL",
+            level: 1,
+            tgs: [
+                { name: "MPU SAMV POL 1", index: "801" },
+                { name: "MPU SAMV POL 2", index: "802" },
+                { name: "SAMV Pol", index: "800" }
+            ]
+        },
+        {
+            name: "NAT KOM",
+            level: 1,
+            tgs: [
+                { name: "Kom 01 PU NAT", index: "851" },
+                { name: "Kom 02 PU NAT", index: "852" },
+                { name: "Kom 03 PU NAT", index: "853" }
+            ]
+        },
+        {
+            name: "REG UPU",
+            level: 1,
+            hasSubfolders: true,
+            subfolders: [
+                { name: "UPU ORDER", level: 2, tgs: [{ name: "Order Reg UPU", index: "100" }, { name: "Order UPU", index: "101" }] },
+                { name: "UPU INSATS", level: 2, tgs: [{ name: "Insats 1 UPU", index: "111" }, { name: "Insats 2 UPU", index: "112" }] }
+            ]
+        },
+        {
+            name: "REG SPU",
+            level: 1,
+            hasSubfolders: true,
+            subfolders: [
+                { name: "SPU ORDER", level: 2, tgs: [{ name: "Order Reg SPU", index: "300" }, { name: "Order SPU", index: "301" }] },
+                { name: "SPU INSATS", level: 2, tgs: [{ name: "Insats 1 SPU", index: "311" }, { name: "Insats 2 SPU", index: "312" }] }
+            ]
+        },
+        {
+            name: "REG BPU",
+            level: 1,
+            hasSubfolders: true,
+            subfolders: [
+                { name: "BPU ORDER", level: 2, tgs: [{ name: "Order Reg BPU", index: "500" }, { name: "Order BPU", index: "501" }] },
+                { name: "BPU INSATS", level: 2, tgs: [{ name: "Insats 1 BPU", index: "511" }, { name: "Insats 2 BPU", index: "512" }] }
+            ]
+        },
+        {
+            name: "REG LPU",
+            level: 1,
+            hasSubfolders: true,
+            subfolders: [
+                { name: "LPU ORDER", level: 2, tgs: [{ name: "Order Reg LPU", index: "7900" }, { name: "Order PO3 LPU", index: "7903" }] },
+                { name: "LPU INSATS", level: 2, tgs: [{ name: "Insats 1 LPU", index: "7911" }, { name: "Insats 2 LPU", index: "7912" }, { name: "Kom 2 LPU", index: "7902" }] }
+            ]
+        },
+        {
+            name: "REG MPU",
+            level: 1,
+            hasSubfolders: true,
+            subfolders: [
+                {
+                    name: "MPU ORDER",
+                    level: 2,
+                    tgs: [
+                        { name: "Order Reg MPU", index: "700" },
+                        { name: "Order PO1 MPU", index: "7001" },
+                        { name: "Order PO2 MPU", index: "7002" },
+                        { name: "Order PO3 MPU", index: "7003" },
+                        { name: "Order PO4 MPU", index: "7004" },
+                        { name: "Order PO5 MPU", index: "7005" }
+                    ]
+                },
+                {
+                    name: "MPU Insats",
+                    level: 2,
+                    tgs: [
+                        { name: "Insats 1 MPU", index: "701" },
+                        { name: "Insats 2 MPU", index: "702" },
+                        { name: "Insats 11 MPU", index: "711" },
+                        { name: "Insats 12 MPU", index: "712" },
+                        { name: "Insats 21 MPU", index: "721" },
+                        { name: "Insats 22 MPU", index: "722" },
+                        { name: "Insats 55 MPU", index: "755" }
+                    ]
+                },
+                {
+                    name: "MPU KOM",
+                    level: 2,
+                    tgs: [
+                        { name: "Kom 1 MPU", index: "791" },
+                        { name: "Kom 2 MPU", index: "792" },
+                        { name: "Kom 5 MPU", index: "795" }
+                    ]
+                },
+                {
+                    name: "MPU ARENA",
+                    level: 2,
+                    tgs: [
+                        { name: "Arena 1 MPU", index: "781" },
+                        { name: "Arena 2 MPU", index: "782" }
+                    ]
+                },
+                {
+                    name: "MPU PROJ",
+                    level: 2,
+                    tgs: [
+                        { name: "Proj 1 MPU", index: "741" },
+                        { name: "Proj 2 MPU", index: "742" },
+                        { name: "Proj 22 MPU", index: "752" }
+                    ]
+                },
+                {
+                    name: "MPU ÖVN",
+                    level: 2,
+                    tgs: [
+                        { name: "Övn 1 MPU", index: "78" },
+                        { name: "Övn 2 MPU", index: "79" }
+                    ]
+                },
+                {
+                    name: "MPU PO",
+                    level: 2,
+                    hasSubfolders: true,
+                    subfolders: [
+                        {
+                            name: "PO 1 MPU",
+                            level: 3,
+                            tgs: [
+                                { name: "IGV PO1 MPU", index: "7011" },
+                                { name: "LPO Centrum", index: "7101" },
+                                { name: "LPO Sorgenfri", index: "7102" },
+                                { name: "Order PO1 MPU", index: "7001" }
+                            ]
+                        },
+                        {
+                            name: "PO 2 MPU",
+                            level: 3,
+                            tgs: [
+                                { name: "IGV PO2 MPU", index: "7012" },
+                                { name: "LPO Lindängen", index: "7201" },
+                                { name: "LPO Oxie", index: "7202" },
+                                { name: "Order PO2 MPU", index: "7002" }
+                            ]
+                        },
+                        {
+                            name: "PO 3 MPU",
+                            level: 3,
+                            tgs: [
+                                { name: "IGV PO3 MPU", index: "7013" },
+                                { name: "LPO Kirseberg", index: "7301" },
+                                { name: "LPO V Hamnen", index: "7302" },
+                                { name: "Order PO3 MPU", index: "7003" }
+                            ]
+                        },
+                        {
+                            name: "PO 4 MPU",
+                            level: 3,
+                            tgs: [
+                                { name: "IGV PO4 MPU", index: "7014" },
+                                { name: "LPO Rosengård", index: "7401" },
+                                { name: "LPO Husie", index: "7402" },
+                                { name: "Order PO4 MPU", index: "7004" }
+                            ]
+                        },
+                        {
+                            name: "PO 5 MPU",
+                            level: 3,
+                            tgs: [
+                                { name: "IGV PO5 MPU", index: "7015" },
+                                { name: "LPO Limhamn", index: "7501" },
+                                { name: "LPO Slotts", index: "7502" },
+                                { name: "Order PO5 MPU", index: "7005" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "MPU RAPS",
+                    level: 2,
+                    tgs: [
+                        { name: "MPU RAPS-01", index: "7801" },
+                        { name: "MPU RAPS-02", index: "7802" },
+                        { name: "MPU RAPS-06", index: "7806" }
+                    ]
+                }
+            ]
+        },
+        {
+            name: "POLKON",
+            level: 1,
+            tgs: [
+                { name: "Polkon 1 MPU", index: "7701" },
+                { name: "Polkon 2 MPU", index: "7702" },
+                { name: "Polkon 9 MPU", index: "7709" }
+            ]
+        },
+        {
+            name: "PU TRAFIK",
+            level: 1,
+            tgs: [
+                { name: "Trafik 1 MPU", index: "7601" },
+                { name: "Trafik 2 MPU", index: "7602" },
+                { name: "Trafik 8 MPU", index: "7608" }
+            ]
+        },
+        {
+            name: "SAMVERKAN",
+            level: 1,
+            tgs: [
+                { name: "SAMV ALLA", index: "810" },
+                { name: "SAMV BLÅ", index: "820" },
+                { name: "SAMV GUL", index: "830" },
+                { name: "SAMV VIT", index: "840" },
+                { name: "SAMV SAR", index: "850" },
+                { name: "RAPS 1 Syd", index: "111" },
+                { name: "RAPS 2 Syd", index: "112" }
+            ]
+        },
+        {
+            name: "DMO",
+            level: 1,
+            isDmoFolder: true,
+            tgs: [
+                { name: "Alla DMO 1", index: "9041", isDmo: true },
+                { name: "Alla DMO 2", index: "9042", isDmo: true },
+                { name: "Pol 1 DMO", index: "9001", isDmo: true },
+                { name: "Pol 2 DMO", index: "9002", isDmo: true },
+                { name: "Pol 3 DMO", index: "9003", isDmo: true },
+                { name: "RAPS DMO 1", index: "9111", isDmo: true }
+            ]
+        }
     ];
 
     const DMO_TG_NAMES = new Set(["Alla DMO 1", "Alla DMO 2", "Pol 1 DMO", "Pol 2 DMO", "Pol 3 DMO", "RAPS DMO 1"]);
 
+    let treePath = [1, 0];
+    let currentTgIdx = 0;
+    let folderAutoConfirmTimer = null;
+
+    function getCurrentFolder(path = treePath) {
+        if (!path || path.length === 0) return folderSystem[0];
+        let cur = folderSystem[path[0]] || folderSystem[0];
+        if (path.length > 1 && cur.subfolders) {
+            cur = cur.subfolders[path[1]] || cur.subfolders[0];
+        }
+        if (path.length > 2 && cur.subfolders) {
+            cur = cur.subfolders[path[2]] || cur.subfolders[0];
+        }
+        return cur;
+    }
+
+    function getAllTalkgroupsFlat() {
+        const result = [];
+        function recurse(node, folderName) {
+            if (node.tgs) {
+                node.tgs.forEach(t => result.push({ tg: t, folder: node.name || folderName }));
+            }
+            if (node.subfolders) {
+                node.subfolders.forEach(sub => recurse(sub, node.name));
+            }
+        }
+        folderSystem.forEach(root => recurse(root, root.name));
+        return result;
+    }
+
     // =========================================================
-    // 4. RADIO STATE, FULL STATUS LIST & DMO GATEWAY CHECK
+    // 4. RADIO STATE, FLIKAR & SNABBVAL
     // =========================================================
     let powerState = 'OFF';
     const REQUIRED_PIN = "0403";
@@ -1343,7 +1583,6 @@
     let channelCheckinTimer = null;
     let awaitingChannelCheckinTg = null;
 
-    // Lista över gator och platser för realistisk patrullrörelse och geografiska AI-svar
     const PATROL_STREETS = [
         { name: "Storgatan", lat: 55.6052, lng: 13.0035 },
         { name: "Amiralsgatan", lat: 55.5968, lng: 13.0185 },
@@ -1358,7 +1597,6 @@
     ];
     window.MY_LOCATION_NAME = "Storgatan";
 
-    // Olika operatörsröster på RLC samt olika patrullröster
     const RLC_OPERATOR_VOICES = ["Aoede", "Kore", "Leda", "Callirrhoe", "Zephyr", "Despina"];
     const PATROL_AI_VOICES = ["Puck", "Charon", "Fenrir", "Orus", "Zephyr", "Kore"];
     let rlcOperatorIndex = 0;
@@ -1369,15 +1607,12 @@
         return v;
     }
 
-    let navFolderIndex = 0;
-    let navTgIndex = 0;
     let folderIndexInput = "";
-
     let activeSelection = {
         isScanList: true,
         scanListObj: scanListsData[0],
         tgObj: scanListsData[0].tgs[0],
-        folderName: "SKAN MPU"
+        folderName: "SKAN IGV PO1 MPU"
     };
     let previousSelection = { ...activeSelection };
     let lastTmoSelection = { ...activeSelection };
@@ -1385,11 +1620,10 @@
         isScanList: false,
         scanListObj: null,
         tgObj: folderSystem[folderSystem.length - 1].tgs[0],
-        folderName: "DMO DIREKT"
+        folderName: "DMO"
     };
     let selectedScanListIdx = 0;
 
-    // Default DV assignments (DV9 = RAPS 1 Syd as standard)
     const dvAssignments = {
         1: "SKAN IGV PO1 MPU",
         3: "Insats 1 MPU",
@@ -1404,14 +1638,27 @@
     let dvPopupIndex = 1;
     let scanPopupOpen = false;
     let scanPopupIndex = 0;
-    let folderPickerMode = null; // null | 'SCAN_ADD' | 'DV_ASSIGN'
+    let folderPickerMode = null;
 
     let pinInput = "", dialInput = "", activeCallNumber = "", callDialMode = "MSISDN";
     let volumeLevel = 7, volumeUI_Timeout = null, returnToIdleTimeout = null;
     let emergencyInterval = null, ringingInterval = null, rlcCallTimeout = null;
-
     let menuState = "IDLE";
     let menuIndex = 0;
+
+    const TABS_LIST = [
+        { name: "Kontakter", icon: "👤", items: ["Kontakter", "Anropshistorik", "Skapa kontakt"] },
+        { name: "Meddel.", icon: "✉️", items: ["Inkorg", "Skapa meddelande", "Hantera meddelanden", "Statusmeddelande", "SDS rapportbegäran"] },
+        { name: "Talgrupp", icon: "👥", items: ["Mappar", "Skanningslistor", "Skanning På/Av", "Direktval"] },
+        { name: "GPS", icon: "🛰️", items: ["Position", "Kompass"] },
+        { name: "Nätverk", icon: "📡", items: ["Sändarspärr På/Av", "Driftsätt (TMO/DMO)", "Byta Nät"] },
+        { name: "Inställ.", icon: "⚙️", items: ["Ljud/vibrator", "Displayinställning", "Ändra PIN", "Autom. tangentlås"] },
+        { name: "Profiler", icon: "👤", items: ["Normal tyst", "Natt", "Span", "Tyst", "Normal ljud"] },
+        { name: "Hjälp", icon: "ℹ️", items: ["Infomeny / Snabbval", "Om radion (SC21)"] }
+    ];
+    let tabIndex = 0;
+    let tabItemIndex = 0;
+
     const mainMenuItems = [
         { title: "Meddelanden", short: "Meddel.", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" fill="#f39c12" stroke="#002855" stroke-width="1.5"/><polyline points="2,6 12,13 22,6" fill="none" stroke="#fff" stroke-width="1.8"/></svg>` },
         { title: "Statusmeny", short: "Status", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="#3498db" stroke="#002855" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="8" stroke="#fff" stroke-width="2"/><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"/><line x1="8" y1="16" x2="13" y2="16" stroke="#fff" stroke-width="2"/></svg>` },
@@ -1424,42 +1671,16 @@
         { title: "Radioinformation", short: "Info", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#005bb5" stroke="#002855" stroke-width="1.5"/><text x="10" y="17" fill="#fff" font-size="13" font-weight="bold" font-family="Arial">i</text></svg>` }
     ];
 
-    const tgSubmenuItems = [
-        "Mappar",
-        "Skanningslistor",
-        "Skanning På/Av",
-        "Direktval"
-    ];
-
-    // Complete list of authentic Rakel Police statuses
-    const statusMenuOptions = [
-        "Klar, ledig",
-        "Påbörjat uppdrag",
-        "Framme på plats",
-        "Upptagen",
-        "Disponibel",
-        "16 Biträde önskas",
-        "Anropsbegäran",
-        "Rapport / Avrapportering",
-        "Utgår"
-    ];
-
-    const profileOptions = [
-        "1 Normal tyst",
-        "2 Natt",
-        "3 Span",
-        "4 Tyst",
-        "5 Normal ljud"
-    ];
+    const tgSubmenuItems = ["Mappar", "Skanningslistor", "Skanning På/Av", "Direktval"];
+    const statusMenuOptions = ["Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Upptagen", "Disponibel", "16 Biträde önskas", "Anropsbegäran", "Rapport / Avrapportering", "Utgår"];
+    const profileOptions = ["1 Normal tyst", "2 Natt", "3 Span", "4 Tyst", "5 Normal ljud"];
     const contactList = [
         { name: "RLC 9-7 (Ledningscentral)", number: "970", type: "RLC" },
         { name: "Kollega Patrull 2", number: "1973221", type: "MSISDN" },
         { name: "Hundpatrull 97-3222", number: "173222", type: "ISSI" },
         { name: "Yttre Befäl (YB)", number: "0701234567", type: "TEL" }
     ];
-    let sdsInbox = [
-        { from: "RLC 9-7", text: "Välkommen i tjänst. Anmäl Klar, ledig vid uppstart.", time: "08:00" }
-    ];
+    let sdsInbox = [{ from: "RLC 9-7", text: "Välkommen i tjänst. Anmäl Klar, ledig vid uppstart.", time: "08:00" }];
 
     let vehicleGatewayActive = false;
     let vehicleGwTmoTg = { name: "Insats 12 MPU", index: "712" };
@@ -1475,11 +1696,7 @@
     window.getNetworkStatusForRlc = () => hasPendingCallRequest ? "Anropsbegäran" : radioStatus;
     window.getActiveRlcCode = () => activeRlcCode;
     window.getRadioMode = () => currentMode;
-    window.getGatewayState = () => ({
-        active: vehicleGatewayActive,
-        tmo: vehicleGwTmoTg.name,
-        dmo: vehicleGwDmoTg.name
-    });
+    window.getGatewayState = () => ({ active: vehicleGatewayActive, tmo: vehicleGwTmoTg.name, dmo: vehicleGwDmoTg.name });
 
     window.changeActiveRlcRegion = function(newRlcCode) {
         if (!newRlcCode) return;
@@ -1489,9 +1706,7 @@
             pttBtn.innerText = `🎙️ HÅLL IN FÖR ATT SÄNDA SOM RLC ${activeRlcCode} (PTT ELLER MELLANSLAG)`;
         }
         const quickInp = document.getElementById('rlcQuickTtsInput');
-        if (quickInp) {
-            quickInp.placeholder = `Skriv röstutrop för RLC ${activeRlcCode} (t.ex. 97-2410 från ${activeRlcCode}, kom)...`;
-        }
+        if (quickInp) quickInp.placeholder = `Skriv röstutrop för RLC ${activeRlcCode} (t.ex. 97-2410 från ${activeRlcCode}, kom)...`;
         appendRlcLog(`🏛️ Aktiv ledningscentral ändrad till <b>RLC ${activeRlcCode}</b>.`);
         updateScreenDisplay();
         if (window.syncPresenceNow) window.syncPresenceNow();
@@ -1499,21 +1714,13 @@
     };
 
     window.getAnyActiveGateway = function() {
-        if (vehicleGatewayActive) {
-            return { active: true, tmo: vehicleGwTmoTg.name, dmo: vehicleGwDmoTg.name, owner: window.MY_TACTICAL };
-        }
-        const all = [
-            ...(window.liveConnectedUnits || []),
-            ...(window.simulatedPatrols || [])
-        ];
+        if (vehicleGatewayActive) return { active: true, tmo: vehicleGwTmoTg.name, dmo: vehicleGwDmoTg.name, owner: window.MY_TACTICAL };
+        const all = [...(window.liveConnectedUnits || []), ...(window.simulatedPatrols || [])];
         const remoteGw = all.find(u => u && u.gwActive && u.gwTmo && u.gwDmo);
-        if (remoteGw) {
-            return { active: true, tmo: remoteGw.gwTmo, dmo: remoteGw.gwDmo, owner: remoteGw.tactical };
-        }
+        if (remoteGw) return { active: true, tmo: remoteGw.gwTmo, dmo: remoteGw.gwDmo, owner: remoteGw.tactical };
         return { active: false, tmo: "", dmo: "", owner: "" };
     };
 
-    // Checks if the radio can reach RLC right now (TMO always can; DMO ONLY if Gateway is active on current DMO TG)
     window.localTmoBlocked = false;
     window.canReachRlcNetwork = function() {
         if (currentMode === "TMO") return !window.localTmoBlocked;
@@ -1524,21 +1731,21 @@
 
     window.getActiveTxTalkgroupName = function() {
         if (window.isRlcViewActive()) return rlcSelectedTxTg || "IGV PO1 MPU";
-        if (currentMode === "DMO") return activeSelection.tgObj.isDmo ? activeSelection.tgObj.name : "Alla DMO 1";
+        if (currentMode === "DMO") return activeSelection.tgObj?.isDmo ? activeSelection.tgObj.name : "Alla DMO 1";
         if (activeSelection.isScanList && activeSelection.scanListObj) {
-            const disp = activeSelection.scanListObj.tgs.find(t => t.displayed) || activeSelection.scanListObj.tgs[0];
+            const disp = activeSelection.scanListObj.tgs?.find(t => t.displayed) || activeSelection.scanListObj.tgs?.[0];
             return disp ? disp.name : activeSelection.scanListObj.name;
         }
-        return activeSelection.tgObj.name;
+        return activeSelection.tgObj?.name || "IGV PO1 MPU";
     };
 
     window.getActiveTxTalkgroupIndex = function() {
-        if (currentMode === "DMO") return activeSelection.tgObj.isDmo ? activeSelection.tgObj.index : "9041";
+        if (currentMode === "DMO") return activeSelection.tgObj?.isDmo ? activeSelection.tgObj.index : "9041";
         if (activeSelection.isScanList && activeSelection.scanListObj) {
-            const disp = activeSelection.scanListObj.tgs.find(t => t.displayed) || activeSelection.scanListObj.tgs[0];
+            const disp = activeSelection.scanListObj.tgs?.find(t => t.displayed) || activeSelection.scanListObj.tgs?.[0];
             return disp ? disp.index : activeSelection.scanListObj.index;
         }
-        return activeSelection.tgObj.index;
+        return activeSelection.tgObj?.index || "7011";
     };
 
     window.shouldReceiveTransmission = function(incomingTg, isBridged = false) {
@@ -1546,7 +1753,7 @@
             const gw = window.getAnyActiveGateway();
             if (DMO_TG_NAMES.has(incomingTg)) {
                 if (gw.active && incomingTg === gw.dmo) return false;
-                return false; // RLC cannot hear unbridged DMO directly
+                return false;
             }
             return rlcMonitoredTgsSet.has(incomingTg) || rlcSelectedTxTg === incomingTg;
         }
@@ -1554,7 +1761,6 @@
         if (powerState === 'OFF' || powerState === 'BOOT' || powerState === 'PIN') return false;
         const myCurrentTg = window.getActiveTxTalkgroupName();
 
-        // In DMO mode: only hear same DMO TG, or TMO traffic bridged via active Gateway
         if (currentMode === "DMO") {
             if (incomingTg === myCurrentTg) return true;
             const gw = window.getAnyActiveGateway();
@@ -1564,7 +1770,7 @@
 
         if (incomingTg === myCurrentTg) return true;
         if (currentMode === "TMO" && scanning && activeSelection.isScanList && activeSelection.scanListObj) {
-            if (activeSelection.scanListObj.tgs.some(t => t.name === incomingTg)) return true;
+            if (activeSelection.scanListObj.tgs?.some(t => t.name === incomingTg)) return true;
         }
         const gw = window.getAnyActiveGateway();
         if (gw.active && !isBridged) {
@@ -1574,40 +1780,27 @@
     };
 
     // =========================================================
-    // 5. SWEDISH RADIO CALLSIGN PRONUNCIATION & AUDIO ENGINE
+    // 5. LJUDMOTOR, LED-KONTROLL & SVENSKT TAL
     // =========================================================
     const DIGIT_WORDS_SV = { '0': 'noll', '1': 'ett', '2': 'två', '3': 'tre', '4': 'fyra', '5': 'fem', '6': 'sex', '7': 'sju', '8': 'åtta', '9': 'nio' };
 
     function formatTwoDigitPairSv(pairStr) {
         if (!pairStr || pairStr.length !== 2) return pairStr;
-        if (pairStr[0] === '0') {
-            return `noll ${DIGIT_WORDS_SV[pairStr[1]] || pairStr[1]}`;
-        }
+        if (pairStr[0] === '0') return `noll ${DIGIT_WORDS_SV[pairStr[1]] || pairStr[1]}`;
         return pairStr;
     }
 
-    // Formaterar patrullnummer som "97-54 20" för text och tvåsiffriga par i tal ("97 54 20")
     window.formatPatrolCallsignPairs = function(callsignStr) {
         if (!callsignStr) return "";
-        return String(callsignStr).replace(/\b(\d{2})-(\d{2})(\d{2})\b/g, "$1-$2 $3");
+        return String(callsignStr).replace(/(\d{2})-(\d{2})(\d{2})/g, "$1-$2 $3");
     };
 
-    // Formats RLC ("9-7" -> "nio sju") and Patrol numbers ("97-6510" or "97-65 10" -> "97 65 10")
     window.formatSwedishRadioSpeech = function(rawText) {
         if (!rawText) return "";
         let txt = String(rawText);
-
-        // 1. Replace RLC codes like 9-7, 9-6, 9-5, 9-4, 9-3, 9-2, 9-1, 9-0 with single digits ("nio sju")
-        txt = txt.replace(/\b9-([0-9])\b/g, (_, d) => `nio ${DIGIT_WORDS_SV[d] || d}`);
-
-        // 2. Replace Patrol numbers like 97-6510, 97-65 10, 34-57 76, 24-10 80 with two-digit groups: "97 65 10"
-        txt = txt.replace(/\b(\d{2})-(\d{2})\s*(\d{2})\b/g, (_, p1, p2, p3) => {
-            return `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`;
-        });
-        txt = txt.replace(/\b(97|34|24)(\d{2})(\d{2})\b/g, (_, p1, p2, p3) => {
-            return `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`;
-        });
-
+        txt = txt.replace(/9-([0-9])/g, (_, d) => `nio ${DIGIT_WORDS_SV[d] || d}`);
+        txt = txt.replace(/(\d{2})-(\d{2})\s*(\d{2})/g, (_, p1, p2, p3) => `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`);
+        txt = txt.replace(/(97|34|24)(\d{2})(\d{2})/g, (_, p1, p2, p3) => `${formatTwoDigitPairSv(p1)} ${formatTwoDigitPairSv(p2)} ${formatTwoDigitPairSv(p3)}`);
         return txt;
     };
 
@@ -1620,9 +1813,7 @@
 
     async function unlockBrowserAudio() {
         try {
-            if (audioCtx.state === 'suspended') {
-                await audioCtx.resume();
-            }
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
             const buf = audioCtx.createBuffer(1, 220, 22050);
             const src = audioCtx.createBufferSource();
             src.buffer = buf;
@@ -1707,14 +1898,11 @@
         unlockBrowserAudio();
         soundPttGrant();
         speakSwedish("Ljudtest från 9-7 till 97-6510. Högtalare och medlyssning fungerar.", null, "RLC 9-7", rlcSelectedTxTg);
-        appendRlcLog("🔊 Ljudtest utfört (uttal: nio sju / 97 65 10).");
+        appendRlcLog("🔊 Ljudtest utfört.");
     };
 
-    // =========================================================
-    // GEMINI MOLNRÖST (KVINNLIG RLC-OPERATÖR) & RADIOFILTER
-    // =========================================================
     window.aiRlcEnabled = true;
-    window.AI_FEMALE_VOICE = "Aoede"; // Naturlig kvinnlig röst (Aoede, Kore, Despina, Sulafat)
+    window.AI_FEMALE_VOICE = "Aoede";
     let isAiProcessingVoice = false;
 
     window.toggleAiRlcMode = function() {
@@ -1723,10 +1911,10 @@
         const btn = document.getElementById('aiRlcToggleBtn');
         if (window.aiRlcEnabled) {
             if (btn) { btn.innerText = "🤖 AI-röst: PÅ"; btn.classList.add('active-gw'); }
-            showTempMsg("🤖 <b>AI-RLC (Kvinnlig molnröst): PÅ</b><br><span style='font-size:11px;'>Håll in PTT och tala med RLC 9-7</span>", 1800);
+            showTempMsg("🤖 <b>AI-RLC: PÅ</b>", 1600);
         } else {
             if (btn) { btn.innerText = "🤖 AI-röst: AV"; btn.classList.remove('active-gw'); }
-            showTempMsg("🤖 <b>AI-RLC: AV</b><br><span style='font-size:11px;'>Endast manuell RLC / Multiplayer</span>", 1600);
+            showTempMsg("🤖 <b>AI-RLC: AV</b>", 1600);
         }
     };
 
@@ -1757,14 +1945,11 @@
 
         const audioBuffer = audioCtx.createBuffer(1, int16.length, sampleRate);
         const channelData = audioBuffer.getChannelData(0);
-        for (let i = 0; i < int16.length; i++) {
-            channelData[i] = int16[i] / 32768.0;
-        }
+        for (let i = 0; i < int16.length; i++) channelData[i] = int16[i] / 32768.0;
 
         const source = audioCtx.createBufferSource();
         source.buffer = audioBuffer;
 
-        // Subtilt Rakel-radiofilter som behåller den naturliga kvinnliga rösten men ger äkta Sepura-karaktär
         const highpass = audioCtx.createBiquadFilter();
         highpass.type = 'highpass';
         highpass.frequency.value = 220;
@@ -1791,29 +1976,17 @@
     async function speakWithGeminiCloudVoice(formattedSpeechText, customVoiceName = null, roleDescription = null) {
         const apiKey = (window.GEMINI_API_KEY || "").trim();
         const voiceToUse = customVoiceName || getNextRlcOperatorVoice();
-        const roleInstruction = roleDescription || "en erfaren, tydlig och naturlig RLC-operatör hos polisen";
+        const roleInstruction = roleDescription || "en erfaren RLC-operatör hos polisen";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
         const payload = {
-            contents: [{
-                parts: [{
-                    text: `Läs upp följande svenska polisradiomeddelande som ${roleInstruction}: "${formattedSpeechText}"`
-                }]
-            }],
+            contents: [{ parts: [{ text: `Läs upp följande svenska polisradiomeddelande som ${roleInstruction}: "${formattedSpeechText}"` }] }],
             generationConfig: {
                 responseModalities: ["AUDIO"],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: voiceToUse }
-                    }
-                }
+                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceToUse } } }
             }
         };
 
-        const response = await fetchWithRetry(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const response = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (!response || !response.ok) throw new Error("Cloud TTS unavailable");
         const result = await response.json();
         const part = result?.candidates?.[0]?.content?.parts?.[0];
@@ -1838,7 +2011,6 @@
 
         const canPlayAudio = rlcActive || (volumeLevel > 0 && !speakerMuted && currentProfile !== "Tyst");
 
-        // 1. Försök först med molnröst (Gemini 2.5 Flash TTS) med varierande operatörs-/patrullröst
         if (canPlayAudio && (window.GEMINI_API_KEY || "").trim() !== "") {
             try {
                 isReceivingReal = true;
@@ -1856,7 +2028,6 @@
             }
         }
 
-        // 2. Fallback: Web Speech API (varierar pitch/röst för att simulera olika operatörer och patruller)
         if ('speechSynthesis' in window && canPlayAudio) {
             try {
                 window.speechSynthesis.cancel();
@@ -1867,11 +2038,9 @@
                 let voices = window.speechSynthesis.getVoices();
                 let svVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().includes('sv') || v.name.toLowerCase().includes('swed')));
                 if (svVoices.length > 0) {
-                    const vIdx = rlcOperatorIndex % svVoices.length;
-                    msg.voice = svVoices[vIdx];
+                    msg.voice = svVoices[rlcOperatorIndex % svVoices.length];
                 }
-                const pitches = [0.95, 1.04, 1.12, 0.90, 1.08];
-                msg.pitch = options.pitch || pitches[rlcOperatorIndex % pitches.length];
+                msg.pitch = options.pitch || 1.0;
                 rlcOperatorIndex++;
                 msg.rate = 1.0;
 
@@ -1902,7 +2071,6 @@
         }, 2500);
     }
 
-    // Tvåvägs AI-rösttolkning: Lyssnar på din PTT-sändning (eller RLC-utrop) och svarar med olika röster, rätt sifferpar och RAPS-disciplin
     window.processAiRlcVoiceTurn = async function(wavDataUrl, tgName, isFromRlcConsole = false) {
         if (!window.aiRlcEnabled || isAiProcessingVoice) return;
         if (!isFromRlcConsole && !window.canReachRlcNetwork()) return;
@@ -1918,130 +2086,71 @@
             const isRapsChannel = tgName.toUpperCase().includes("RAPS");
 
             if (isFromRlcConsole) {
-                // När du sänder som RLC i RLC-vyn: Patrullerna (eller Ambulans/Räddning på RAPS) svarar med sin geografiska position!
                 const simUnits = (window.simulatedPatrols && window.simulatedPatrols.length > 0)
                     ? window.simulatedPatrols
                     : [{ tactical: "97-5420", alias: "Andersson", locationName: "Storgatan", tg: tgName }];
-                const unitsContext = simUnits.map(u => `${window.formatPatrolCallsignPairs(u.tactical)} (${u.alias || 'Patrull'}, befinner sig på ${u.locationName || 'Storgatan'})`).join("; ");
+                const unitsContext = simUnits.map(u => `${window.formatPatrolCallsignPairs(u.tactical)} (${u.alias || 'Patrull'}, på ${u.locationName || 'Storgatan'})`).join("; ");
 
-                const rlcConsoleSysInstruction = `Du simulerar polispatruller (samt räddningstjänst "räddning 24-10 80" och ambulans "ambulans 34-57 76" om kanalen är RAPS) som lyssnar på talgruppen "${tgName}".
-Operatören på RLC ${activeRlcCode} har precis sänt ett röstmeddelande.
-Tillgängliga patruller i området: ${unitsContext}.
-Regler:
-1. Skriv ALLTID ut patrullnummer med två siffror i taget med mellanslag (t.ex. "97-54 20" eller "34-57 76").
-2. När en patrull blir uppropad av RLC ska patrullen svara med sitt anropsnummer och sin aktuella geografiska gata/plats, t.ex.: "${window.formatPatrolCallsignPairs(simUnits[0].tactical)}, ${simUnits[0].locationName || 'Storgatan'}, kom." eller bekräfta ordern med sin position.
-3. Om sändningen sker på en RAPS-kanal ska enheten inleda med funktion + anropsnummer, t.ex. "polis 97-54 20" eller "ambulans 34-57 76".`;
+                const rlcConsoleSysInstruction = `Du simulerar polispatruller som lyssnar på "${tgName}". Operatören på RLC ${activeRlcCode} har sänt ett meddelande. Enheter: ${unitsContext}. Svara med patrullnummer och plats.`;
 
                 const payload = {
-                    contents: [{
-                        role: "user",
-                        parts: [
-                            { text: "Lyssna på RLC-operatörens anrop och svara som den tilltalade patrullen/enheten med geografisk plats i JSON." },
-                            { inlineData: { mimeType: "audio/wav", data: base64Audio } }
-                        ]
-                    }],
+                    contents: [{ role: "user", parts: [{ text: "Lyssna och svara i JSON." }, { inlineData: { mimeType: "audio/wav", data: base64Audio } }] }],
                     systemInstruction: { parts: [{ text: rlcConsoleSysInstruction }] },
                     generationConfig: {
                         responseMimeType: "application/json",
                         responseSchema: {
                             type: "OBJECT",
-                            properties: {
-                                transcript: { type: "STRING" },
-                                responderCallsign: { type: "STRING" },
-                                spokenResponse: { type: "STRING" }
-                            },
+                            properties: { transcript: { type: "STRING" }, responderCallsign: { type: "STRING" }, spokenResponse: { type: "STRING" } },
                             required: ["transcript", "responderCallsign", "spokenResponse"]
                         }
                     }
                 };
 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                const response = await fetchWithRetry(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const response = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response || !response.ok) return;
                 const result = await response.json();
                 const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!jsonText) return;
                 const parsed = JSON.parse(jsonText);
-                if (parsed.transcript) {
-                    appendRlcLog(`🎙️ RLC ${activeRlcCode} (${tgName}): "${parsed.transcript}"`);
-                }
+                if (parsed.transcript) appendRlcLog(`🎙️ RLC ${activeRlcCode} (${tgName}): "${parsed.transcript}"`);
                 if (parsed.spokenResponse) {
-                    const patrolVoice = PATROL_AI_VOICES[Math.floor(Math.random() * PATROL_AI_VOICES.length)];
                     const senderTag = parsed.responderCallsign || window.formatPatrolCallsignPairs(simUnits[0].tactical);
                     appendRlcLog(`🚔 ${senderTag} (${tgName}): "${parsed.spokenResponse}"`);
                     soundPttGrant();
-                    await speakSwedish(parsed.spokenResponse, null, senderTag, tgName, {
-                        voiceName: patrolVoice,
-                        roleDesc: "en svensk polispatrull ute i fält"
-                    });
+                    await speakSwedish(parsed.spokenResponse, null, senderTag, tgName);
                 }
                 return;
             }
 
-            // När patrullen sänder från Rakel-handterminalen:
             if (awaitingChannelCheckinTg && awaitingChannelCheckinTg === tgName) {
                 clearTimeout(channelCheckinTimer);
                 awaitingChannelCheckinTg = null;
             }
 
-            const systemInstruction = `Du är operatör vid Polisen Regionledningscentral RLC "${activeRlcCode}" (uttalas siffra för siffra, t.ex. "nio sju").
-Du lyssnar på talgruppen "${tgName}".
-Patrullen som sänder har anropsnummer "${formattedMyTactical}"${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''}, befinner sig vid "${window.MY_LOCATION_NAME || 'Storgatan'}" och har status "${radioStatus}".
-
-Regler för radiokommunikation:
-1. ALLA patrullnummer ska skrivas och läsas med två siffror åt gången, t.ex. "${formattedMyTactical}, kom" (aldrig 6510 i en klump).
-2. Riktningsregeln: Nämn alltid mottagaren före sändaren, t.ex. "${formattedMyTactical} från ${activeRlcCode}, kom."
-3. Om patrullen anmäler sig på en insats- eller samverkanskanal (t.ex. "${formattedMyTactical} anmäler sig på insatsen, kom"), svara direkt och bekräfta att de är noterade på kanalen!
-4. ${isRapsChannel ? 'Eftersom detta är en RAPS-samverkanskanal (Räddning, Ambulans, Polis): Om patrullen anropar ambulans (t.ex. "ambulans 34-57 76 från polis ' + formattedMyTactical + '") eller räddningstjänst ("räddning 24-10 80"), svara i rollen som den anropade ambulansen eller räddningsenheten och börja svaret med t.ex. "polis ' + formattedMyTactical + ' från ambulans 34-57 76, kom"!' : 'Svara som RLC ' + activeRlcCode + '.'}
-5. Om patrullen begär slagning på person eller fordon, ge ett realistiskt svar i tal och lägg detaljerna i "sdsFollowUp".
-6. Om patrullen anmäler en ny status muntligt, sätt "newStatus" till en av: "Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Upptagen", "Disponibel", "16 Biträde önskas" (annars "").`;
-
+            const systemInstruction = `Du är operatör vid RLC ${activeRlcCode}. Patrull ${formattedMyTactical} på ${tgName} sänder. Svara enligt svensk sambandstjänst.`;
             const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: "Lyssna på patrullens radiosändning och svara enligt reglerna i JSON-format." },
-                        { inlineData: { mimeType: "audio/wav", data: base64Audio } }
-                    ]
-                }],
+                contents: [{ role: "user", parts: [{ text: "Lyssna och svara i JSON." }, { inlineData: { mimeType: "audio/wav", data: base64Audio } }] }],
                 systemInstruction: { parts: [{ text: systemInstruction }] },
                 generationConfig: {
                     responseMimeType: "application/json",
                     responseSchema: {
                         type: "OBJECT",
-                        properties: {
-                            transcript: { type: "STRING" },
-                            shouldReply: { type: "BOOLEAN" },
-                            responderLabel: { type: "STRING" },
-                            spokenResponse: { type: "STRING" },
-                            sdsFollowUp: { type: "STRING" },
-                            newStatus: { type: "STRING" }
-                        },
+                        properties: { transcript: { type: "STRING" }, shouldReply: { type: "BOOLEAN" }, responderLabel: { type: "STRING" }, spokenResponse: { type: "STRING" }, sdsFollowUp: { type: "STRING" }, newStatus: { type: "STRING" } },
                         required: ["transcript", "shouldReply", "spokenResponse"]
                     }
                 }
             };
 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-            const response = await fetchWithRetry(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
+            const response = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response || !response.ok) return;
             const result = await response.json();
             const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!jsonText) return;
 
             const parsed = JSON.parse(jsonText);
-            if (parsed.transcript) {
-                appendRlcLog(`🎤 ${formattedMyTactical} (${tgName}): "${parsed.transcript}"`);
-            }
+            if (parsed.transcript) appendRlcLog(`🎤 ${formattedMyTactical} (${tgName}): "${parsed.transcript}"`);
             if (parsed.newStatus && statusMenuOptions.includes(parsed.newStatus)) {
                 radioStatus = parsed.newStatus;
                 previousNormalStatus = parsed.newStatus;
@@ -2051,18 +2160,17 @@ Regler för radiokommunikation:
             }
             if (parsed.shouldReply && parsed.spokenResponse) {
                 const senderName = parsed.responderLabel || `RLC ${activeRlcCode}`;
-                const operatorVoice = getNextRlcOperatorVoice();
                 appendRlcLog(`🎧 ${senderName} (${tgName}): "${parsed.spokenResponse}"`);
                 soundPttGrant();
-                await speakSwedish(parsed.spokenResponse, null, senderName, tgName, { voiceName: operatorVoice });
+                await speakSwedish(parsed.spokenResponse, null, senderName, tgName);
             }
             if (parsed.sdsFollowUp && parsed.sdsFollowUp.trim() !== "") {
                 sdsInbox.push({ from: `RLC ${activeRlcCode}`, text: parsed.sdsFollowUp.trim(), time: getTime() });
                 soundStatusDelivered();
-                showTempMsg(`✉️ <b>SDS från RLC ${activeRlcCode}:</b><br><span style="font-size:11px;font-weight:normal;">${parsed.sdsFollowUp.trim()}</span>`, 3800);
+                showTempMsg(`✉️ <b>SDS:</b> ${parsed.sdsFollowUp.trim()}`, 3500);
             }
         } catch (err) {
-            console.warn("AI-RLC röstanalys varning:", err);
+            console.warn("AI-RLC röstanalys:", err);
         } finally {
             isAiProcessingVoice = false;
         }
@@ -2115,6 +2223,67 @@ Regler för radiokommunikation:
         if (sl) sl.innerHTML = l || "";
         if (sc) sc.innerHTML = c || "";
         if (sr) sr.innerHTML = r || "";
+    }
+
+    function restartAutoConfirmTimer() {
+        clearTimeout(folderAutoConfirmTimer);
+        if (powerState !== 'FOLDERS') return;
+        folderAutoConfirmTimer = setTimeout(() => {
+            if (powerState === 'FOLDERS') confirmFolderSelection();
+        }, 5000);
+    }
+
+    function confirmFolderSelection() {
+        clearTimeout(folderAutoConfirmTimer);
+        const curFolder = getCurrentFolder();
+        if (curFolder.hasSubfolders && (!curFolder.tgs || curFolder.tgs.length === 0)) {
+            soundError();
+            showTempMsg("Tryck pil nedåt för undermappar", 1300);
+            return;
+        }
+        if (curFolder.tgs && curFolder.tgs.length > 0) {
+            const selectedTg = curFolder.tgs[currentTgIdx] || curFolder.tgs[0];
+            if (folderPickerMode === 'DV_ASSIGN') {
+                const curKey = dvKeysOrder[selectedDvIdx] || '1';
+                dvAssignments[curKey] = selectedTg.name;
+                folderPickerMode = null;
+                folderIndexInput = "";
+                powerState = 'IDLE';
+                menuState = "DIREKTVAL_LIST";
+                menuIndex = selectedDvIdx;
+                soundStatusDelivered();
+                updateScreenDisplay();
+                showTempMsg(`✔ <b>Direktval ${curKey}</b> programmerat:<br><b style="color:#005bb5;">${selectedTg.name}</b>`, 1800);
+                return;
+            }
+            if (folderPickerMode === 'SCAN_ADD') {
+                const list = scanListsData[selectedScanListIdx] || scanListsData[0];
+                if (selectedTg.isDmo) {
+                    soundError();
+                    showTempMsg("❌ Välj en nät-talgrupp (TMO)!", 1500);
+                    return;
+                }
+                if (list.tgs.length >= 10) {
+                    soundError();
+                    showTempMsg("❌ Max 10 talgrupper!", 1500);
+                } else if (list.tgs.some(t => t.name === selectedTg.name)) {
+                    soundError();
+                    showTempMsg("Finns redan i skanningslistan!", 1400);
+                } else {
+                    const isOrder = selectedTg.name.toLowerCase().includes("order");
+                    list.tgs.push({ name: selectedTg.name, index: selectedTg.index, prio: isOrder ? "high" : "low", displayed: list.tgs.length === 0 });
+                    soundStatusDelivered();
+                }
+                folderPickerMode = null;
+                folderIndexInput = "";
+                powerState = 'IDLE';
+                menuState = "SCAN_EDIT";
+                menuIndex = list.tgs.length - 1;
+                updateScreenDisplay();
+                return;
+            }
+            selectTalkgroupObject(selectedTg, curFolder.name);
+        }
     }
 
     function updateScreenDisplay() {
@@ -2177,44 +2346,103 @@ Regler för radiokommunikation:
         }
 
         if (powerState === 'FOLDERS') {
-            const folder = folderSystem[navFolderIndex];
-            const tg = folder.tgs[navTgIndex] || folder.tgs[0];
-            const tgIcon = tg.isScanList ? '📻' : (tg.isDmo ? '⇄' : '👥');
-            const headerLabel = folderPickerMode === 'DV_ASSIGN'
-                ? `Direktval ${dvKeysOrder[selectedDvIdx]} ➔ Välj TG`
-                : (folderPickerMode === 'SCAN_ADD' ? `Lägg till i ${(scanListsData[selectedScanListIdx] || scanListsData[0]).name}` : `Välj talgrupp (${navFolderIndex + 1}/${folderSystem.length})`);
+            const curFolder = getCurrentFolder();
+            const curLevel = treePath.length;
+            const hasSubs = Boolean(curFolder.hasSubfolders && curFolder.subfolders && curFolder.subfolders.length > 0);
+            const hasParent = (treePath.length > 1);
+
+            let arrowSymbol = "";
+            if (hasSubs && hasParent) arrowSymbol = "▲▼";
+            else if (hasSubs && !hasParent) arrowSymbol = "▼";
+            else if (!hasSubs && hasParent) arrowSymbol = "▲";
+
+            let middleHtml = "";
+            if (hasSubs && (!curFolder.tgs || curFolder.tgs.length === 0)) {
+                middleHtml = `
+                    <div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:bold;color:#000;">
+                        <span style="font-size:16px;">👥</span>
+                        <span>Tryck pil nedåt</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11px;color:#002855;">
+                        <span style="color:#555;">Undermappar finns</span>
+                        <span style="font-weight:bold;">▼</span>
+                    </div>`;
+            } else if (curFolder.tgs && curFolder.tgs.length > 0) {
+                const tg = curFolder.tgs[currentTgIdx] || curFolder.tgs[0];
+                const tgIcon = tg.isScanList ? '📻' : (tg.isDmo ? '⇄' : '👥');
+                middleHtml = `
+                    <div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:bold;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        <span style="font-size:16px;">${tgIcon}</span>
+                        <span style="overflow:hidden;text-overflow:ellipsis;">${tg.name}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:12px;color:#002855;">
+                        <span style="font-size:14px;color:#005bb5;font-weight:bold;">🔄</span>
+                        <span style="font-size:13px;font-weight:bold;color:#000;">${folderIndexInput !== "" ? folderIndexInput + "_" : tg.index}</span>
+                    </div>`;
+            }
+
             display.innerHTML = `
-                <div class="sepura-top-net"><span>${headerLabel}</span><span>${getTime()}</span></div>
-                <div class="ui-box-frame" style="padding:4px 5px;justify-content:space-between;">
-                    <div style="font-size:11px;color:#002855;font-weight:bold;border-bottom:1px solid #ccd6e0;padding-bottom:2px;display:flex;align-items:center;gap:4px;">
+                <div class="ui-box-frame" style="border:2px solid #001f4d;margin:2px;background:#fff;justify-content:space-between;padding:0;">
+                    <div style="background:#eef3f8;border-bottom:1.5px solid #001f4d;padding:2px 6px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:bold;color:#002855;">
                         <span>📁</span><span>Välj talgrupp</span>
                     </div>
-                    <div style="text-align:left;margin:2px 0;border:1px solid #99aabb;padding:3px 5px;background:#f8fafc;">
-                        <div style="font-size:13px;font-weight:bold;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                            ${tgIcon} ${tg.name}
-                        </div>
-                        <div style="display:flex;justify-content:space-between;font-size:11px;color:#002855;margin-top:2px;">
-                            <span>↕ (${navTgIndex + 1}/${folder.tgs.length})</span>
-                            <span>Index: <b>${folderIndexInput !== "" ? folderIndexInput + "_" : tg.index}</b></span>
-                        </div>
+                    <div style="padding:6px 8px;flex:1;display:flex;flex-direction:column;justify-content:center;">
+                        ${middleHtml}
                     </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;border:1px solid #002855;background:#eef3f8;padding:2px 5px;font-weight:bold;">
-                        <span>${navFolderIndex + 1}</span>
-                        <span>◄ 📁 ${folder.name} ►</span>
+                    <div style="display:flex;border-top:1.5px solid #001f4d;background:#f4f6f9;min-height:24px;">
+                        <div style="width:38px;border-right:1.5px solid #001f4d;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;color:#002855;background:#e2e8f0;">
+                            ${curLevel} <span style="font-size:10px;margin-left:1px;">${arrowSymbol}</span>
+                        </div>
+                        <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 6px;font-size:11px;font-weight:bold;color:#000;">
+                            <span>◄</span>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;display:flex;align-items:center;gap:3px;">
+                                <span>📁</span><span>${curFolder.name}</span>
+                            </span>
+                            <span>►</span>
+                        </div>
                     </div>
                 </div>`;
-            updateSoftkeys("Välj", "Index", "Avbryt");
+            updateSoftkeys("Välj", "Status", "Avbryt");
+            return;
+        }
+
+        if (menuState === "TAB_MENU") {
+            const curTab = TABS_LIST[tabIndex];
+            display.innerHTML = `
+                <div class="ui-box-frame" style="border:1.5px solid #001f4d;margin:2px;background:#fff;">
+                    <div style="display:flex;background:#002855;border-bottom:1.5px solid #001f4d;overflow-x:hidden;">
+                        ${TABS_LIST.map((t, idx) => `
+                            <div style="flex:1;text-align:center;padding:2px 1px;cursor:pointer;font-size:9px;font-weight:bold;${idx === tabIndex ? 'background:#fff;color:#002855;border-top:2px solid #f39c12;' : 'color:#aad4ff;'}">
+                                ${t.name.slice(0, 4)}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="background:#eef3f8;padding:2px 6px;font-size:11px;font-weight:bold;color:#002855;border-bottom:1px solid #ccd6e0;display:flex;justify-content:space-between;">
+                        <span>${curTab.icon} ${curTab.name}</span>
+                        <span style="font-size:10px;color:#666;">◄ ${tabIndex + 1}/8 ►</span>
+                    </div>
+                    <div class="menu-list" style="padding:1px 0;">
+                        ${curTab.items.map((it, idx) => `
+                            <div class="menu-row ${idx === tabItemIndex ? 'selected' : ''}" onclick="tabItemIndex=${idx};pressCenter()" style="padding:4px 6px;font-size:11px;">
+                                <span>${it}</span><span>►</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            updateSoftkeys("Välj", "", "Åter");
             return;
         }
 
         if (powerState === 'SMARTMENU') {
             display.innerHTML = `
                 <div class="sepura-top-net"><span>Smartmeny</span><span>${getTime()}</span></div>
-                <div class="ui-box-frame" style="padding:6px;font-size:12px;line-height:1.55;font-weight:bold;">
-                    <div>1 Ljus &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;6 Skan (${scanning ? 'PÅ' : 'AV'})</div>
-                    <div>2 Nät (${currentMode}) &nbsp;&nbsp;7 Min Info</div>
-                    <div>3 Klar, ledig &nbsp;8 16 Biträde</div>
-                    <div>4 TX-Spärr &nbsp;&nbsp;&nbsp;9 Påbörjat uppdr</div>
+                <div class="ui-box-frame" style="padding:4px 6px;font-size:11px;line-height:1.45;font-weight:bold;background:#fff;overflow-y:auto;">
+                    <div>1 Belysningsmeny &nbsp;&nbsp;&nbsp;7 Info-meny</div>
+                    <div>2 Byta Nät (${currentMode}) &nbsp;&nbsp;8 16 Biträde</div>
+                    <div>3 Fri status &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;9 Patrull utgår</div>
+                    <div>4 Sändarspärr &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0 Ej span.res</div>
+                    <div>5 Vänd display &nbsp;&nbsp;&nbsp;&nbsp;* Ej åtgärd</div>
+                    <div>6 Skannade TG &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# Hämta HR</div>
                 </div>`;
             updateSoftkeys("Välj", "", "Avbryt");
             return;
@@ -2366,7 +2594,7 @@ Regler för radiokommunikation:
                         <div class="ui-title"><span>Direktval</span><span>DV ${curKey}</span></div>
                         <div class="menu-list">
                             ${dvKeysOrder.map((k, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};dvPopupOpen=false;updateScreenDisplay()">
-                                <span>Direktval ${k}${['1','7','9'].includes(k) ? '' : ''}</span>
+                                <span>Direktval ${k}</span>
                                 <span style="font-size:10px;opacity:0.85;">${dvAssignments[k] || '-'}</span>
                             </div>`).join('')}
                         </div>
@@ -2442,11 +2670,13 @@ Regler för radiokommunikation:
                 display.innerHTML = `
                     <div class="ui-box-frame">
                         <div class="ui-title"><span>Radioinformation</span></div>
-                        <div style="padding:6px;font-size:11px;line-height:1.45;">
-                            <div><b>Anropsnr:</b> ${window.MY_TACTICAL} ${window.MY_ALIAS ? '(' + window.MY_ALIAS + ')' : ''}</div>
-                            <div><b>MSISDN:</b> ${window.MY_MSISDN}</div>
-                            <div><b>ISSI:</b> ${window.MY_ISSI}</div>
-                            <div><b>Aktivt RLC:</b> RLC ${activeRlcCode}</div>
+                        <div style="padding:5px 6px;font-size:10px;line-height:1.4;overflow-y:auto;">
+                            <div><b>ISSI:</b> ${window.MY_ISSI} | <b>MSISDN:</b> ${window.MY_MSISDN}</div>
+                            <div style="margin-top:2px;"><b>0:</b> Högtalare PÅ/AV &nbsp;|&nbsp; <b>1:</b> Normalpassn</div>
+                            <div><b>2/A:</b> Anropsbegäran &nbsp;|&nbsp; <b>8:</b> Driftsätt</div>
+                            <div><b>B:</b> Normal ljud &nbsp;|&nbsp; <b>C:</b> Natt</div>
+                            <div><b>#:</b> Smartmeny &nbsp;|&nbsp; <b>*:</b> Knapplås</div>
+                            <div style="color:#005bb5;font-weight:bold;margin-top:3px;">Sepura SC21 v4.3-005</div>
                         </div>
                     </div>`;
                 updateSoftkeys("Byt namn", "", "Tillb.");
@@ -2454,15 +2684,13 @@ Regler för radiokommunikation:
             }
         }
 
-        // IDLE SCREEN
         const tgName = activeSelection.isScanList && activeSelection.scanListObj
-            ? (activeSelection.scanListObj.tgs.find(t => t.displayed) || activeSelection.scanListObj.tgs[0]).name
-            : activeSelection.tgObj.name;
+            ? (activeSelection.scanListObj.tgs?.find(t => t.displayed) || activeSelection.scanListObj.tgs?.[0])?.name || activeSelection.scanListObj.name
+            : activeSelection.tgObj?.name || "IGV PO1 MPU";
         const tgIdx = window.getActiveTxTalkgroupIndex();
         const aliasStr = window.MY_ALIAS ? ` • ${window.MY_ALIAS}` : "";
         const gwInfo = window.getAnyActiveGateway();
         const dmoBridged = currentMode === "DMO" && gwInfo.active && tgName === gwInfo.dmo;
-        // Visa aldrig texten "Anropsbegäran" på Rakel-skärmens grundvy (visar ordinarie status)
         const displayStatusOnScreen = (radioStatus === "Anropsbegäran") ? previousNormalStatus : radioStatus;
 
         let statusBannerHtml = "";
@@ -2476,7 +2704,7 @@ Regler för radiokommunikation:
             <div class="idle-layout">
                 <div class="idle-top-row">
                     <div>
-                        <div style="font-size:12px;font-weight:bold;color:#000;">RAKEL (${currentMode}${dmoBridged || (currentMode==='TMO' && gwInfo.active) ? '+GW' : ''})</div>
+                        <div style="font-size:12px;font-weight:bold;color:#000;">RAKEL</div>
                         <div class="idle-net-label">${window.MY_TACTICAL}${aliasStr}</div>
                         <div style="font-size:11px;font-weight:bold;color:#002855;">${displayStatusOnScreen}</div>
                     </div>
@@ -2494,11 +2722,14 @@ Regler för radiokommunikation:
                     <div class="idle-index-row">Index: <b>${tgIdx}</b> ${activeSelection.isScanList && scanning ? '<span style="color:#005bb5;font-size:10px;">(Skanning)</span>' : ''}</div>
                 </div>
                 <div class="idle-folder-row">
-                    <span>📁 ${currentMode === 'DMO' ? 'DMO DIREKT' : activeSelection.folderName}</span>
+                    <div style="display:flex;align-items:center;gap:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        <span>📁</span>
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${activeSelection.folderName}</span>
+                    </div>
                     <span style="font-size:10px;color:${window.canReachRlcNetwork() ? '#555' : '#c0392b'};">${window.canReachRlcNetwork() ? 'RLC ' + activeRlcCode : (window.localTmoBlocked && currentMode === 'TMO' ? '📵 TMO-spärr' : 'Ej nät (DMO)')}</span>
                 </div>
             </div>`;
-        updateSoftkeys("Meny", "Grupper", "Inkorg");
+        updateSoftkeys("Inkorg", "Grupper", "Högt/Til");
     }
 
     function showTempMsg(html, duration = 1800) {
@@ -2516,13 +2747,13 @@ Regler för radiokommunikation:
     // =========================================================
     function applyOperatingMode(targetMode) {
         if (targetMode === "DMO") {
-            if (currentMode === "TMO" && !activeSelection.tgObj.isDmo) {
+            if (currentMode === "TMO" && !activeSelection.tgObj?.isDmo) {
                 lastTmoSelection = { ...activeSelection };
             }
             currentMode = "DMO";
             activeSelection = { ...lastDmoSelection };
         } else {
-            if (currentMode === "DMO" && activeSelection.tgObj.isDmo) {
+            if (currentMode === "DMO" && activeSelection.tgObj?.isDmo) {
                 lastDmoSelection = { ...activeSelection };
             }
             currentMode = "TMO";
@@ -2541,11 +2772,11 @@ Regler för radiokommunikation:
         if (tgObj.isDmo) {
             if (currentMode === "TMO") lastTmoSelection = { ...activeSelection };
             currentMode = "DMO";
-            activeSelection = { isScanList: false, scanListObj: null, tgObj: tgObj, folderName: folderName || "DMO DIREKT" };
+            activeSelection = { isScanList: false, scanListObj: null, tgObj: tgObj, folderName: folderName || "DMO" };
             lastDmoSelection = { ...activeSelection };
-        } else if (tgObj.isScanList) {
+        } else if (tgObj.isScanList || folderName.startsWith("SKAN")) {
             currentMode = "TMO";
-            const sList = scanListsData.find(s => s.id === tgObj.scanId) || scanListsData[0];
+            const sList = scanListsData.find(s => s.id === tgObj.scanId || s.name === folderName) || scanListsData[0];
             activeSelection = { isScanList: true, scanListObj: sList, tgObj: sList.tgs[0], folderName: sList.name };
             lastTmoSelection = { ...activeSelection };
             scanning = true;
@@ -2556,13 +2787,13 @@ Regler för radiokommunikation:
         }
         powerState = 'IDLE';
         folderIndexInput = "";
+        clearTimeout(folderAutoConfirmTimer);
         updateScreenDisplay();
         if (window.syncPresenceNow) window.syncPresenceNow();
         if (window.refreshRlcDashboard) window.refreshRlcDashboard();
         const activeTgName = window.getActiveTxTalkgroupName();
         showTempMsg(`Vald talgrupp:<br><span style="color:#005bb5;font-size:15px;">${activeTgName}</span>`, 1400);
 
-        // Punkt 7: Kanalbyte till Insats / RAPS / SAMV -> Förvänta anmälan på kanalen, annars ropar RLC efter 20 sek
         scheduleChannelCheckinPrompt(activeTgName);
     }
 
@@ -2591,23 +2822,15 @@ Regler för radiokommunikation:
     function findTalkgroupByIndex(idxStr) {
         const clean = String(idxStr || "").trim();
         if (!clean) return null;
-        for (const f of folderSystem) {
-            for (const t of f.tgs) {
-                if (t.index === clean) return { tg: t, folder: f.name };
-            }
-        }
-        return null;
+        const all = getAllTalkgroupsFlat();
+        return all.find(item => item.tg && item.tg.index === clean) || null;
     }
 
     function findTalkgroupByName(nameStr) {
         const clean = String(nameStr || "").trim().toLowerCase();
         if (!clean) return null;
-        for (const f of folderSystem) {
-            for (const t of f.tgs) {
-                if (t.name.toLowerCase() === clean) return { tg: t, folder: f.name };
-            }
-        }
-        return null;
+        const all = getAllTalkgroupsFlat();
+        return all.find(item => item.tg && item.tg.name && item.tg.name.toLowerCase() === clean) || null;
     }
 
     window.toggleScanRowPrio = function(rowIdx, evt) {
@@ -2672,11 +2895,11 @@ Regler för radiokommunikation:
         if (activeSelection.isScanList && activeSelection.scanListObj) {
             return activeSelection.scanListObj.name;
         }
-        return activeSelection.tgObj.name;
+        return activeSelection.tgObj?.name || "IGV PO1 MPU";
     }
 
     // =========================================================
-    // 8. KEYPAD, LONG-PRESS DIRECT SELECTIONS (DV) & NAVIGATION
+    // 8. KEYPAD, DV & AUTENTISKA SNABBVAL
     // =========================================================
     let keypadTimer = null, isLongPress = false, activeKeyDown = null;
 
@@ -2762,6 +2985,9 @@ Regler för radiokommunikation:
                     txInhibit = !txInhibit;
                     showTempMsg(txInhibit ? "🚫 Sändningsspärr PÅ" : "✔ Sändningsspärr AV", 1400);
                     break;
+                case '5':
+                    document.getElementById('screen-container')?.classList.toggle('flipped');
+                    break;
                 case '6':
                     scanning = !scanning;
                     showTempMsg(`Skanning: <b>${scanning ? 'PÅ' : 'AV'}</b>`, 1400);
@@ -2772,6 +2998,9 @@ Regler för radiokommunikation:
                     break;
                 case '8': window.sendStatusToRlc("16 Biträde önskas"); break;
                 case '9': window.sendStatusToRlc("Påbörjat uppdrag"); break;
+                case '0': showTempMsg("Ej spaningsresultat skickat", 1300); break;
+                case '*': showTempMsg("Ej åtgärd/brott skickat", 1300); break;
+                case '#': showTempMsg("Hämtar HR från RLC...", 1500); break;
                 default: updateScreenDisplay(); break;
             }
             if (window.syncPresenceNow) window.syncPresenceNow();
@@ -2783,9 +3012,36 @@ Regler för radiokommunikation:
                 folderIndexInput += key;
                 const match = findTalkgroupByIndex(folderIndexInput);
                 if (match) {
-                    navFolderIndex = folderSystem.findIndex(f => f.name === match.folder);
-                    navTgIndex = folderSystem[navFolderIndex].tgs.findIndex(t => t.index === folderIndexInput);
+                    for (let r = 0; r < folderSystem.length; r++) {
+                        const root = folderSystem[r];
+                        if (root.tgs && root.tgs.some(t => t.index === folderIndexInput)) {
+                            treePath = [r];
+                            currentTgIdx = root.tgs.findIndex(t => t.index === folderIndexInput);
+                            break;
+                        }
+                        if (root.subfolders) {
+                            for (let s = 0; s < root.subfolders.length; s++) {
+                                const sub = root.subfolders[s];
+                                if (sub.tgs && sub.tgs.some(t => t.index === folderIndexInput)) {
+                                    treePath = [r, s];
+                                    currentTgIdx = sub.tgs.findIndex(t => t.index === folderIndexInput);
+                                    break;
+                                }
+                                if (sub.subfolders) {
+                                    for (let l3 = 0; l3 < sub.subfolders.length; l3++) {
+                                        const sub3 = sub.subfolders[l3];
+                                        if (sub3.tgs && sub3.tgs.some(t => t.index === folderIndexInput)) {
+                                            treePath = [r, s, l3];
+                                            currentTgIdx = sub3.tgs.findIndex(t => t.index === folderIndexInput);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+                restartAutoConfirmTimer();
                 updateScreenDisplay();
             }
             return;
@@ -2795,7 +3051,7 @@ Regler för radiokommunikation:
             if (menuState !== "IDLE") menuState = "IDLE";
             powerState = 'DIALING';
             dialInput += key;
-            if (dialInput === "*477") {
+            if (dialInput === "*477" || dialInput.toUpperCase() === "*GPS") {
                 dialInput = "";
                 powerState = 'IDLE';
                 showTempMsg(`🆔 <b>${window.MY_TACTICAL}</b><br>MSISDN: ${window.MY_MSISDN}<br>ISSI: ${window.MY_ISSI}`, 3200);
@@ -2823,6 +3079,14 @@ Regler för radiokommunikation:
         menuState = "IDLE";
         powerState = 'IDLE';
 
+        if (key === '0') {
+            speakerMuted = !speakerMuted;
+            updateScreenDisplay();
+            soundStatusDelivered();
+            showTempMsg(speakerMuted ? "🔇 Yttre högtalare AV (Ljud i snäcka)" : "🔊 Yttre högtalare PÅ", 1600);
+            return;
+        }
+
         if (['1', '3', '4', '5', '7', '9'].includes(key)) {
             const targetName = dvAssignments[key];
             if (key === '1') scanning = true;
@@ -2839,7 +3103,7 @@ Regler för radiokommunikation:
                 const temp = { ...activeSelection };
                 activeSelection = { ...previousSelection };
                 previousSelection = temp;
-                currentMode = activeSelection.tgObj.isDmo ? "DMO" : "TMO";
+                currentMode = activeSelection.tgObj?.isDmo ? "DMO" : "TMO";
                 updateScreenDisplay();
                 showTempMsg(`Växlar till föregående:<br><b>${window.getActiveTxTalkgroupName()}</b>`, 1400);
                 break;
@@ -2861,12 +3125,72 @@ Regler för radiokommunikation:
     }
 
     // =========================================================
-    // 9. ARROWS, OK, SOFTKEYS & CALL BUTTONS
+    // 9. PILAR, NAVIGERING, SOFTKEYS & LURKNAPPAR
     // =========================================================
     window.pressArrow = function(dir) {
         if (powerState === 'OFF' || powerState === 'PIN') return;
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
         soundKeypress();
+
+        if (menuState === "TAB_MENU") {
+            const curTab = TABS_LIST[tabIndex];
+            if (dir === 'höger') {
+                tabIndex = (tabIndex + 1) % TABS_LIST.length;
+                tabItemIndex = 0;
+            } else if (dir === 'vänster') {
+                tabIndex = (tabIndex - 1 + TABS_LIST.length) % TABS_LIST.length;
+                tabItemIndex = 0;
+            } else if (dir === 'ner') {
+                tabItemIndex = (tabItemIndex + 1) % curTab.items.length;
+            } else if (dir === 'upp') {
+                tabItemIndex = (tabItemIndex - 1 + curTab.items.length) % curTab.items.length;
+            }
+            updateScreenDisplay();
+            return;
+        }
+
+        if (powerState === 'FOLDERS') {
+            folderIndexInput = "";
+            const curFolder = getCurrentFolder();
+            const hasSubs = Boolean(curFolder.hasSubfolders && curFolder.subfolders && curFolder.subfolders.length > 0);
+            const hasParent = (treePath.length > 1);
+
+            let siblingList = folderSystem;
+            if (treePath.length === 2) siblingList = folderSystem[treePath[0]].subfolders;
+            else if (treePath.length === 3) siblingList = folderSystem[treePath[0]].subfolders[treePath[1]].subfolders;
+
+            let curSiblingIdx = treePath[treePath.length - 1];
+
+            if (dir === 'vänster') {
+                treePath[treePath.length - 1] = (curSiblingIdx - 1 + siblingList.length) % siblingList.length;
+                currentTgIdx = 0;
+                restartAutoConfirmTimer();
+            } else if (dir === 'höger') {
+                treePath[treePath.length - 1] = (curSiblingIdx + 1) % siblingList.length;
+                currentTgIdx = 0;
+                restartAutoConfirmTimer();
+            } else if (dir === 'ner') {
+                if (hasSubs) {
+                    treePath.push(0);
+                    currentTgIdx = 0;
+                    restartAutoConfirmTimer();
+                } else if (curFolder.tgs && curFolder.tgs.length > 0) {
+                    currentTgIdx = (currentTgIdx + 1) % curFolder.tgs.length;
+                    restartAutoConfirmTimer();
+                }
+            } else if (dir === 'upp') {
+                if (hasParent) {
+                    treePath.pop();
+                    currentTgIdx = 0;
+                    restartAutoConfirmTimer();
+                } else if (curFolder.tgs && curFolder.tgs.length > 0) {
+                    currentTgIdx = (currentTgIdx - 1 + curFolder.tgs.length) % curFolder.tgs.length;
+                    restartAutoConfirmTimer();
+                }
+            }
+            updateScreenDisplay();
+            return;
+        }
 
         if (menuState !== "IDLE") {
             if (menuState === "MAIN_MENU") {
@@ -2929,35 +3253,20 @@ Regler för radiokommunikation:
             return;
         }
 
-        if (powerState === 'FOLDERS') {
-            folderIndexInput = "";
-            if (dir === 'vänster') {
-                navFolderIndex = (navFolderIndex - 1 + folderSystem.length) % folderSystem.length;
-                navTgIndex = 0;
-            } else if (dir === 'höger') {
-                navFolderIndex = (navFolderIndex + 1) % folderSystem.length;
-                navTgIndex = 0;
-            } else if (dir === 'upp') {
-                const len = folderSystem[navFolderIndex].tgs.length;
-                navTgIndex = (navTgIndex - 1 + len) % len;
-            } else if (dir === 'ner') {
-                const len = folderSystem[navFolderIndex].tgs.length;
-                navTgIndex = (navTgIndex + 1) % len;
-            }
-            updateScreenDisplay();
-            return;
-        }
-
         if (powerState === 'IDLE') {
-            if (dir === 'vänster' || dir === 'höger') {
-                window.sendStatusToRlc("Påbörjat uppdrag");
-            } else if (dir === 'ner') {
-                menuState = "MAIN_MENU";
-                menuIndex = 0;
+            if (dir === 'ner') {
+                menuState = "TAB_MENU";
+                tabIndex = 2;
+                tabItemIndex = 0;
                 updateScreenDisplay();
+            } else if (dir === 'vänster' || dir === 'höger') {
+                window.sendStatusToRlc("Påbörjat uppdrag");
             } else if (dir === 'upp') {
+                menuState = "IDLE";
+                folderPickerMode = null;
                 powerState = 'FOLDERS';
                 folderIndexInput = "";
+                restartAutoConfirmTimer();
                 updateScreenDisplay();
             }
         }
@@ -2985,6 +3294,66 @@ Regler för radiokommunikation:
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
         soundKeypress();
 
+        if (menuState === "TAB_MENU") {
+            const curTab = TABS_LIST[tabIndex];
+            if (tabIndex === 0) {
+                if (tabItemIndex === 0) { menuState = "CONTACTS"; menuIndex = 0; }
+                else if (tabItemIndex === 1) { showTempMsg("Anropshistorik tom", 1400); }
+                else { askInput("Skapa kontakt - Ange namn:", "", () => {}); }
+            } else if (tabIndex === 1) {
+                if (tabItemIndex === 0) { menuState = "INBOX"; menuIndex = 0; }
+                else if (tabItemIndex === 3) { menuState = "STATUS_MENU"; menuIndex = 0; }
+                else { showTempMsg("Funktion ej konfigurerad", 1200); }
+            } else if (tabIndex === 2) {
+                if (tabItemIndex === 0) {
+                    menuState = "IDLE";
+                    powerState = 'FOLDERS';
+                    folderIndexInput = "";
+                    restartAutoConfirmTimer();
+                } else if (tabItemIndex === 1) {
+                    menuState = "SCAN_LISTS";
+                    menuIndex = 0;
+                } else if (tabItemIndex === 2) {
+                    scanning = !scanning;
+                    showTempMsg(`Skanning: <b>${scanning ? 'PÅ' : 'AV'}</b>`, 1400);
+                } else if (tabItemIndex === 3) {
+                    menuState = "DIREKTVAL_LIST";
+                    menuIndex = 0;
+                    dvPopupOpen = false;
+                }
+            } else if (tabIndex === 3) {
+                menuState = "GPS_VIEW";
+            } else if (tabIndex === 4) {
+                if (tabItemIndex === 0) {
+                    txInhibit = !txInhibit;
+                    showTempMsg(txInhibit ? "🚫 Sändningsspärr PÅ" : "✔ Sändningsspärr AV", 1400);
+                } else if (tabItemIndex === 1) {
+                    menuState = "MODE_SELECT";
+                    menuIndex = (currentMode === "TMO") ? 1 : 0;
+                } else {
+                    showTempMsg("Söker nätverk...", 1500);
+                }
+            } else if (tabIndex === 5) {
+                if (tabItemIndex === 2) {
+                    showTempMsg("Ändra PIN endast på personlig terminal", 1700);
+                } else if (tabItemIndex === 3) {
+                    isLocked = !isLocked;
+                    showTempMsg(isLocked ? "🔒 Tangentlås PÅ" : "🔓 Tangentlås AV", 1400);
+                } else {
+                    showTempMsg("Inställning sparad", 1200);
+                }
+            } else if (tabIndex === 6) {
+                const raw = profileOptions[tabItemIndex].substring(2);
+                currentProfile = raw;
+                menuState = "IDLE";
+                showTempMsg(`Profil aktiverad:<br><b>${profileOptions[tabItemIndex]}</b>`, 1400);
+            } else if (tabIndex === 7) {
+                menuState = "INFO_VIEW";
+            }
+            updateScreenDisplay();
+            return;
+        }
+
         if (menuState === "MAIN_MENU") {
             switch (menuIndex) {
                 case 0: menuState = "INBOX"; menuIndex = 0; updateScreenDisplay(); break;
@@ -3006,6 +3375,7 @@ Regler för radiokommunikation:
                 folderPickerMode = null;
                 powerState = 'FOLDERS';
                 folderIndexInput = "";
+                restartAutoConfirmTimer();
                 updateScreenDisplay();
             } else if (menuIndex === 1) {
                 menuState = "SCAN_LISTS";
@@ -3043,6 +3413,7 @@ Regler för radiokommunikation:
                 menuState = "IDLE";
                 powerState = 'FOLDERS';
                 folderIndexInput = "";
+                restartAutoConfirmTimer();
                 updateScreenDisplay();
             } else if (dvPopupIndex === 2) {
                 const currentDispName = getCurrentDisplayedItemName();
@@ -3062,11 +3433,8 @@ Regler för radiokommunikation:
         if (menuState === "STATUS_MENU") {
             const chosen = statusMenuOptions[menuIndex];
             menuState = "IDLE";
-            if (chosen === "Anropsbegäran") {
-                requestCallFromRlc();
-            } else {
-                window.sendStatusToRlc(chosen);
-            }
+            if (chosen === "Anropsbegäran") requestCallFromRlc();
+            else window.sendStatusToRlc(chosen);
             return;
         }
 
@@ -3132,7 +3500,7 @@ Regler för radiokommunikation:
             }
             scanPopupOpen = false;
             if (!list.editable) {
-                selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, "SKAN MPU");
+                selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, list.name);
                 menuState = "IDLE";
                 return;
             }
@@ -3145,11 +3513,10 @@ Regler för radiokommunikation:
                 folderPickerMode = 'SCAN_ADD';
                 menuState = "IDLE";
                 powerState = 'FOLDERS';
-                if (folderSystem[navFolderIndex].isScanFolder || folderSystem[navFolderIndex].isDmoFolder) {
-                    navFolderIndex = 1;
-                    navTgIndex = 0;
-                }
+                treePath = [9, 0];
+                currentTgIdx = 0;
                 folderIndexInput = "";
+                restartAutoConfirmTimer();
                 updateScreenDisplay();
             } else if (scanPopupIndex === 1) {
                 window.toggleScanRowPrio(menuIndex);
@@ -3171,7 +3538,7 @@ Regler för radiokommunikation:
                 if (!list.tgs.some(t => t.displayed) && list.tgs.length > 0) {
                     list.tgs[0].displayed = true;
                 }
-                selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, "SKAN MPU");
+                selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, list.name);
                 menuState = "IDLE";
                 soundStatusDelivered();
                 showTempMsg(`✔ <b>${list.name}</b> sparad & aktiverad!<br><span style="font-size:11px;">Display: ${window.getActiveTxTalkgroupName()}</span>`, 1800);
@@ -3192,71 +3559,7 @@ Regler för radiokommunikation:
         }
 
         if (powerState === 'FOLDERS') {
-            let chosenTg = null, chosenFolder = null;
-            if (folderIndexInput !== "") {
-                const match = findTalkgroupByIndex(folderIndexInput);
-                if (match) {
-                    chosenTg = match.tg;
-                    chosenFolder = match.folder;
-                } else {
-                    soundError();
-                    folderIndexInput = "";
-                    showTempMsg("❌ Ogiltigt talgruppsindex!", 1400);
-                    return;
-                }
-            } else {
-                const folder = folderSystem[navFolderIndex];
-                chosenTg = folder.tgs[navTgIndex];
-                chosenFolder = folder.name;
-            }
-
-            if (folderPickerMode === 'DV_ASSIGN') {
-                const curKey = dvKeysOrder[selectedDvIdx] || '1';
-                dvAssignments[curKey] = chosenTg.name;
-                folderPickerMode = null;
-                folderIndexInput = "";
-                powerState = 'IDLE';
-                menuState = "DIREKTVAL_LIST";
-                menuIndex = selectedDvIdx;
-                soundStatusDelivered();
-                updateScreenDisplay();
-                showTempMsg(`✔ <b>Direktval ${curKey}</b> programmerat:<br><b style="color:#005bb5;">${chosenTg.name}</b>`, 1800);
-                return;
-            }
-
-            if (folderPickerMode === 'SCAN_ADD') {
-                const list = scanListsData[selectedScanListIdx] || scanListsData[0];
-                if (chosenTg.isScanList || chosenTg.isDmo) {
-                    soundError();
-                    showTempMsg("❌ Välj en nät-talgrupp (TMO)!", 1500);
-                    return;
-                }
-                if (list.tgs.length >= 10) {
-                    soundError();
-                    showTempMsg("❌ Max 10 talgrupper!", 1500);
-                } else if (list.tgs.some(t => t.name === chosenTg.name)) {
-                    soundError();
-                    showTempMsg("Finns redan i skanningslistan!", 1400);
-                } else {
-                    const isOrder = chosenTg.name.toLowerCase().includes("order");
-                    list.tgs.push({
-                        name: chosenTg.name,
-                        index: chosenTg.index,
-                        prio: isOrder ? "high" : "low",
-                        displayed: list.tgs.length === 0
-                    });
-                    soundStatusDelivered();
-                }
-                folderPickerMode = null;
-                folderIndexInput = "";
-                powerState = 'IDLE';
-                menuState = "SCAN_EDIT";
-                menuIndex = list.tgs.length - 1;
-                updateScreenDisplay();
-                return;
-            }
-
-            selectTalkgroupObject(chosenTg, chosenFolder);
+            confirmFolderSelection();
             return;
         }
 
@@ -3268,6 +3571,7 @@ Regler för radiokommunikation:
         if (powerState === 'IDLE') {
             powerState = 'FOLDERS';
             folderIndexInput = "";
+            restartAutoConfirmTimer();
             updateScreenDisplay();
         }
     };
@@ -3283,13 +3587,11 @@ Regler för radiokommunikation:
             return;
         }
         if (powerState === 'FOLDERS') {
-            askInput("Ange talgruppsindex (t.ex. 7011, 712, 970):", "", (val) => {
-                if (val) {
-                    const m = findTalkgroupByIndex(val.trim());
-                    if (m) selectTalkgroupObject(m.tg, m.folder);
-                    else { soundError(); showTempMsg("❌ Index hittades ej", 1400); }
-                }
-            });
+            confirmFolderSelection();
+            return;
+        }
+        if (menuState === "TAB_MENU") {
+            window.pressCenter();
             return;
         }
         if (menuState === "SCAN_LISTS") {
@@ -3309,7 +3611,7 @@ Regler för radiokommunikation:
                 list.tgs[0].displayed = true;
             }
             scanPopupOpen = false;
-            selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, "SKAN MPU");
+            selectTalkgroupObject({ name: list.name, index: list.index, isScanList: true, scanId: list.id }, list.name);
             menuState = "IDLE";
             soundStatusDelivered();
             showTempMsg(`✔ <b>${list.name}</b> sparad!<br><span style="font-size:11px;">Displaylagd: ${window.getActiveTxTalkgroupName()}</span>`, 1700);
@@ -3324,16 +3626,18 @@ Regler för radiokommunikation:
                 folderPickerMode = null;
                 powerState = 'FOLDERS';
                 folderIndexInput = "";
+                restartAutoConfirmTimer();
                 updateScreenDisplay();
             } else if (centerSoftClicks === 2) {
-                menuState = "IDLE";
+                menuState = "STATUS_MENU";
+                menuIndex = 0;
                 powerState = 'IDLE';
-                window.sendStatusToRlc("Klar, ledig");
-            } else if (centerSoftClicks >= 3) {
-                const nextProf = (currentProfile === "Normal ljud") ? "Normal tyst" : (currentProfile === "Normal tyst" ? "Natt" : "Normal ljud");
-                currentProfile = nextProf;
                 updateScreenDisplay();
-                showTempMsg(`Profil aktiverad:<br><b>${currentProfile}</b>`, 1400);
+            } else if (centerSoftClicks >= 3) {
+                menuState = "PROFILES";
+                menuIndex = 0;
+                powerState = 'IDLE';
+                updateScreenDisplay();
             }
             centerSoftClicks = 0;
         }, 320);
@@ -3384,7 +3688,7 @@ Regler för radiokommunikation:
             return;
         }
         if (powerState === 'IDLE') {
-            menuState = "MAIN_MENU";
+            menuState = "INBOX";
             menuIndex = 0;
             updateScreenDisplay();
         }
@@ -3435,6 +3739,7 @@ Regler för radiokommunikation:
             return;
         }
         if (powerState === 'FOLDERS' || powerState === 'SMARTMENU') {
+            clearTimeout(folderAutoConfirmTimer);
             folderIndexInput = "";
             if (folderPickerMode === 'DV_ASSIGN') {
                 folderPickerMode = null;
@@ -3452,9 +3757,10 @@ Regler för radiokommunikation:
             return;
         }
         if (powerState === 'IDLE') {
-            menuState = "INBOX";
-            menuIndex = 0;
+            speakerMuted = !speakerMuted;
+            soundKeypress();
             updateScreenDisplay();
+            showTempMsg(speakerMuted ? "🔇 Ljud i tillkopplat tillbehör" : "🔊 Ljud i terminalens yttre högtalare", 1400);
         }
     };
 
@@ -3467,7 +3773,7 @@ Regler för radiokommunikation:
         redHoldTimer = setTimeout(() => {
             redLongFired = true;
             toggleRadioPower();
-        }, 1400);
+        }, 1000);
     };
     window.stopRed = function() {
         clearTimeout(redHoldTimer);
@@ -3484,6 +3790,7 @@ Regler för radiokommunikation:
                 endActiveCall();
                 return;
             }
+            clearTimeout(folderAutoConfirmTimer);
             menuState = "IDLE";
             dialInput = "";
             folderIndexInput = "";
@@ -3496,6 +3803,7 @@ Regler för radiokommunikation:
     function toggleRadioPower() {
         if (powerState !== 'OFF') {
             powerState = 'OFF';
+            clearTimeout(folderAutoConfirmTimer);
             isLocked = false; isPttActive = false; isEmergency = false; isReceivingReal = false;
             menuState = "IDLE";
             clearInterval(emergencyInterval); clearInterval(ringingInterval);
@@ -3535,12 +3843,13 @@ Regler för radiokommunikation:
         greenHoldTimer = setTimeout(() => {
             greenLongFired = true;
             if (powerState === 'FOLDERS') {
-                const tg = folderSystem[navFolderIndex].tgs[navTgIndex];
-                if (tg && tg.rlcCode) {
-                    activeRlcCode = tg.rlcCode;
+                const cur = getCurrentFolder();
+                if (cur.tgs && cur.tgs[currentTgIdx]?.rlcCode) {
+                    activeRlcCode = cur.tgs[currentTgIdx].rlcCode;
                     powerState = 'IDLE';
+                    clearTimeout(folderAutoConfirmTimer);
                     updateScreenDisplay();
-                    showTempMsg(`✔ Riktat mot <b>RLC ${activeRlcCode}</b> (${tg.name})`, 1800);
+                    showTempMsg(`✔ Riktat mot <b>RLC ${activeRlcCode}</b> (${cur.tgs[currentTgIdx].name})`, 1800);
                 }
             }
         }, 700);
@@ -3568,7 +3877,7 @@ Regler för radiokommunikation:
             return;
         }
         if (powerState === 'FOLDERS') {
-            window.pressCenter();
+            confirmFolderSelection();
             return;
         }
         if (powerState === 'IDLE') {
@@ -3604,12 +3913,27 @@ Regler för radiokommunikation:
         if (e.deltaY < 0) window.turnKnob('right');
         else window.turnKnob('left');
     };
+
     window.turnKnob = function(dir) {
         if (powerState === 'OFF' || powerState === 'BOOT' || powerState === 'PIN' || isLocked) return;
-        if (powerState === 'FOLDERS' || menuState !== "IDLE") {
+
+        if (powerState === 'FOLDERS') {
+            const curFolder = getCurrentFolder();
+            if (curFolder.tgs && curFolder.tgs.length > 0) {
+                if (dir === 'right') currentTgIdx = (currentTgIdx + 1) % curFolder.tgs.length;
+                else currentTgIdx = (currentTgIdx - 1 + curFolder.tgs.length) % curFolder.tgs.length;
+                soundKeypress();
+                restartAutoConfirmTimer();
+                updateScreenDisplay();
+                return;
+            }
+        }
+
+        if (menuState !== "IDLE") {
             window.pressArrow(dir === 'right' ? 'ner' : 'upp');
             return;
         }
+
         if (dir === 'right' && volumeLevel < 10) volumeLevel++;
         if (dir === 'left' && volumeLevel > 0) volumeLevel--;
         soundKeypress();
@@ -3641,12 +3965,11 @@ Regler för radiokommunikation:
             updateScreenDisplay();
             showTempMsg("Profil aktiverad:<br><b>5 Normal ljud</b>", 1300);
         } else if (btn === 'C') {
-            currentProfile = (currentProfile === "Natt") ? "Normal ljud" : "Natt";
+            currentProfile = "Natt";
             updateScreenDisplay();
-            showTempMsg(`Profil aktiverad:<br><b>${currentProfile === 'Natt' ? '2 Natt' : '5 Normal ljud'}</b>`, 1300);
+            showTempMsg("Profil aktiverad:<br><b>2 Natt</b>", 1300);
         }
     };
-
     function requestCallFromRlc() {
         if (!window.canReachRlcNetwork()) {
             soundError();
