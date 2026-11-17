@@ -288,6 +288,436 @@
         .rlc-form-input, .rlc-form-select, .rlc-form-textarea { width: 100%; background: #0b111a; color: #fff; border: 1px solid #2c3e55; border-radius: 6px; padding: 7px 9px; font-size: 12px; font-family: inherit; }
         .rlc-log-box { background: #080c11; border: 1px solid #1e2c3d; border-radius: 6px; padding: 6px 8px; font-family: monospace; font-size: 11px; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
         .leaflet-dark-tiles { filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(90%); }
+
+/* TITAN & HBC3 Fordonsmodul */
+.titan-dashboard {
+    position: fixed; top: 42px; left: 0; right: 0; bottom: 0;
+    background: #121417;
+    z-index: 1300; display: none; align-items: center; justify-content: center;
+    gap: 34px; padding: 18px 24px; flex-wrap: wrap; overflow-y: auto;
+    font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+}
+.titan-dashboard.active { display: flex; }
+
+/* Titan Tablet Screen */
+.titan-tablet {
+    width: 920px; height: 560px; max-width: 95vw;
+    background: #0b1118;
+    border-radius: 16px;
+    border: 12px solid #23272f;
+    outline: 1px solid #3c4350;
+    box-shadow:
+        0 24px 65px rgba(0, 0, 0, 0.88),
+        0 0 0 2px #101318,
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 0 22px rgba(0, 0, 0, 0.9);
+    display: flex; flex-direction: column; overflow: hidden; position: relative;
+}
+.titan-tablet::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    z-index: 4000;
+}
+.titan-topbar {
+    background: linear-gradient(180deg, #1b2432 0%, #101620 100%);
+    padding: 8px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    color: #f8fafc;
+    flex-shrink: 0;
+}
+.titan-top-issi { font-size: 18px; font-weight: 800; letter-spacing: 0.8px; display: flex; flex-direction: column; color: #f8fafc; }
+.titan-top-clock { font-size: 20px; text-align: center; letter-spacing: 0.5px; color: #f1f5f9; }
+.titan-top-tg {
+    background: linear-gradient(180deg, #212d3e 0%, #161f2c 100%);
+    padding: 6px 13px; border-radius: 8px;
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    display: flex; align-items: center; gap: 14px;
+}
+.titan-split {
+    flex: 1; display: grid; grid-template-columns: 55% 45%;
+    background: #0c121a; min-height: 0;
+}
+
+/* Titan Left (Map) */
+.titan-left-pane {
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    position: relative; display: flex; flex-direction: column; min-height: 0;
+}
+.titan-map-area { flex: 1; background: #0d131a; position: relative; min-height: 0; }
+#titanMapContainer .leaflet-tile-pane {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+.titan-patrol-marker {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #2563eb; border: 3px solid #ffffff;
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.35), 0 3px 10px rgba(0, 0, 0, 0.8);
+}
+.titan-hr-marker {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #ef4444; border: 3px solid #fef2f2;
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.4), 0 3px 12px rgba(0, 0, 0, 0.85);
+}
+
+/* Titan Right (Grid) */
+.titan-right-pane {
+    padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    align-content: stretch; min-height: 0;
+    background: linear-gradient(180deg, #0f1621 0%, #0b1018 100%);
+}
+.titan-col { display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+.titan-btn {
+    background: linear-gradient(180deg, #273244 0%, #19222f 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px; color: #f1f5f9;
+    font-family: inherit; font-size: 13.5px; font-weight: 700; letter-spacing: 0.2px;
+    padding: 11px 12px; min-height: 44px;
+    display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: transform 0.08s ease, filter 0.12s ease, box-shadow 0.12s ease;
+}
+.titan-btn:hover { filter: brightness(1.1); border-color: rgba(255, 255, 255, 0.22); }
+.titan-btn:active { transform: translateY(1px); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); filter: brightness(0.95); }
+.titan-btn-icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.titan-btn-stack {
+    flex-direction: column; justify-content: center; text-align: center;
+    gap: 3px; padding: 8px 6px; line-height: 1.15; font-size: 12px;
+}
+.titan-btn-action {
+    background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+    border: 1px solid rgba(134, 239, 172, 0.45);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.titan-btn-mission {
+    background: linear-gradient(180deg, #0ea5e9 0%, #0f766e 100%);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(14, 165, 233, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.titan-btn-normal {
+    background: linear-gradient(180deg, #3b4b63 0%, #1e293b 100%);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #e2e8f0;
+}
+.titan-btn-grey {
+    background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #e2e8f0;
+}
+
+/* Titan Bottom Bar */
+.titan-bottombar {
+    background: linear-gradient(180deg, #161f2c 0%, #0d131c 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex; justify-content: space-around; padding: 7px 5px; flex-shrink: 0;
+}
+.titan-bottom-btn {
+    background: transparent; border: none; border-bottom: 3px solid transparent;
+    color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 600; cursor: pointer; padding: 4px 12px; border-radius: 6px;
+}
+.titan-bottom-btn:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.titan-bottom-btn.active { color: #fff; border-bottom: 3px solid #3b82f6; }
+.titan-bottom-icon { font-size: 18px; line-height: 1; }
+
+/* HBC3 Handset */
+.hbc3-handset {
+    width: 264px; height: 560px;
+    background:
+        radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(155deg, #2b2f36 0%, #181a1f 48%, #111316 100%);
+    background-size: 4px 4px, 100% 100%;
+    border-radius: 24px 24px 32px 32px;
+    border: 2px solid #090a0c;
+    box-shadow:
+        12px 20px 42px rgba(0, 0, 0, 0.85),
+        inset 0 1px 2px rgba(255, 255, 255, 0.16),
+        inset 0 -6px 14px rgba(0, 0, 0, 0.85),
+        inset 0 0 0 4px rgba(255, 255, 255, 0.03);
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    padding: 12px 12px 14px 12px; flex-shrink: 0;
+}
+.hbc3-top {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    padding: 0 18px; height: 24px; margin-bottom: 6px;
+}
+.hbc3-knob {
+    width: 38px; height: 20px;
+    background: repeating-linear-gradient(90deg, #16181c, #343840 2px, #0b0c0e 4px);
+    border-radius: 5px; border: 1px solid #000;
+    box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.18), 0 3px 6px rgba(0, 0, 0, 0.7);
+    cursor: ns-resize;
+}
+.hbc3-speaker-slot {
+    width: 68px; height: 8px; border-radius: 4px;
+    background: repeating-linear-gradient(90deg, #0b0c0e 0px, #0b0c0e 3px, #25282e 3px, #25282e 5px);
+    border: 1px solid #000; box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.9);
+}
+.hbc3-emerg {
+    width: 38px; height: 16px;
+    background: linear-gradient(180deg, #ff453a 0%, #b91c1c 100%);
+    border-radius: 4px; border: 1px solid #450a0a;
+    box-shadow: 0 0 0 2px #101214, inset 0 2px 2px rgba(255, 255, 255, 0.45), 0 2px 6px rgba(220, 38, 38, 0.5);
+    cursor: pointer;
+}
+.hbc3-emerg:active { transform: translateY(1px); background: #991b1b; }
+.hbc3-screen-bezel {
+    background: linear-gradient(180deg, #0b0c0e 0%, #15171b 100%);
+    padding: 8px; border-radius: 8px; width: 96%; margin-bottom: 10px;
+    border: 1px solid #000;
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.95), 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+.hbc3-screen {
+    overflow: hidden; position: relative; background: #fff; width: 100%; height: 175px;
+    border-radius: 2px; border: 1px solid #2b2f36;
+    font-family: 'Tahoma', sans-serif;
+}
+#hbc3InnerScaler {
+    position: absolute; top: 0; left: 0;
+    transform-origin: top left;
+}
+.hbc3-ptt {
+    position: absolute; left: -16px; top: 145px; width: 16px; height: 96px;
+    background: linear-gradient(to right, #ff9500, #d96b00 60%, #9a4700);
+    border-radius: 8px 0 0 8px; border: 1px solid #000;
+    box-shadow: inset 2px 0 3px rgba(255, 255, 255, 0.45), -3px 4px 10px rgba(0, 0, 0, 0.65);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    writing-mode: vertical-rl; color: rgba(0, 0, 0, 0.75);
+    font-size: 9px; font-weight: 900; letter-spacing: 1px;
+}
+.hbc3-ptt:active { transform: translateX(2px); background: #cc5200; }
+.hbc3-keypad { width: 94%; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.hbc3-softkeys { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+.hbc3-soft-btn {
+    background: linear-gradient(to bottom, #4b4f57, #202328);
+    border: 1px solid #050505; height: 24px; border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.hbc3-soft-btn:active { transform: translateY(1px); background: #16181c; }
+.hbc3-nav-cluster {
+    display: grid; grid-template-columns: 42px 1fr 42px; gap: 6px;
+    align-items: center; margin: 1px 0;
+}
+.hbc3-call-btn {
+    height: 36px; border-radius: 10px; border: 1px solid #000; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+.hbc3-call-btn:active { transform: translateY(1px); }
+.hbc3-call-green { background: linear-gradient(to bottom, #22c55e, #15803d); }
+.hbc3-call-red { background: linear-gradient(to bottom, #ef4444, #b91c1c); }
+.hbc3-dpad {
+    display: grid; grid-template-columns: repeat(3, 28px); grid-template-rows: repeat(3, 28px);
+    gap: 2px; justify-content: center; margin: 0 auto;
+    background: linear-gradient(145deg, #16181d, #090a0c);
+    border-radius: 50%; padding: 5px; border: 1px solid #2a2e35;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.95), 0 3px 6px rgba(0, 0, 0, 0.7);
+}
+.hbc3-dpad button {
+    background: linear-gradient(to bottom, #3b3f47, #1c1f24);
+    border: 1px solid #050505; color: #e2e8f0; font-size: 10px; cursor: pointer;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.16);
+}
+.hbc3-dpad button:active { background: #0f1114; }
+.hbc3-numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 2px; }
+.hbc3-num-btn {
+    background: linear-gradient(to bottom, #34383f, #181a1e);
+    border: 1px solid #050505; border-bottom: 2px solid #000;
+    border-radius: 8px; height: 32px; color: #f8fafc; font-size: 15px; font-weight: bold;
+    cursor: pointer; display: flex; align-items: baseline; justify-content: center; gap: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.14);
+}
+.hbc3-num-btn:active { transform: translateY(1px); background: #121417; }
+.hbc3-num-btn span { font-size: 8.5px; color: #9ca3af; font-weight: normal; letter-spacing: 0.4px; }
+
+/* TITAN Meny-overlays & HR-larm */
+.titan-overlay {
+    position: absolute; top: 52px; left: 0; right: 0; bottom: 52px;
+    background: rgba(12, 18, 26, 0.96); z-index: 2000; display: none;
+    flex-direction: column; padding: 20px; color: #fff;
+}
+.titan-overlay.active { display: flex; }
+.titan-overlay-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid #374151; padding-bottom: 10px; margin-bottom: 15px;
+    font-size: 20px; font-weight: bold;
+}
+.titan-overlay-close {
+    background: #e74c3c; border: none; color: #fff; padding: 8px 16px;
+    border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;
+}
+.titan-overlay-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    overflow-y: auto; flex: 1; align-content: start;
+}
+.titan-hr-banner {
+    position: absolute; top: 60px; left: 15px; right: 15px;
+    background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+    border: 2px solid #f87171; border-radius: 10px; padding: 14px 18px;
+    color: #fff; z-index: 2500; display: none; flex-direction: column; gap: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.85);
+}
+.titan-hr-banner.active { display: flex; }
+.titan-hr-actions { display: flex; gap: 10px; margin-top: 6px; }
+.titan-hr-btn {
+    flex: 1; padding: 10px; border: none; border-radius: 6px;
+    font-weight: bold; font-size: 14px; cursor: pointer; color: #fff;
+}
+
+/* Layoutlägen för TITAN Split-screen */
+.titan-split.mode-split { grid-template-columns: 55% 45%; }
+.titan-split.mode-left-full { grid-template-columns: 1fr; }
+.titan-split.mode-left-full .titan-right-pane { display: none; }
+.titan-split.mode-right-full { grid-template-columns: 1fr; }
+.titan-split.mode-right-full .titan-left-pane { display: none; }
+
+/* Kartans "Mer"-popover */
+.titan-map-popover {
+    position: absolute; top: 58px; left: 15px; width: 220px;
+    background: rgba(17, 24, 39, 0.96); border: 1px solid #4b5563;
+    border-radius: 10px; padding: 8px; z-index: 1500; display: none;
+    flex-direction: column; gap: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+}
+.titan-map-popover.active { display: flex; }
+.titan-map-pop-btn {
+    background: #1f2937; border: 1px solid #374151; color: #f3f4f6;
+    padding: 10px 12px; border-radius: 6px; text-align: left; font-size: 13px;
+    font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;
+}
+.titan-map-pop-btn:hover { background: #374151; }
+
+/* TITAN Adress-autosuggest Modal */
+.titan-addr-modal {
+    position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+    width: 440px; max-width: 90%; background: rgba(17, 24, 39, 0.98);
+    border: 2px solid #3b82f6; border-radius: 12px; padding: 16px;
+    z-index: 3000; display: none; flex-direction: column; gap: 10px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.9); color: #fff;
+}
+.titan-addr-modal.active { display: flex; }
+.titan-addr-input {
+    width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #4b5563;
+    background: #0f172a; color: #fff; font-size: 15px; box-sizing: border-box;
+}
+.titan-addr-input:focus { outline: none; border-color: #3b82f6; }
+.titan-addr-suggestions {
+    display: flex; flex-direction: column; gap: 6px; max-height: 210px; overflow-y: auto;
+}
+.titan-addr-item {
+    background: #1f2937; border: 1px solid #374151; padding: 10px 12px;
+    border-radius: 6px; cursor: pointer; text-align: left; font-size: 13px; color: #f3f4f6;
+}
+.titan-addr-item:hover { background: #2563eb; border-color: #60a5fa; }
+
+/* TITAN Ljus & Siren Status Pill & Rengöringslås */
+.titan-emerg-pill {
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800;
+    letter-spacing: 0.4px; display: none; align-items: center; gap: 6px;
+    text-transform: uppercase;
+}
+.titan-emerg-pill.cruise {
+    display: inline-flex; background: rgba(37, 99, 235, 0.28);
+    border: 1px solid #60a5fa; color: #93c5fd;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.45);
+}
+.titan-emerg-pill.prio1 {
+    display: inline-flex; background: rgba(220, 38, 38, 0.35);
+    border: 1px solid #f87171; color: #fecaca;
+    animation: titanSirenPulse 0.7s infinite alternate;
+}
+@keyframes titanSirenPulse {
+    0% { background: rgba(220, 38, 38, 0.45); border-color: #ef4444; box-shadow: 0 0 14px rgba(239, 68, 68, 0.65); }
+    100% { background: rgba(37, 99, 235, 0.45); border-color: #3b82f6; box-shadow: 0 0 14px rgba(59, 130, 246, 0.65); }
+}
+.titan-clean-lock {
+    position: absolute; inset: 0; background: rgba(7, 11, 18, 0.92);
+    z-index: 4500; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; color: #f8fafc;
+    backdrop-filter: blur(4px); text-align: center; padding: 20px;
+}
+.titan-clean-lock.active { display: flex; }
+.titan-toast {
+    position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.96); color: #f8fafc;
+    border: 1.5px solid #38bdf8; border-radius: 10px;
+    padding: 10px 18px; font-size: 13px; font-weight: 700;
+    z-index: 4600; display: none; align-items: center; gap: 8px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.75); pointer-events: none;
+    white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis;
+}
+.titan-toast.active { display: flex; }
+.hbc3-handset button, .hbc3-knob, .hbc3-ptt, .hbc3-emerg { touch-action: manipulation; }
+
+/* TITAN Fristående Taktisk Karta (Karta #2) */
+.titan-freemap-view {
+    position: absolute; top: 52px; left: 0; right: 0; bottom: 52px;
+    background: #0c121a; z-index: 1800; display: none; flex-direction: column;
+}
+.titan-freemap-view.active { display: flex; }
+.titan-freemap-toolbar {
+    position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1900;
+    display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; pointer-events: none;
+}
+.titan-freemap-group {
+    display: flex; flex-wrap: wrap; gap: 6px; pointer-events: auto;
+}
+.titan-freemap-pill {
+    background: rgba(17, 24, 39, 0.94); border: 1px solid #4b5563; color: #fff;
+    padding: 7px 11px; border-radius: 20px; font-size: 12px; font-weight: bold;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 5px;
+}
+.titan-freemap-pill:hover { background: #2563eb; border-color: #60a5fa; }
+.titan-freemap-pill.active-layer { background: #2563eb; border-color: #93c5fd; }
+.titan-freemap-pill.active-tool { background: #16a34a; border-color: #86efac; }
+
+/* TITAN Utökad HR-läsvy & Scenariesimulator */
+.titan-overlay-grid:has(> .titan-hr-layout) {
+    grid-template-rows: 1fr; align-content: stretch; overflow: hidden;
+}
+.titan-hr-layout {
+    display: grid; grid-template-columns: 320px 1fr; gap: 16px;
+    flex: 1; overflow: hidden; height: 100%; min-height: 0;
+}
+.titan-hr-sidebar {
+    background: #111827; border: 1px solid #374151; border-radius: 8px;
+    padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto;
+}
+.titan-hr-scenario-btn {
+    background: #1f2937; border: 1px solid #374151; color: #f3f4f6;
+    padding: 10px 12px; border-radius: 6px; text-align: left; cursor: pointer;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.titan-hr-scenario-btn:hover { background: #2563eb; border-color: #60a5fa; }
+.titan-hr-prio-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 11px; font-weight: bold; width: fit-content;
+}
+.prio-1 { background: #dc2626; color: #fff; }
+.prio-2 { background: #d97706; color: #fff; }
+.titan-hr-reader {
+    background: #111827; border: 1px solid #374151; border-radius: 8px;
+    padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+}
+.titan-hr-meta-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    background: #1f2937; padding: 10px 12px; border-radius: 6px; font-size: 13px;
+}
+.titan-hr-log-box {
+    background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+    padding: 12px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+    font-family: 'Consolas', 'Courier New', monospace; font-size: 13px;
+}
+.titan-hr-log-entry {
+    border-left: 3px solid #3b82f6; padding-left: 10px; line-height: 1.4;
+}
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -317,8 +747,49 @@
     let db, auth;
     window.multiplayerEnabled = false;
     window.localSentTxIds = new Set();
+    window._rakelTabId = window._rakelTabId || ('tab_' + Math.random().toString(36).slice(2, 10));
 
     const localTxChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('rakel_local_tx_guard') : null;
+    window._tabPatrolGpsOverrides = window._tabPatrolGpsOverrides || {};
+    const hrBridgeChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('rakel_hr_bridge') : null;
+    if (hrBridgeChannel) {
+        hrBridgeChannel.onmessage = (ev) => {
+            const d = ev.data;
+            if (!d || d.senderTabId === window._rakelTabId) return;
+            if (d.bridgeType === 'PATROL_GPS_UPDATE') {
+                if (d.tactical && typeof d.lat === 'number' && typeof d.lng === 'number') {
+                    window._tabPatrolGpsOverrides[d.tactical] = {
+                        lat: d.lat,
+                        lng: d.lng,
+                        locationName: d.locationName || '',
+                        ts: Date.now()
+                    };
+                    if (window.isRlcViewActive && window.isRlcViewActive() && window.refreshRlcDashboard) {
+                        window.refreshRlcDashboard();
+                    }
+                }
+                return;
+            }
+            if (d.target === window.MY_ISSI || d.target === window.MY_MSISDN || d.target === window.MY_TACTICAL || d.target === "ALL") {
+                if (window.receiveTitanHrAlarm) {
+                    window.receiveTitanHrAlarm(d.title, d.details, d.lat, d.lng, d.address, true, false, {
+                        id: d.hrId || undefined,
+                        prio: d.hrPrio || 1,
+                        code: d.hrCode || "0000 HR-larm",
+                        caller: d.hrCaller || "RLC",
+                        tg: d.tg || "",
+                        units: d.hrUnits || d.target,
+                        summary: d.hrSummary || d.details
+                    });
+                }
+            }
+        };
+    }
+    window.broadcastLocalHrBridge = function(payload) {
+        if (hrBridgeChannel) {
+            try { hrBridgeChannel.postMessage({ ...payload, senderTabId: window._rakelTabId }); } catch (e) {}
+        }
+    };
     if (localTxChannel) {
         localTxChannel.onmessage = (ev) => {
             if (ev.data && ev.data.txId) window.localSentTxIds.add(ev.data.txId);
@@ -380,7 +851,8 @@
                     const data = change.doc.data();
                     if (data.timestamp > sessionStartTime) {
                         if (window.onRlcSdsMonitor) window.onRlcSdsMonitor(data);
-                        const isNotFromMe = !data.senderUid || data.senderUid !== auth.currentUser.uid;
+                        const isDifferentTab = data.senderTabId && data.senderTabId !== window._rakelTabId;
+                        const isNotFromMe = !data.senderUid || data.senderUid !== auth.currentUser.uid || (isDifferentTab && !(window.isRlcViewActive && window.isRlcViewActive()));
                         if (isNotFromMe && (data.to_issi === window.MY_ISSI || data.to_issi === window.MY_MSISDN || data.to_issi === window.MY_TACTICAL || data.to_issi === "ALL")) {
                             if (data.type === "RLC_RING") {
                                 if (window.triggerIncomingRlcRingFromConsole) window.triggerIncomingRlcRingFromConsole(data.rlcCode || "9-7");
@@ -388,6 +860,28 @@
                                 if (window.handleRemoteCallHangup) window.handleRemoteCallHangup();
                             } else if (data.type === "RLC_SET_STATUS" && data.newStatus) {
                                 if (window.applyStatusFromRlcConsole) window.applyStatusFromRlcConsole(data.newStatus, data.rlcCode || "9-7");
+                            } else if (data.type === "RLC_HR_ALARM") {
+                                window.receiveSds(data.from_issi, data.msg, data.ttsText || "", data.tg || "");
+                                if (window.receiveTitanHrAlarm) {
+                                    window.receiveTitanHrAlarm(
+                                        data.hrTitle || "HR-uppdrag",
+                                        data.hrDetails || data.msg,
+                                        data.hrLat,
+                                        data.hrLng,
+                                        data.hrAddress || "Uppdragsplats",
+                                        true,
+                                        false,
+                                        {
+                                            id: data.hrId || undefined,
+                                            prio: data.hrPrio || 1,
+                                            code: data.hrCode || "0000 HR-larm",
+                                            caller: data.hrCaller || data.from_issi || "RLC",
+                                            tg: data.tg || "",
+                                            units: data.hrUnits || data.to_issi,
+                                            summary: data.hrSummary || data.hrDetails || data.msg
+                                        }
+                                    );
+                                }
                             } else {
                                 window.receiveSds(data.from_issi, data.msg, data.ttsText || "", data.tg || "");
                             }
@@ -478,9 +972,10 @@
 
         window.syncPresenceNow = async function() {
             const rlcActive = window.isRlcViewActive && window.isRlcViewActive();
+            const titanActive = document.getElementById('titanDashboard')?.classList.contains('active');
             const radioOn = window.getPowerState && window.getPowerState() !== 'OFF' && window.getPowerState() !== 'BOOT' && window.getPowerState() !== 'PIN';
             if (auth && auth.currentUser && window.getActiveTxTalkgroupName) {
-                if (radioOn || rlcActive) {
+                if (radioOn || rlcActive || titanActive) {
                     const curRlc = window.getActiveRlcCode ? window.getActiveRlcCode() : "9-7";
                     await setDoc(doc(db, 'presence', auth.currentUser.uid), {
                         uid: auth.currentUser.uid,
@@ -512,6 +1007,7 @@
             const senderLabel = extra.fromOverride || (window.MY_ALIAS ? `${window.MY_TACTICAL} (${window.MY_ALIAS})` : window.MY_TACTICAL);
             await addDoc(collection(db, 'sds'), {
                 senderUid: auth.currentUser.uid,
+                senderTabId: window._rakelTabId,
                 from_issi: senderLabel,
                 to_issi: toIssi,
                 msg: msgText,
@@ -520,6 +1016,17 @@
                 ttsText: extra.ttsText || "",
                 tg: extra.tg || "",
                 rlcCode: extra.rlcCode || "9-7",
+                hrId: extra.hrId || "",
+                hrPrio: extra.hrPrio || 1,
+                hrCode: extra.hrCode || "",
+                hrCaller: extra.hrCaller || "",
+                hrUnits: extra.hrUnits || "",
+                hrSummary: extra.hrSummary || "",
+                hrTitle: extra.hrTitle || "",
+                hrDetails: extra.hrDetails || "",
+                hrAddress: extra.hrAddress || "",
+                hrLat: typeof extra.hrLat === 'number' ? extra.hrLat : null,
+                hrLng: typeof extra.hrLng === 'number' ? extra.hrLng : null,
                 timestamp: Date.now()
             });
         };
@@ -536,6 +1043,13 @@
 
         window.dbSendAudio = async function(base64Data, tgName, senderOverride = null) {
             if(!auth || !auth.currentUser) return;
+            const curPowerState = window.getPowerState ? window.getPowerState() : null;
+            const isRlcActive = window.isRlcViewActive ? window.isRlcViewActive() : false;
+            const activeCallTarget = window.getRlcActiveCallTarget ? window.getRlcActiveCallTarget() : null;
+            if ((!isRlcActive && (curPowerState === 'IN_CALL_RLC' || curPowerState === 'RLC_CONNECTED')) || (isRlcActive && activeCallTarget !== null)) {
+                tgName = "PRIVATE_CALL_" + (activeCallTarget || window.MY_TACTICAL);
+            }
+
             const txId = `${auth.currentUser.uid}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
             window.markLocalMachineTransmitting(txId);
 
@@ -592,6 +1106,7 @@
 <div class="top-bar pin-locked" id="topBar">
     <div class="top-bar-group">
         <button class="top-btn" id="rlcViewToggleBtn" onclick="toggleRlcViewMode()" style="background:linear-gradient(to bottom,#8e44ad,#5b2c6f);border-color:#d2b4de;">🖥️ RLC-vy</button>
+        <button class="top-btn" id="titanViewToggleBtn" onclick="toggleTitanViewMode()" style="background:linear-gradient(to bottom,#34495e,#2c3e50);border-color:#7f8c8d;">🚓 TITAN-vy</button>
         <button class="top-btn" id="gwPanelBtn" onclick="toggleVehiclePanel()">🚓 Gateway</button>
         <button class="top-btn active-gw" id="aiRlcToggleBtn" onclick="toggleAiRlcMode()" title="Slå på/av röststyrd kvinnlig AI-operatör (RLC 9-7)">🤖 AI-röst: PÅ</button>
         <button class="top-btn active-gw" id="spontanBtn" onclick="toggleSpontaneousMode()">🚨 Spontan: PÅ</button>
@@ -603,6 +1118,7 @@
         <button class="top-btn" id="pwaInstallBtn" onclick="installPwaApp()" style="background:linear-gradient(to bottom,#16a085,#117864);border-color:#76d7c4;">📲 App</button>
         <button class="top-btn" id="apiKeyBtn" onclick="promptApiKey()">🔑</button>
         <button class="top-btn" onclick="toggleLathund()">📘 Manual</button>
+        <button class="top-btn" onclick="hardResetApp()" style="background:#e74c3c;border-color:#c0392b;">♻️ Rensa</button>
     </div>
 </div>
 <div class="pin-lock-banner" id="pinLockBanner">🔒 Starta Rakel (håll in Röd lur) och slå in PIN-kod för att låsa upp!</div>
@@ -780,6 +1296,233 @@
             <div style="border-top:1px solid #26354a;margin:4px 0;"></div>
             <div style="font-size:11px;font-weight:bold;color:#94a3b8;">3. INKOMMANDE STATUS & SAMBANDSLOGG:</div>
             <div class="rlc-log-box" id="rlcEventLogBox"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TITAN & HBC3 FORDONSMODUL -->
+<div class="titan-dashboard" id="titanDashboard">
+    
+    <!-- TITAN TABLET -->
+    <div class="titan-tablet">
+        <div class="titan-topbar">
+            <div class="titan-top-issi">
+                <span id="titanIssiNumber">33-9000</span>
+                <span style="font-size:10px; font-weight:normal; color:#9ca3af;">👤 u0000000</span>
+            </div>
+            <div id="titanEmergencyPill" class="titan-emerg-pill"></div>
+            <div class="titan-top-clock">
+                <div id="titanClockTime" style="font-weight:bold;">13:37</div>
+                <div id="titanClockDate" style="font-size:12px; color:#9ca3af;">Mån 27 april</div>
+            </div>
+            <div class="titan-top-tg">
+                <div>
+                    <div id="titanCurrentTg" style="font-size:16px; font-weight:bold;">Trafik Insats 1</div>
+                    <div id="titanAudioOutLabel" style="font-size:11px; color:#9ca3af;">🎧 HBC3 Handenhet</div>
+                </div>
+                <div id="titanAudioOutIcon" title="Växla ljudutgång" style="font-size:22px; cursor:pointer;" onclick="toggleTitanAudioOutput()">🔊</div>
+            </div>
+        </div>
+        
+        <div class="titan-split">
+            <div class="titan-left-pane">
+                <div onclick="toggleTitanMapMenu()" style="position:absolute; top:15px; left:15px; z-index:1000; background:rgba(255,255,255,0.9); padding:8px 16px; border-radius:20px; color:#000; font-weight:bold; cursor:pointer;">
+                    <span style="font-size:16px;">▤</span> Mer
+                </div>
+                <div class="titan-map-popover" id="titanMapPopover">
+                    <button class="titan-map-pop-btn" onclick="titanMapAction('center')">🎯 Centrera på fordon</button>
+                    <button class="titan-map-pop-btn" onclick="titanMapAction('zoomin')">➕ Zooma in</button>
+                    <button class="titan-map-pop-btn" onclick="titanMapAction('zoomout')">➖ Zooma ut</button>
+                    <button class="titan-map-pop-btn" onclick="titanMapAction('theme')">🌓 Växla Dag/Natt-karta</button>
+                    <button class="titan-map-pop-btn" onclick="titanMapAction('clearroute')">🧹 Rensa rutt/markering</button>
+                </div>
+                <div id="titanMapContainer" class="titan-map-area">
+                    <div style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.75); color:#fff; padding:10px 20px; border-radius:8px; z-index:1000; pointer-events:none;">
+                        <div style="font-size:18px; text-align:center;">📍</div>
+                        <div id="titanLocationName">Kungsholmsgatan</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="titan-right-pane">
+                <div class="titan-col">
+                    <button class="titan-btn" onclick="titanOpenStatusMenu()"><span class="titan-btn-icon">💬</span><span>Status</span></button>
+                    <button class="titan-btn" onclick="titanOpenGateControl()"><span class="titan-btn-icon">🔓</span><span>Portöppning</span></button>
+                    <button class="titan-btn" onclick="titanOpenInbox()"><span class="titan-btn-icon">✉️</span><span>SDS</span></button>
+                    <button class="titan-btn" onclick="titanOpenRightMoreMenu()"><span class="titan-btn-icon">▤</span><span>Mer</span></button>
+                    <button class="titan-btn titan-btn-grey titan-btn-stack" onclick="titanPrevTg()" style="margin-top:auto; height:64px;">
+                        <span style="font-size:17px;">↺</span>
+                        <span>Föregående<br>Talgrupp</span>
+                    </button>
+                </div>
+                <div class="titan-col">
+                    <button class="titan-btn" onclick="titanOpenInsats()"><span class="titan-btn-icon">🎯</span><span>Insats</span></button>
+                    <button class="titan-btn" onclick="titanOpenRaps()"><span class="titan-btn-icon">✳️</span><span>Raps</span></button>
+                    <button class="titan-btn" onclick="titanSearchTg()"><span class="titan-btn-icon">🔍</span><span>Sök talgrupp</span></button>
+                    <button class="titan-btn" onclick="titanIndexInput()"><span class="titan-btn-icon">🔢</span><span>Index</span></button>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:auto;">
+                        <button class="titan-btn titan-btn-normal titan-btn-stack" onclick="titanNormalTg()" style="height:64px;">
+                            <span style="font-size:14px; font-weight:800;">(N)</span>
+                            <span>Normal-<br>passning</span>
+                        </button>
+                        <button class="titan-btn titan-btn-mission titan-btn-stack" onclick="titanStartMission()" style="height:64px;">
+                            <span style="font-size:15px;">▶</span>
+                            <span>Påbörj<br>Uppdrag</span>
+                        </button>
+                    </div>
+                </div>
+                <button class="titan-btn titan-btn-action" onclick="titanCallRequest()" style="grid-column: 2; height:52px; justify-content:center; font-size:14.5px;">
+                    <span class="titan-btn-icon">📞</span><span>Anropsbegäran</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="titan-bottombar">
+            <button class="titan-bottom-btn" id="tNavExpandLeft" title="Maximera vänster panel" onclick="titanSetLayout('left-full')"><span class="titan-bottom-icon">⤢</span></button>
+            <button class="titan-bottom-btn" id="tNavNavigation" onclick="titanBottomNav('navigation')"><span class="titan-bottom-icon">🧭</span>Navigation</button>
+            <button class="titan-bottom-btn" id="tNavKamera" onclick="titanBottomNav('kamera')"><span class="titan-bottom-icon">📹</span>Kamera</button>
+            <button class="titan-bottom-btn" id="tNavMeny" onclick="titanBottomNav('meny')"><span class="titan-bottom-icon">⋯</span>Meny</button>
+            <button class="titan-bottom-btn" id="tNavHem" onclick="titanBottomNav('hem')"><span class="titan-bottom-icon">🏠</span>Hem</button>
+            <button class="titan-bottom-btn" id="tNavKarta" onclick="titanBottomNav('karta')"><span class="titan-bottom-icon">🗺️</span>Karta</button>
+            <button class="titan-bottom-btn active" id="tNavHR" onclick="titanBottomNav('hr')"><span class="titan-bottom-icon">📋</span>HR</button>
+            <button class="titan-bottom-btn active" id="tNavRakel" style="color:#f39c12; border-color:#f39c12;" onclick="titanBottomNav('rakel')"><span class="titan-bottom-icon">📡</span>Rakel</button>
+            <button class="titan-bottom-btn" id="tNavExpandRight" title="Maximera höger panel" onclick="titanSetLayout('right-full')"><span class="titan-bottom-icon">⤡</span></button>
+        </div>
+        <!-- TITAN INTERAKTIV MENY-OVERLAY -->
+        <div class="titan-overlay" id="titanOverlay">
+            <div class="titan-overlay-header">
+                <span id="titanOverlayTitle">Meny</span>
+                <button class="titan-overlay-close" onclick="closeTitanOverlay()">✕ Stäng</button>
+            </div>
+            <div class="titan-overlay-grid" id="titanOverlayContent"></div>
+        </div>
+
+        <!-- TITAN HR-LARM BANNER -->
+        <div class="titan-hr-banner" id="titanHrBanner">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold; font-size:16px;">🚨 INKOMMANDE HR-UPPDRAG (PRIO 1)</span>
+                <span id="titanHrTime" style="font-size:12px; opacity:0.9;">Nyss</span>
+            </div>
+            <div id="titanHrText" style="font-size:15px; font-weight:bold;">Trafikolycka - E4 Norrgående, avfart 122</div>
+            <div id="titanHrDetails" style="font-size:13px; color:#fecaca;">Räddningstjänst och ambulans larmade. Insatskanal tilldelad.</div>
+            <div class="titan-hr-actions">
+                <button class="titan-hr-btn" style="background:#16a34a;" onclick="acceptTitanHrAlarm()">✔ Kvittera & Påbörja</button>
+                <button class="titan-hr-btn" style="background:#374151;" onclick="dismissTitanHrAlarm()">Dölj</button>
+            </div>
+        </div>
+
+        <!-- TITAN ADRESS-AUTOSUGGEST MODAL -->
+        <div class="titan-addr-modal" id="titanAddrModal">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong id="titanAddrModalTitle" style="font-size:15px;">🧭 Sök adress</strong>
+                <button class="titan-overlay-close" style="padding:4px 10px;" onclick="closeTitanAddressSearch()">✕</button>
+            </div>
+            <input type="text" id="titanAddrInput" class="titan-addr-input" placeholder="Börja skriv gata, plats eller stad..." oninput="onTitanAddressInput(this.value)" autocomplete="off" />
+            <div id="titanAddrSuggestions" class="titan-addr-suggestions"></div>
+        </div>
+
+        <!-- TITAN TALGRUPP LIVE-SÖK MODAL -->
+        <div class="titan-addr-modal" id="titanTgSearchModal">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="font-size:15px;">🔍 Sök talgrupp</strong>
+                <button class="titan-overlay-close" style="padding:4px 10px;" onclick="closeTitanTgSearch()">✕</button>
+            </div>
+            <input type="text" id="titanTgSearchInput" class="titan-addr-input" placeholder="Skriv t.ex. MPU, Insats, RAPS eller index..." oninput="onTitanTgSearchInput(this.value)" autocomplete="off" />
+            <div id="titanTgSearchSuggestions" class="titan-addr-suggestions"></div>
+        </div>
+
+        <!-- TITAN INDEX LIVE-SÖK MODAL -->
+        <div class="titan-addr-modal" id="titanIndexSearchModal">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="font-size:15px;">🔢 Sök via Indexnummer</strong>
+                <button class="titan-overlay-close" style="padding:4px 10px;" onclick="closeTitanIndexSearch()">✕</button>
+            </div>
+            <input type="text" id="titanIndexSearchInput" class="titan-addr-input" inputmode="numeric" placeholder="Skriv indexnummer (t.ex. 005, 101)..." oninput="onTitanIndexSearchInput(this.value)" autocomplete="off" />
+            <div id="titanIndexSearchSuggestions" class="titan-addr-suggestions"></div>
+        </div>
+
+        <div class="titan-clean-lock" id="titanCleanLock">
+            <div style="font-size:36px;">🔒</div>
+            <div style="font-size:18px; font-weight:800;">Skärmlås (Rengöring)</div>
+            <div style="font-size:13px; color:#94a3b8;">Pekskärmen är spärrad så du kan torka av skärmen.</div>
+            <div id="titanCleanCountdown" style="font-size:28px; font-weight:900; color:#38bdf8;">10 s</div>
+        </div>
+
+        <div class="titan-toast" id="titanToast"></div>
+        <!-- TITAN FRISTÅENDE TAKTISK KARTA (KARTA #2) -->
+        <div class="titan-freemap-view" id="titanFreeMapView">
+            <div class="titan-freemap-toolbar">
+                <div class="titan-freemap-group">
+                    <button class="titan-freemap-pill active-layer" id="btnFreeMapStreet" onclick="setTitanFreeMapLayer('street')">🗺️ Vägkarta</button>
+                    <button class="titan-freemap-pill" id="btnFreeMapSat" onclick="setTitanFreeMapLayer('satellite')">🛰️ Flygfoto / Satellit</button>
+                    <button class="titan-freemap-pill" onclick="focusFreeMapOnHr()">🚨 Visa HR-plats</button>
+                    <button class="titan-freemap-pill" onclick="focusFreeMapOnPatrol()">🚓 Visa patrull</button>
+                    <button class="titan-freemap-pill" id="btnFreeMapToolBreakpoint" onclick="setTitanFreeMapDrawTool('breakpoint')">📍 Sätt Brytpunkt</button>
+                    <button class="titan-freemap-pill" id="btnFreeMapToolRoadblock" onclick="setTitanFreeMapDrawTool('roadblock')">🚧 Avspärrning</button>
+                    <button class="titan-freemap-pill" id="btnFreeMapToolLine" onclick="setTitanFreeMapDrawTool('line')">✏️ Rita flyktväg / linje</button>
+                    <button class="titan-freemap-pill" onclick="clearTitanFreeMapAnnotations()">🗑️ Rensa markeringar</button>
+                </div>
+                <div class="titan-freemap-group">
+                    <button class="titan-freemap-pill" style="background:#dc2626; border-color:#f87171;" onclick="closeTitanFreeMap()">✕ Tillbaka till Navigation</button>
+                </div>
+            </div>
+            <div id="titanFreeMapContainer" style="flex:1; width:100%; height:100%;"></div>
+        </div>
+        <div id="titanBlackout" style="position:absolute; top:0; left:0; width:100%; height:100%; background:#000; z-index:5000; display:none; cursor:pointer;" onclick="this.style.display='none'"></div>
+    </div>
+
+    <!-- HBC3 HANDSET -->
+    <div class="hbc3-handset">
+        <div class="hbc3-top">
+            <div class="hbc3-knob" title="Volym (- / + eller skrolla)" onwheel="handleKnobScroll(event)" style="display:flex; overflow:hidden;">
+                <div style="flex:1; height:100%; display:flex; align-items:center; justify-content:center; font-size:11px; color:rgba(255,255,255,0.55); font-weight:bold;" onpointerdown="unlockBrowserAudio(); turnKnob('left');">-</div>
+                <div style="flex:1; height:100%; display:flex; align-items:center; justify-content:center; font-size:11px; color:rgba(255,255,255,0.55); font-weight:bold;" onpointerdown="unlockBrowserAudio(); turnKnob('right');">+</div>
+            </div>
+            <div class="hbc3-speaker-slot"></div>
+            <div class="hbc3-emerg" title="Förtursknapp" onpointerdown="unlockBrowserAudio(); startEmergencyBtn()" onpointerup="stopEmergencyBtn()" onpointerleave="stopEmergencyBtn()"></div>
+        </div>
+        
+        <div class="hbc3-ptt" title="PTT" onpointerdown="startPtt(event)" onpointerup="stopPtt(event)" onpointerleave="cancelPtt(event)" onpointercancel="cancelPtt(event)">PTT</div>
+        
+        <div class="hbc3-screen-bezel">
+            <div class="hbc3-screen" id="hbc3Display">
+                <div id="hbc3InnerScaler"></div>
+            </div>
+        </div>
+        
+        <div class="hbc3-keypad">
+            <div class="hbc3-softkeys">
+                <button class="hbc3-soft-btn" onpointerdown="unlockBrowserAudio(); triggerLeftSoft()"><div class="soft-dot"></div></button>
+                <button class="hbc3-soft-btn" onpointerdown="unlockBrowserAudio(); pressCenterSoft()"><div class="soft-square"></div></button>
+                <button class="hbc3-soft-btn" onpointerdown="unlockBrowserAudio(); triggerRightSoft()"><div class="soft-dot"></div></button>
+            </div>
+            
+            <div class="hbc3-nav-cluster">
+                <button class="hbc3-call-btn hbc3-call-green" onpointerdown="unlockBrowserAudio(); pressGreen()" onpointerup="stopGreen()" onpointerleave="cancelGreen()" onpointercancel="cancelGreen()">📞</button>
+                <div class="hbc3-dpad">
+                    <button style="grid-column:2; grid-row:1; border-radius:6px 6px 2px 2px;" onpointerdown="unlockBrowserAudio(); pressArrow('upp')">▲</button>
+                    <button style="grid-column:1; grid-row:2; border-radius:6px 2px 2px 6px;" onpointerdown="unlockBrowserAudio(); pressArrow('vänster')">◄</button>
+                    <button style="grid-column:2; grid-row:2; border-radius:50%; background:#1f2228;" onpointerdown="unlockBrowserAudio(); pressCenter()"></button>
+                    <button style="grid-column:3; grid-row:2; border-radius:2px 6px 6px 2px;" onpointerdown="unlockBrowserAudio(); pressArrow('höger')">►</button>
+                    <button style="grid-column:2; grid-row:3; border-radius:2px 2px 6px 6px;" onpointerdown="unlockBrowserAudio(); pressArrow('ner')">▼</button>
+                </div>
+                <button class="hbc3-call-btn hbc3-call-red" onpointerdown="unlockBrowserAudio(); startRed()" onpointerup="stopRed()" onpointerleave="cancelRed()" onpointercancel="cancelRed()">☎</button>
+            </div>
+            
+            <div class="hbc3-numpad">
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('1', event)" onpointerup="onKeypadUp('1', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">1</button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('2', event)" onpointerup="onKeypadUp('2', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">2 <span>abc</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('3', event)" onpointerup="onKeypadUp('3', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">3 <span>def</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('4', event)" onpointerup="onKeypadUp('4', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">4 <span>ghi</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('5', event)" onpointerup="onKeypadUp('5', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">5 <span>jkl</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('6', event)" onpointerup="onKeypadUp('6', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">6 <span>mno</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('7', event)" onpointerup="onKeypadUp('7', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">7 <span>pqrs</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('8', event)" onpointerup="onKeypadUp('8', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">8 <span>tuv</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('9', event)" onpointerup="onKeypadUp('9', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">9 <span>wxyz</span></button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('*', event)" onpointerup="onKeypadUp('*', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">*</button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('0', event)" onpointerup="onKeypadUp('0', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">0</button>
+                <button class="hbc3-num-btn" onpointerdown="onKeypadDown('#', event)" onpointerup="onKeypadUp('#', event)" onpointerleave="onKeypadLeave()" onpointercancel="onKeypadLeave()">#</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1226,6 +1969,7 @@
     ];
 
     const folderSystem = [
+        { name: "EGEN", level: 1, tgs: [{ name: "Tom", index: "000" }] },
         { name: "SKAN MPU", isScanFolder: true, tgs: [
             { name: "SKAN IGV PO1 MPU", index: "7801", isScanList: true, scanId: 1 },
             { name: "SKAN LPO CENTRUM", index: "7802", isScanList: true, scanId: 2 },
@@ -1412,6 +2156,7 @@
 
     let menuState = "IDLE";
     let menuIndex = 0;
+    let menuSubIndex = 0;
     const mainMenuItems = [
         { title: "Meddelanden", short: "Meddel.", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" fill="#f39c12" stroke="#002855" stroke-width="1.5"/><polyline points="2,6 12,13 22,6" fill="none" stroke="#fff" stroke-width="1.8"/></svg>` },
         { title: "Statusmeny", short: "Status", icon: `<svg width="22" height="22" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="#3498db" stroke="#002855" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="8" stroke="#fff" stroke-width="2"/><line x1="8" y1="12" x2="16" y2="12" stroke="#fff" stroke-width="2"/><line x1="8" y1="16" x2="13" y2="16" stroke="#fff" stroke-width="2"/></svg>` },
@@ -1471,6 +2216,7 @@
     };
 
     window.getPowerState = () => powerState;
+    window.getRlcActiveCallTarget = () => rlcActiveCallTarget;
     window.getRadioStatus = () => radioStatus;
     window.getNetworkStatusForRlc = () => hasPendingCallRequest ? "Anropsbegäran" : radioStatus;
     window.getActiveRlcCode = () => activeRlcCode;
@@ -1542,6 +2288,15 @@
     };
 
     window.shouldReceiveTransmission = function(incomingTg, isBridged = false) {
+        if (typeof incomingTg === 'string' && incomingTg.startsWith("PRIVATE_CALL_")) {
+            const targetPatrol = incomingTg.replace("PRIVATE_CALL_", "");
+            if (window.isRlcViewActive()) {
+                return rlcActiveCallTarget === targetPatrol;
+            }
+            if (powerState === 'OFF' || powerState === 'BOOT' || powerState === 'PIN') return false;
+            return window.MY_TACTICAL === targetPatrol && (powerState === 'IN_CALL_RLC' || powerState === 'RLC_CONNECTED');
+        }
+
         if (window.isRlcViewActive()) {
             const gw = window.getAnyActiveGateway();
             if (DMO_TG_NAMES.has(incomingTg)) {
@@ -2115,6 +2870,7 @@ Regler för radiokommunikation:
         if (sl) sl.innerHTML = l || "";
         if (sc) sc.innerHTML = c || "";
         if (sr) sr.innerHTML = r || "";
+        if (typeof window.updateTitanDisplay === 'function') window.updateTitanDisplay();
     }
 
     function updateScreenDisplay() {
@@ -2126,6 +2882,7 @@ Regler för radiokommunikation:
         if (powerState === 'OFF') {
             screenContainer.classList.add("off");
             setLed('left', ''); setLed('right', '');
+            if (typeof window.updateTitanDisplay === 'function') window.updateTitanDisplay();
             return;
         }
         screenContainer.classList.remove("off");
@@ -2182,7 +2939,11 @@ Regler för radiokommunikation:
             const tgIcon = tg.isScanList ? '📻' : (tg.isDmo ? '⇄' : '👥');
             const headerLabel = folderPickerMode === 'DV_ASSIGN'
                 ? `Direktval ${dvKeysOrder[selectedDvIdx]} ➔ Välj TG`
-                : (folderPickerMode === 'SCAN_ADD' ? `Lägg till i ${(scanListsData[selectedScanListIdx] || scanListsData[0]).name}` : `Välj talgrupp (${navFolderIndex + 1}/${folderSystem.length})`);
+                : (folderPickerMode === 'SCAN_ADD'
+                    ? `Lägg till i ${(scanListsData[selectedScanListIdx] || scanListsData[0]).name}`
+                    : (folderPickerMode === 'FOLDER_ADD' && window.addingToFolderIndex !== undefined && window.addingToFolderIndex !== null && folderSystem[window.addingToFolderIndex]
+                        ? `Lägg till i ${folderSystem[window.addingToFolderIndex].name}`
+                        : `Välj talgrupp (${navFolderIndex + 1}/${folderSystem.length})`));
             display.innerHTML = `
                 <div class="sepura-top-net"><span>${headerLabel}</span><span>${getTime()}</span></div>
                 <div class="ui-box-frame" style="padding:4px 5px;justify-content:space-between;">
@@ -2376,6 +3137,51 @@ Regler för radiokommunikation:
                 else updateSoftkeys("Detaljer", "Mer", "Åter");
                 return;
             }
+            if (menuState === "FOLDER_LIST") {
+                display.innerHTML = `
+                    <div class="ui-box-frame">
+                        <div class="ui-title"><span>📁 Mappar</span><span>${menuIndex + 1}/${folderSystem.length}</span></div>
+                        <div class="menu-list">
+                            ${folderSystem.map((f, idx) => `<div class="menu-row ${idx === menuIndex ? 'selected' : ''}" onclick="menuIndex=${idx};pressCenter()">
+                                <span>📁 ${f.name}</span>
+                                <span>►</span>
+                            </div>`).join('')}
+                        </div>
+                    </div>`;
+                updateSoftkeys("Öppna", "Välj", "Åter");
+                return;
+            }
+            if (menuState === "FOLDER_OPTIONS") {
+                const opts = ["Visa innehåll", "Lägg till grupp"];
+                display.innerHTML = `
+                    <div class="ui-box-frame">
+                        <div class="ui-title"><span>Alternativ</span></div>
+                        <div class="menu-list">
+                            ${opts.map((opt, idx) => `<div class="menu-row ${idx === menuSubIndex ? 'selected' : ''}" onclick="menuSubIndex=${idx};pressCenter()">
+                                <span>${opt}</span>
+                            </div>`).join('')}
+                        </div>
+                    </div>`;
+                updateSoftkeys("Välj", "", "Åter");
+                return;
+            }
+
+            if (menuState === "FOLDER_CONTENTS") {
+                const folder = folderSystem[menuIndex];
+                const tgs = folder.tgs || [];
+                display.innerHTML = `
+                    <div class="ui-box-frame">
+                        <div class="ui-title"><span>📁 ${folder.name}</span><span>${tgs.length > 0 ? (menuSubIndex + 1) + '/' + tgs.length : '0/0'}</span></div>
+                        <div class="menu-list">
+                            ${tgs.length === 0 ? '<div class="menu-row"><span>(Tom mapp)</span></div>' :
+                            tgs.map((tg, idx) => `<div class="menu-row ${idx === menuSubIndex ? 'selected' : ''}" onclick="menuSubIndex=${idx};pressCenter()">
+                                <span>👥 ${tg.name}</span>
+                            </div>`).join('')}
+                        </div>
+                    </div>`;
+                updateSoftkeys("", "Välj", "Åter");
+                return;
+            }
             if (menuState === "SCAN_LISTS") {
                 display.innerHTML = `
                     <div class="ui-box-frame">
@@ -2499,12 +3305,14 @@ Regler för radiokommunikation:
                 </div>
             </div>`;
         updateSoftkeys("Meny", "Grupper", "Inkorg");
+        if (typeof window.updateTitanDisplay === 'function') window.updateTitanDisplay();
     }
 
     function showTempMsg(html, duration = 1800) {
         const display = document.getElementById('display');
         if (!display || powerState === 'OFF') return;
         display.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;font-size:13px;font-weight:bold;"><div>${html}</div></div>`;
+        if (typeof window.updateTitanDisplay === 'function') window.updateTitanDisplay();
         clearTimeout(returnToIdleTimeout);
         returnToIdleTimeout = setTimeout(() => {
             if (powerState !== 'OFF') updateScreenDisplay();
@@ -2679,6 +3487,8 @@ Regler för radiokommunikation:
     // 8. KEYPAD, LONG-PRESS DIRECT SELECTIONS (DV) & NAVIGATION
     // =========================================================
     let keypadTimer = null, isLongPress = false, activeKeyDown = null;
+    let hbc3ZeroHoldTimer = null;
+    let hbc3ZeroLongPressed = false;
 
     window.onKeypadDown = function(key, evt) {
         if (evt) evt.preventDefault();
@@ -2688,6 +3498,18 @@ Regler för radiokommunikation:
         isLongPress = false;
         activeKeyDown = key;
         clearTimeout(keypadTimer);
+        if (key === '0' && document.getElementById('titanDashboard')?.classList.contains('active')) {
+            hbc3ZeroLongPressed = false;
+            clearTimeout(hbc3ZeroHoldTimer);
+            hbc3ZeroHoldTimer = setTimeout(() => {
+                hbc3ZeroLongPressed = true;
+                isLongPress = true;
+                if (typeof window.toggleTitanAudioOutput === 'function') {
+                    window.toggleTitanAudioOutput();
+                }
+            }, 650);
+            return;
+        }
         keypadTimer = setTimeout(() => {
             isLongPress = true;
             handleLongPressKey(key);
@@ -2697,6 +3519,15 @@ Regler för radiokommunikation:
     window.onKeypadUp = function(key, evt) {
         if (evt) evt.preventDefault();
         if (powerState === 'OFF' || powerState === 'BOOT') return;
+        if (key === '0') {
+            clearTimeout(hbc3ZeroHoldTimer);
+            if (hbc3ZeroLongPressed) {
+                hbc3ZeroLongPressed = false;
+                isLongPress = false;
+                activeKeyDown = null;
+                return; // Förhindra att kort-trycks-logiken körs efter ett långt tryck
+            }
+        }
         clearTimeout(keypadTimer);
         if (!isLongPress && activeKeyDown === key) {
             handleShortPressKey(key);
@@ -2707,6 +3538,8 @@ Regler för radiokommunikation:
 
     window.onKeypadLeave = function() {
         clearTimeout(keypadTimer);
+        clearTimeout(hbc3ZeroHoldTimer);
+        hbc3ZeroLongPressed = false;
         isLongPress = false;
         activeKeyDown = null;
     };
@@ -2823,9 +3656,28 @@ Regler för radiokommunikation:
         menuState = "IDLE";
         powerState = 'IDLE';
 
-        if (['1', '3', '4', '5', '7', '9'].includes(key)) {
+        if (key === '1') {
+            previousSelection = { ...activeSelection };
+            currentMode = "TMO";
+            scanning = true;
+            const sList = scanListsData[0];
+            activeSelection = {
+                isScanList: true,
+                scanListObj: sList,
+                tgObj: sList.tgs[0],
+                folderName: sList.name
+            };
+            lastTmoSelection = { ...activeSelection };
+            powerState = 'IDLE';
+            updateScreenDisplay();
+            if (window.syncPresenceNow) window.syncPresenceNow();
+            if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+            showTempMsg(`Vald talgrupp:<br><span style="color:#005bb5;font-size:15px;">${window.getActiveTxTalkgroupName()}</span>`, 1400);
+            return;
+        }
+
+        if (['3', '4', '5', '7', '9'].includes(key)) {
             const targetName = dvAssignments[key];
-            if (key === '1') scanning = true;
             const m = findTalkgroupByName(targetName);
             if (m) selectTalkgroupObject(m.tg, m.folder);
             return;
@@ -2867,6 +3719,16 @@ Regler för radiokommunikation:
         if (powerState === 'OFF' || powerState === 'PIN') return;
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
         soundKeypress();
+
+        if (menuState === "FOLDER_OPTIONS" || menuState === "FOLDER_CONTENTS") {
+            let maxLen = menuState === "FOLDER_OPTIONS" ? 2 : (folderSystem[menuIndex].tgs ? folderSystem[menuIndex].tgs.length : 0);
+            if (maxLen > 0) {
+                if (dir === 'ner') menuSubIndex = (menuSubIndex + 1) % maxLen;
+                if (dir === 'upp') menuSubIndex = (menuSubIndex - 1 + maxLen) % maxLen;
+            }
+            updateScreenDisplay();
+            return;
+        }
 
         if (menuState !== "IDLE") {
             if (menuState === "MAIN_MENU") {
@@ -2911,6 +3773,7 @@ Regler för radiokommunikation:
             if (menuState === "PROFILES") maxLen = profileOptions.length;
             if (menuState === "INBOX") maxLen = Math.max(1, sdsInbox.length);
             if (menuState === "SCAN_LISTS") maxLen = scanListsData.length;
+            if (menuState === "FOLDER_LIST") maxLen = folderSystem.length;
             if (menuState === "SCAN_EDIT") maxLen = Math.max(1, (scanListsData[selectedScanListIdx] || scanListsData[0]).tgs.length);
 
             if (dir === 'ner') menuIndex = (menuIndex + 1) % maxLen;
@@ -2985,6 +3848,35 @@ Regler för radiokommunikation:
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
         soundKeypress();
 
+        if (menuState === "FOLDER_OPTIONS") {
+            if (menuSubIndex === 0) {
+                menuState = "FOLDER_CONTENTS";
+                menuSubIndex = 0;
+                updateScreenDisplay();
+            } else if (menuSubIndex === 1) {
+                window.addingToFolderIndex = menuIndex;
+                menuState = "IDLE";
+                folderPickerMode = 'FOLDER_ADD';
+                powerState = 'FOLDERS';
+                folderIndexInput = "";
+                updateScreenDisplay();
+            }
+            return;
+        }
+
+        if (menuState === "FOLDER_CONTENTS") {
+            const folder = folderSystem[menuIndex];
+            if (!folder.tgs || folder.tgs.length === 0) return;
+            navFolderIndex = menuIndex;
+            navTgIndex = menuSubIndex;
+            menuState = "IDLE";
+            folderPickerMode = null;
+            powerState = 'FOLDERS';
+            folderIndexInput = "";
+            updateScreenDisplay();
+            return;
+        }
+
         if (menuState === "MAIN_MENU") {
             switch (menuIndex) {
                 case 0: menuState = "INBOX"; menuIndex = 0; updateScreenDisplay(); break;
@@ -3002,10 +3894,8 @@ Regler för radiokommunikation:
 
         if (menuState === "TG_SUBMENU") {
             if (menuIndex === 0) {
-                menuState = "IDLE";
-                folderPickerMode = null;
-                powerState = 'FOLDERS';
-                folderIndexInput = "";
+                menuState = "FOLDER_LIST";
+                menuIndex = 0;
                 updateScreenDisplay();
             } else if (menuIndex === 1) {
                 menuState = "SCAN_LISTS";
@@ -3051,6 +3941,17 @@ Regler för radiokommunikation:
                 updateScreenDisplay();
                 showTempMsg(`✔ <b>Direktval ${curKey}</b> programmerat:<br><b style="color:#005bb5;">${currentDispName}</b>`, 1800);
             }
+            return;
+        }
+
+        if (menuState === "FOLDER_LIST") {
+            navFolderIndex = menuIndex;
+            navTgIndex = 0;
+            menuState = "IDLE";
+            folderPickerMode = null;
+            powerState = 'FOLDERS';
+            folderIndexInput = "";
+            updateScreenDisplay();
             return;
         }
 
@@ -3145,8 +4046,9 @@ Regler för radiokommunikation:
                 folderPickerMode = 'SCAN_ADD';
                 menuState = "IDLE";
                 powerState = 'FOLDERS';
-                if (folderSystem[navFolderIndex].isScanFolder || folderSystem[navFolderIndex].isDmoFolder) {
-                    navFolderIndex = 1;
+                if (folderSystem[navFolderIndex].isScanFolder || folderSystem[navFolderIndex].isDmoFolder || folderSystem[navFolderIndex].name === "EGEN") {
+                    const firstRegIdx = folderSystem.findIndex(f => !f.isScanFolder && !f.isDmoFolder && f.name !== "EGEN");
+                    navFolderIndex = firstRegIdx >= 0 ? firstRegIdx : 0;
                     navTgIndex = 0;
                 }
                 folderIndexInput = "";
@@ -3208,6 +4110,23 @@ Regler för radiokommunikation:
                 const folder = folderSystem[navFolderIndex];
                 chosenTg = folder.tgs[navTgIndex];
                 chosenFolder = folder.name;
+            }
+
+            if (typeof window.addingToFolderIndex !== 'undefined' && window.addingToFolderIndex !== null) {
+                const targetFolder = folderSystem[window.addingToFolderIndex];
+                if (targetFolder && chosenTg) {
+                    targetFolder.tgs.push(chosenTg);
+                    soundStatusDelivered();
+                    const savedName = targetFolder.name;
+                    window.addingToFolderIndex = null;
+                    folderPickerMode = null;
+                    folderIndexInput = "";
+                    powerState = 'IDLE';
+                    menuState = "FOLDER_LIST";
+                    updateScreenDisplay();
+                    showTempMsg(`Tillagd i ${savedName}`, 2000);
+                }
+                return;
             }
 
             if (folderPickerMode === 'DV_ASSIGN') {
@@ -3292,6 +4211,10 @@ Regler för radiokommunikation:
             });
             return;
         }
+        if (menuState === "FOLDER_LIST" || menuState === "FOLDER_CONTENTS") {
+            window.pressCenter();
+            return;
+        }
         if (menuState === "SCAN_LISTS") {
             scanning = !scanning;
             updateScreenDisplay();
@@ -3370,6 +4293,27 @@ Regler för radiokommunikation:
         if (powerState === 'PIN') { window.pressCenter(); return; }
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
         if (powerState === 'RINGING_RLC') { window.pressGreen(); return; }
+        if (menuState === "FOLDER_LIST") {
+            menuState = "FOLDER_OPTIONS";
+            menuSubIndex = 0;
+            updateScreenDisplay();
+            return;
+        }
+        if (menuState === "FOLDER_OPTIONS") {
+            if (menuSubIndex === 0) {
+                menuState = "FOLDER_CONTENTS";
+                menuSubIndex = 0;
+                updateScreenDisplay();
+            } else if (menuSubIndex === 1) {
+                window.addingToFolderIndex = menuIndex;
+                menuState = "IDLE";
+                folderPickerMode = 'FOLDER_ADD';
+                powerState = 'FOLDERS';
+                folderIndexInput = "";
+                updateScreenDisplay();
+            }
+            return;
+        }
         if (powerState === 'RLC_CONNECTED' || powerState === 'CALL_ACTIVE') {
             askInput("Skriv svar/rapport till RLC:", "", (txt) => {
                 if (txt) {
@@ -3398,6 +4342,11 @@ Regler för radiokommunikation:
             return;
         }
         if (isLocked) { soundError(); showTempMsg("🔒 Knapplås aktivt", 1200); return; }
+        if (menuState === "FOLDER_OPTIONS" || menuState === "FOLDER_CONTENTS") {
+            menuState = "FOLDER_LIST";
+            updateScreenDisplay();
+            return;
+        }
         if (powerState === 'DIALING') {
             dialInput = dialInput.slice(0, -1);
             if (dialInput === "") powerState = 'IDLE';
@@ -3422,7 +4371,7 @@ Regler för radiokommunikation:
             if (menuState === "SCAN_EDIT") {
                 menuState = "SCAN_LISTS";
                 menuIndex = selectedScanListIdx;
-            } else if (menuState === "DIREKTVAL_LIST" || menuState === "SCAN_LISTS") {
+            } else if (menuState === "DIREKTVAL_LIST" || menuState === "SCAN_LISTS" || menuState === "FOLDER_LIST") {
                 menuState = "TG_SUBMENU";
                 menuIndex = 0;
             } else if (menuState !== "MAIN_MENU" && menuState !== "MODE_SELECT") {
@@ -3436,6 +4385,15 @@ Regler för radiokommunikation:
         }
         if (powerState === 'FOLDERS' || powerState === 'SMARTMENU') {
             folderIndexInput = "";
+            if (typeof window.addingToFolderIndex !== 'undefined' && window.addingToFolderIndex !== null) {
+                window.addingToFolderIndex = null;
+                folderPickerMode = null;
+                powerState = 'IDLE';
+                menuState = "FOLDER_OPTIONS";
+                menuSubIndex = 1; // Hoppa tillbaka till "Lägg till grupp"
+                updateScreenDisplay();
+                return;
+            }
             if (folderPickerMode === 'DV_ASSIGN') {
                 folderPickerMode = null;
                 powerState = 'IDLE';
@@ -3601,6 +4559,7 @@ Regler för radiokommunikation:
     }
 
     window.handleKnobScroll = function(e) {
+        if (e && e.preventDefault) e.preventDefault();
         if (e.deltaY < 0) window.turnKnob('right');
         else window.turnKnob('left');
     };
@@ -3619,8 +4578,12 @@ Regler för radiokommunikation:
             vo.style.opacity = '1';
             vb.style.height = `${volumeLevel * 10}%`;
             vb.style.backgroundColor = volumeLevel === 0 ? '#e74c3c' : '#2ecc71';
+            if (typeof window.updateTitanDisplay === 'function') window.updateTitanDisplay();
             clearTimeout(volumeUI_Timeout);
-            volumeUI_Timeout = setTimeout(() => { vo.style.opacity = '0'; }, 1400);
+            volumeUI_Timeout = setTimeout(() => {
+                vo.style.opacity = '0';
+                if (typeof window.updateTitanDisplay === 'function') window.updateTitanDisplay();
+            }, 1400);
         }
     };
 
@@ -3662,7 +4625,9 @@ Regler för radiokommunikation:
         if (window.refreshRlcDashboard) window.refreshRlcDashboard();
         appendRlcLog(`📞 Anropsbegäran från ${window.formatPatrolCallsignPairs(window.MY_TACTICAL)}${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''} till RLC ${activeRlcCode} (Klicka på patrullen för att svara)`, true);
         updateScreenDisplay();
+        showTempMsg("<div style='font-size:14px;font-weight:bold;color:#000;padding:10px;'>Sänder status<br><span style='color:#002855;font-size:16px;'>Anropsbegäran</span><br><br><span style='color:#2ecc71;font-size:12px;'>✔ Levererat</span></div>", 2000);
     }
+    window.sendCallRequestToRlc = requestCallFromRlc;
 
     window.triggerIncomingRlcRingFromConsole = function(rlcCodeStr = "9-7") {
         if (powerState === 'OFF' || powerState === 'PIN') return;
@@ -4000,17 +4965,32 @@ Regler för radiokommunikation:
         }
     }, 35000);
 
+    window.titanSdsMessages = window.titanSdsMessages || [];
+
     window.receiveSds = function(from, text, ttsText = "", tgName = "") {
         if (powerState === 'OFF' || powerState === 'PIN') return;
         // Strict DMO check: If in DMO without Gateway, cannot receive RLC SDS/dispatches
         if (!window.canReachRlcNetwork() && String(from).includes("RLC")) {
             return;
         }
-        sdsInbox.push({ from: from, text: text, time: getTime() });
+        const entry = {
+            from: from,
+            to: window.MY_TACTICAL || "Mig",
+            text: text,
+            time: getTime()
+        };
+        sdsInbox.push(entry);
+        window.titanSdsMessages.push(entry);
         soundStatusDelivered();
         setLed('right', 'blue');
         setTimeout(() => setLed('right', ''), 2500);
         showTempMsg(`✉️ <b>Nytt SDS från ${from}:</b><br><span style="font-size:11px;font-weight:normal;">${text}</span>`, 3500);
+
+        const overlayEl = document.getElementById('titanOverlay');
+        const overlayTitle = document.getElementById('titanOverlayTitle')?.innerText || "";
+        if (overlayEl && overlayEl.classList.contains('active') && overlayTitle.includes('Inkorg')) {
+            if (typeof window.titanOpenInbox === 'function') window.titanOpenInbox();
+        }
 
         if (ttsText && !window.isRlcViewActive()) {
             setTimeout(() => {
@@ -4155,6 +5135,14 @@ Regler för radiokommunikation:
         } else {
             units = units.filter(u => u.tactical !== window.MY_TACTICAL);
         }
+        const nowMs = Date.now();
+        units = units.map(u => {
+            const ov = window._tabPatrolGpsOverrides?.[u.tactical];
+            if (ov && (nowMs - ov.ts < 15000) && u.tactical !== window.MY_TACTICAL) {
+                return { ...u, lat: ov.lat, lng: ov.lng, locationName: ov.locationName || u.locationName };
+            }
+            return u;
+        });
         return [...units, ...window.simulatedPatrols];
     }
 
@@ -4279,6 +5267,12 @@ Regler för radiokommunikation:
             if (window.syncPresenceNow) window.syncPresenceNow();
             if (window.updateOnlinePillUI) window.updateOnlinePillUI();
         } else {
+            const titanDash = document.getElementById('titanDashboard');
+            const titanBtn = document.getElementById('titanViewToggleBtn');
+            const sc21 = document.getElementById('scale-wrapper');
+            if (titanDash) titanDash.classList.remove('active');
+            if (titanBtn) { titanBtn.innerHTML = '🚓 TITAN-vy'; titanBtn.classList.remove('active-gw'); }
+            if (sc21) sc21.style.display = 'flex';
             d.classList.add('active');
             b.innerText = "📱 Handterminal";
             initRlcMapIfNeeded();
@@ -4946,20 +5940,76 @@ Regler för radiokommunikation:
             }
         }
 
-        const hrText = `🚨 HR: ${type} | Plats: ${addr} | TG: ${tg} | ${desc}`;
+        const hrId = "HR-" + new Date().getFullYear() + "-" + String(Math.floor(1000 + Math.random() * 9000));
+        const typeLower = type.toLowerCase();
+        const hrPrio = (typeLower.includes("rattfylleri") || typeLower.includes("försvunnen") || typeLower.includes("ordningsstörning") || typeLower.includes("prio 2")) ? 2 : 1;
+        const hrText = `🚨 HR [${hrId}]: ${type} | Plats: ${addr} | TG: ${tg} | ${desc}`;
         const targetLabel = target === "ALL" ? "samtliga patruller" : window.formatPatrolCallsignPairs(target);
         const spokenDispatch = `${targetLabel} från ${activeRlcCode}. ${type}, ${addr}. Tilldelad talgrupp ${tg}. ${desc}, kom.`;
+        const hrLat = selectedHrCoords ? selectedHrCoords.lat : 58.5877;
+        const hrLng = selectedHrCoords ? selectedHrCoords.lng : 16.1924;
+        const hrDetailsStr = `${desc ? desc + ' ' : ''}(Talgrupp: ${tg})`;
+        const hrCaller = `RLC ${activeRlcCode}`;
+        const hrUnits = target === "ALL" ? "Samtliga larmade patruller" : target;
+
         if (window.dbSendSds) {
             window.dbSendSds(target, hrText, {
-                fromOverride: `RLC ${activeRlcCode}`,
+                type: "RLC_HR_ALARM",
+                fromOverride: hrCaller,
                 ttsText: spokenDispatch,
-                tg: tg
+                tg: tg,
+                hrId: hrId,
+                hrPrio: hrPrio,
+                hrCode: `RLC-${hrPrio} ${type}`,
+                hrCaller: hrCaller,
+                hrUnits: hrUnits,
+                hrSummary: desc || type,
+                hrTitle: type,
+                hrDetails: hrDetailsStr,
+                hrAddress: addr,
+                hrLat: hrLat,
+                hrLng: hrLng
             });
+        }
+        if (window.broadcastLocalHrBridge) {
+            window.broadcastLocalHrBridge({
+                target: target,
+                title: type,
+                details: hrDetailsStr,
+                lat: hrLat,
+                lng: hrLng,
+                address: addr,
+                tg: tg,
+                hrId: hrId,
+                hrPrio: hrPrio,
+                hrCode: `RLC-${hrPrio} ${type}`,
+                hrCaller: hrCaller,
+                hrUnits: hrUnits,
+                hrSummary: desc || type
+            });
+        }
+        if (target === window.MY_TACTICAL || target === "ALL") {
+            window._pendingTitanHrAlarm = {
+                title: type,
+                details: hrDetailsStr,
+                lat: hrLat,
+                lng: hrLng,
+                address: addr,
+                hrMeta: {
+                    id: hrId,
+                    prio: hrPrio,
+                    code: `RLC-${hrPrio} ${type}`,
+                    caller: hrCaller,
+                    tg: tg,
+                    units: hrUnits,
+                    summary: desc || type
+                }
+            };
         }
 
         if (rlcMap) {
             const hrIcon = L.divIcon({ className: '', html: `<div class="map-hr-label">🚨 ${type} (${tg})</div>`, iconSize: [160, 24], iconAnchor: [80, 12] });
-            rlcHrMarkers.push(L.marker([selectedHrCoords.lat, selectedHrCoords.lng], { icon: hrIcon }).addTo(rlcMap));
+            rlcHrMarkers.push(L.marker([hrLat, hrLng], { icon: hrIcon }).addTo(rlcMap));
         }
 
         appendRlcLog(`🚨 RLC ${activeRlcCode} larmade ut HR (${type} @ ${addr}) till ${targetLabel} på ${tg}`);
@@ -5199,6 +6249,1609 @@ Regler för radiokommunikation:
         const nativeBox = document.getElementById('pwaNativeInstallBox');
         if (nativeBox) nativeBox.style.display = 'none';
         document.getElementById('pwaInstallModal').style.display = 'none';
+    };
+
+    window.hardResetApp = async function() {
+        localStorage.clear();
+        if ('serviceWorker' in navigator) {
+            try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let r of regs) await r.unregister();
+            } catch (e) {}
+        }
+        window.location.reload(true);
+    };
+
+    function getAllTalkgroupsFlat() {
+        const list = [];
+        for (const f of folderSystem) {
+            for (const tg of (f.tgs || [])) {
+                list.push({ tg, folder: f.name });
+            }
+        }
+        return list;
+    }
+
+    window.toggleTitanViewMode = function() {
+        const titanDash = document.getElementById('titanDashboard');
+        const sc21 = document.getElementById('scale-wrapper');
+        const sc21ScreenEl = document.getElementById('screen-container');
+        const rlcDash = document.getElementById('rlcDashboard');
+        const rlcBtn = document.getElementById('rlcViewToggleBtn');
+        const btn = document.getElementById('titanViewToggleBtn');
+
+        if (titanDash.classList.contains('active')) {
+            titanDash.classList.remove('active');
+            if (sc21) sc21.style.display = 'flex';
+            btn.innerHTML = '🚓 TITAN-vy';
+            btn.classList.remove('active-gw');
+            if (typeof resizeRadio === 'function') resizeRadio();
+        } else {
+            if (sc21ScreenEl && sc21ScreenEl.offsetWidth > 0 && sc21ScreenEl.offsetHeight > 0) {
+                window._sc21NativeWidth = sc21ScreenEl.offsetWidth;
+                window._sc21NativeHeight = sc21ScreenEl.offsetHeight;
+            }
+            titanDash.classList.add('active');
+            if (sc21) sc21.style.display = 'none';
+            if (rlcDash) rlcDash.classList.remove('active');
+            if (rlcBtn) rlcBtn.innerText = '🖥️ RLC-vy';
+            btn.innerHTML = '📱 SC21-vy';
+            btn.classList.add('active-gw');
+            if (window.unlockBrowserAudio) window.unlockBrowserAudio();
+            updateTitanDisplay();
+            setTimeout(initTitanMap, 80);
+            setTimeout(() => { if (titanMap) titanMap.invalidateSize(); }, 250);
+            if (window._pendingTitanHrAlarm && window.receiveTitanHrAlarm) {
+                const p = window._pendingTitanHrAlarm;
+                window._pendingTitanHrAlarm = null;
+                setTimeout(() => window.receiveTitanHrAlarm(p.title, p.details, p.lat, p.lng, p.address, true, false, p.hrMeta || null), 300);
+            }
+        }
+    };
+
+    window.updateTitanDisplay = function() {
+        const dash = document.getElementById('titanDashboard');
+        if (!dash || !dash.classList.contains('active')) return;
+
+        const tgNameEl = document.getElementById('titanCurrentTg');
+        if (tgNameEl && window.getActiveTxTalkgroupName) {
+            tgNameEl.innerText = window.getActiveTxTalkgroupName();
+        }
+        const issiEl = document.getElementById('titanIssiNumber');
+        if (issiEl) issiEl.innerText = window.MY_TACTICAL || "33-9000";
+
+        const nu = new Date();
+        const tid = nu.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        const veckodagar = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
+        const manader = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+        const datum = `${veckodagar[nu.getDay()]} ${nu.getDate()} ${manader[nu.getMonth()]}`;
+        document.getElementById('titanClockTime').innerText = tid;
+        document.getElementById('titanClockDate').innerText = datum;
+
+        const hbc3Screen = document.getElementById('hbc3Display');
+        const sc21Screen = document.getElementById('screen-container');
+        if (hbc3Screen && sc21Screen) {
+            let innerScaler = document.getElementById('hbc3InnerScaler');
+            if (!innerScaler) {
+                innerScaler = document.createElement('div');
+                innerScaler.id = 'hbc3InnerScaler';
+                hbc3Screen.innerHTML = '';
+                hbc3Screen.appendChild(innerScaler);
+            }
+            const scW = sc21Screen.offsetWidth > 0 ? sc21Screen.offsetWidth : (window._sc21NativeWidth || 257);
+            const scH = sc21Screen.offsetHeight > 0 ? sc21Screen.offsetHeight : (window._sc21NativeHeight || 200);
+            const targetW = hbc3Screen.clientWidth || 210;
+            const targetH = hbc3Screen.clientHeight || 175;
+            const scaleX = targetW / scW;
+            const scaleY = targetH / scH;
+
+            innerScaler.className = sc21Screen.className;
+            innerScaler.style.width = scW + 'px';
+            innerScaler.style.height = scH + 'px';
+            innerScaler.style.transformOrigin = 'top left';
+            innerScaler.style.transform = `scale(${scaleX}, ${scaleY})`;
+            innerScaler.innerHTML = sc21Screen.innerHTML.replace(/\sid="([^"]*)"/g, ' data-cloned-id="$1"');
+        }
+    };
+
+    window.addEventListener('resize', () => {
+        if (document.getElementById('titanDashboard')?.classList.contains('active')) {
+            updateTitanDisplay();
+            if (titanMap) titanMap.invalidateSize();
+        }
+    });
+
+    setInterval(() => {
+        if (document.getElementById('titanDashboard')?.classList.contains('active')) {
+            updateTitanDisplay();
+        }
+    }, 10000);
+
+    window.titanStartMission = function() {
+        if (window.sendStatusToRlc) window.sendStatusToRlc("Påbörjat uppdrag");
+        showTempMsg("Status skickad: Påbörjat uppdrag", 2000);
+    };
+
+    window.titanCallRequest = function() {
+        if (window.sendCallRequestToRlc) {
+            window.sendCallRequestToRlc();
+            showTempMsg("Sänder status: Anropsbegäran", 2500);
+        }
+    };
+
+    window.titanPrevTg = function() {
+        const temp = { ...activeSelection };
+        activeSelection = { ...previousSelection };
+        previousSelection = temp;
+        if (window.syncPresenceNow) window.syncPresenceNow();
+        updateScreenDisplay();
+    };
+
+    window.titanNormalTg = function() {
+        if (scanListsData && scanListsData.length > 0) {
+            previousSelection = { ...activeSelection };
+            activeSelection = {
+                isScanList: true,
+                scanListObj: scanListsData[0],
+                tgObj: scanListsData[0].tgs[0],
+                folderName: scanListsData[0].name
+            };
+            if (window.syncPresenceNow) window.syncPresenceNow();
+            updateScreenDisplay();
+        }
+    };
+
+    window.titanSearchTg = function() {
+        const modal = document.getElementById('titanTgSearchModal');
+        const input = document.getElementById('titanTgSearchInput');
+        const list = document.getElementById('titanTgSearchSuggestions');
+        if (!modal || !input || !list) return;
+
+        input.value = "";
+        list.innerHTML = `<div style="color:#9ca3af; font-size:12px; padding:4px;">Börja skriva för att filtrera talgrupper (t.ex. MPU)...</div>`;
+        modal.classList.add('active');
+        setTimeout(() => input.focus(), 50);
+    };
+
+    window.closeTitanTgSearch = function() {
+        const modal = document.getElementById('titanTgSearchModal');
+        if (modal) modal.classList.remove('active');
+    };
+
+    window.onTitanTgSearchInput = function(query) {
+        const list = document.getElementById('titanTgSearchSuggestions');
+        if (!list) return;
+        const q = query.trim().toLowerCase();
+
+        if (q.length === 0) {
+            list.innerHTML = `<div style="color:#9ca3af; font-size:12px; padding:4px;">Börja skriva för att filtrera talgrupper...</div>`;
+            return;
+        }
+
+        const allTgs = typeof getAllTalkgroupsFlat === 'function' ? getAllTalkgroupsFlat() : [];
+        const matches = allTgs.filter(item =>
+            (item.tg.name && item.tg.name.toLowerCase().includes(q)) ||
+            (item.folder && item.folder.toLowerCase().includes(q)) ||
+            (item.tg.index && item.tg.index.toLowerCase().includes(q))
+        );
+
+        if (matches.length === 0) {
+            const safeQuery = query.trim().replace(/</g, '&lt;');
+            list.innerHTML = `<div style="color:#fca5a5; font-size:12px; padding:4px;">Inga talgrupper matchade "${safeQuery}".</div>`;
+            return;
+        }
+
+        list.innerHTML = "";
+        matches.slice(0, 25).forEach(hit => {
+            const btn = document.createElement('button');
+            btn.className = 'titan-addr-item';
+            btn.style.display = 'flex';
+            btn.style.justifyContent = 'space-between';
+            btn.style.alignItems = 'center';
+            btn.innerHTML = `
+                <span>👥 <strong>${hit.tg.name}</strong> <small style="color:#93c5fd;">(${hit.folder})</small></span>
+                <span style="font-family:monospace; color:#9ca3af; font-size:12px;">#${hit.tg.index}</span>
+            `;
+            btn.onclick = () => {
+                previousSelection = { ...activeSelection };
+                activeSelection = {
+                    isScanList: false,
+                    scanListObj: null,
+                    tgObj: hit.tg,
+                    folderName: hit.folder
+                };
+                if (window.syncPresenceNow) window.syncPresenceNow();
+                updateScreenDisplay();
+                closeTitanTgSearch();
+                showTempMsg(`Bytt till: ${hit.tg.name}`, 1800);
+                if (window.showTitanToast) showTitanToast(`👥 Bytt talgrupp: ${hit.tg.name}`, 1800);
+            };
+            list.appendChild(btn);
+        });
+    };
+
+    window.titanIndexInput = function() {
+        const modal = document.getElementById('titanIndexSearchModal');
+        const input = document.getElementById('titanIndexSearchInput');
+        const list = document.getElementById('titanIndexSearchSuggestions');
+        if (!modal || !input || !list) return;
+
+        input.value = "";
+        list.innerHTML = `<div style="color:#9ca3af; font-size:12px; padding:4px;">Börja skriva ett indexnummer för att se träffar...</div>`;
+        modal.classList.add('active');
+        setTimeout(() => input.focus(), 50);
+    };
+
+    window.closeTitanIndexSearch = function() {
+        const modal = document.getElementById('titanIndexSearchModal');
+        if (modal) modal.classList.remove('active');
+    };
+
+    window.onTitanIndexSearchInput = function(query) {
+        const list = document.getElementById('titanIndexSearchSuggestions');
+        if (!list) return;
+        const q = query.trim();
+
+        if (q.length === 0) {
+            list.innerHTML = `<div style="color:#9ca3af; font-size:12px; padding:4px;">Börja skriva ett indexnummer...</div>`;
+            return;
+        }
+
+        const allTgs = typeof getAllTalkgroupsFlat === 'function' ? getAllTalkgroupsFlat() : [];
+        // Matchar index som börjar med eller innehåller inmatade siffror, sorterat så exakta/inledande träffar hamnar överst
+        const matches = allTgs
+            .filter(item => item.tg.index && item.tg.index.includes(q))
+            .sort((a, b) => {
+                const aStarts = a.tg.index.startsWith(q) ? 0 : 1;
+                const bStarts = b.tg.index.startsWith(q) ? 0 : 1;
+                return aStarts - bStarts || a.tg.index.localeCompare(b.tg.index);
+            });
+
+        if (matches.length === 0) {
+            const safeQ = q.replace(/</g, '&lt;');
+            list.innerHTML = `<div style="color:#fca5a5; font-size:12px; padding:4px;">Inget index matchade "${safeQ}".</div>`;
+            return;
+        }
+
+        list.innerHTML = "";
+        matches.slice(0, 25).forEach(hit => {
+            const btn = document.createElement('button');
+            btn.className = 'titan-addr-item';
+            btn.style.display = 'flex';
+            btn.style.justifyContent = 'space-between';
+            btn.style.alignItems = 'center';
+            btn.innerHTML = `
+                <span><strong style="font-family:monospace; color:#60a5fa; font-size:14px;">#${hit.tg.index}</strong> &nbsp;👥 <strong>${hit.tg.name}</strong></span>
+                <small style="color:#9ca3af;">${hit.folder}</small>
+            `;
+            btn.onclick = () => {
+                previousSelection = { ...activeSelection };
+                activeSelection = {
+                    isScanList: false,
+                    scanListObj: null,
+                    tgObj: hit.tg,
+                    folderName: hit.folder
+                };
+                if (window.syncPresenceNow) window.syncPresenceNow();
+                updateScreenDisplay();
+                closeTitanIndexSearch();
+                showTempMsg(`Bytt till #${hit.tg.index}: ${hit.tg.name}`, 1800);
+                if (window.showTitanToast) showTitanToast(`🔢 Bytt till #${hit.tg.index}: ${hit.tg.name}`, 1800);
+            };
+            list.appendChild(btn);
+        });
+    };
+
+    let titanMap = null;
+    let titanMarker = null;
+    let titanHrMarker = null;
+    let titanRouteLine = null;
+    const TITAN_START_COORDS = [58.5877, 16.1924];
+
+    window.initTitanMap = function() {
+        const container = document.getElementById('titanMapContainer');
+        if (!container || typeof L === 'undefined') return;
+        if (titanMap) {
+            setTimeout(() => titanMap.invalidateSize(), 120);
+            return;
+        }
+        titanMap = L.map('titanMapContainer', { zoomControl: false }).setView(TITAN_START_COORDS, 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(titanMap);
+
+        const patrolIcon = L.divIcon({
+            className: '',
+            html: '<div class="titan-patrol-marker"></div>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+        titanMarker = L.marker(TITAN_START_COORDS, { icon: patrolIcon })
+            .addTo(titanMap)
+            .bindTooltip(window.MY_TACTICAL || 'Egen patrull', { direction: 'top', offset: [0, -10] });
+
+        document.getElementById('titanLocationName').innerText = "Norrköping C (GPS Aktiv)";
+        setTimeout(() => { if (titanMap) titanMap.invalidateSize(); }, 150);
+    };
+
+    window.openTitanOverlay = function(title, htmlContent) {
+        document.getElementById('titanOverlayTitle').innerText = title;
+        document.getElementById('titanOverlayContent').innerHTML = htmlContent;
+        document.getElementById('titanOverlay').classList.add('active');
+    };
+
+    window.closeTitanOverlay = function() {
+        document.getElementById('titanOverlay').classList.remove('active');
+    };
+
+    window.titanOpenStatusMenu = function() {
+        const statuses = [
+            "Ledig på station", "Ledig på patrull", "Påbörjat uppdrag",
+            "Framme på plats", "Avslutat uppdrag", "Avrapporterar",
+            "Transport", "Ej disponibel"
+        ];
+        const html = statuses.map(st => `
+            <button class="titan-btn" style="justify-content:center; text-align:center;" onclick="selectTitanStatus('${st}')">
+                ${st}
+            </button>
+        `).join('');
+        openTitanOverlay("💬 Skicka Status till RLC", html);
+    };
+
+    window.selectTitanStatus = function(statusText) {
+        if (window.sendStatusToRlc) window.sendStatusToRlc(statusText);
+        closeTitanOverlay();
+        showTempMsg(`Status skickad: ${statusText}`, 2000);
+    };
+
+    window.titanOpenInsats = function() {
+        const insatsFolders = folderSystem.filter(f => !f.isScanFolder && (f.name.toUpperCase().includes("INSATS") || f.name.toUpperCase().includes("PO") || (f.tgs || []).some(t => t.name.toUpperCase().includes("INSATS"))));
+        const list = insatsFolders.length > 0 ? insatsFolders : folderSystem;
+        let html = "";
+        list.forEach(folder => {
+            (folder.tgs || []).forEach(tg => {
+                html += `<button class="titan-btn" onclick="switchTitanTgByObj('${tg.index}')">🎯 ${tg.name}<br><small style="color:#9ca3af;">(${folder.name})</small></button>`;
+            });
+        });
+        openTitanOverlay("🎯 Välj Insatstalgrupp", html || "<p>Inga insatsgrupper hittades.</p>");
+    };
+
+    window.titanOpenRaps = function() {
+        const rapsFolders = folderSystem.filter(f => f.name.toUpperCase().includes("RAPS") || f.name.toUpperCase().includes("SAMVERKAN"));
+        const list = rapsFolders.length > 0 ? rapsFolders : folderSystem;
+        let html = "";
+        list.forEach(folder => {
+            (folder.tgs || []).forEach(tg => {
+                html += `<button class="titan-btn" onclick="switchTitanTgByObj('${tg.index}')">✳️ ${tg.name}</button>`;
+            });
+        });
+        openTitanOverlay("✳️ RAPS / Samverkan", html || "<p>Inga RAPS-grupper hittades.</p>");
+    };
+
+    window.switchTitanTgByObj = function(tgIndex) {
+        const allTgs = getAllTalkgroupsFlat();
+        const hit = allTgs.find(t => t.tg.index === tgIndex);
+        if (hit) {
+            previousSelection = { ...activeSelection };
+            activeSelection = { isScanList: false, scanListObj: null, tgObj: hit.tg, folderName: hit.folder };
+            if (window.syncPresenceNow) window.syncPresenceNow();
+            updateScreenDisplay();
+            closeTitanOverlay();
+            showTempMsg(`Talgrupp: ${hit.tg.name}`, 1500);
+        }
+    };
+
+    window.titanOpenInbox = function() {
+        const primaryMsgs = (typeof sdsInbox !== 'undefined' && sdsInbox.length > 0) ? sdsInbox : (window.titanSdsMessages || []);
+        const msgs = primaryMsgs;
+        const msgsHtml = msgs.length > 0
+            ? msgs.map((m, idx) => {
+                const isMine = String(m.from || "").startsWith("Mig") || (window.MY_TACTICAL && String(m.from || "") === window.MY_TACTICAL);
+                const rawFrom = String(m.from || "Okänd");
+                const rawTo = String(m.to || (isMine ? "ALL" : (window.MY_TACTICAL || "Mig")));
+                const safeFrom = rawFrom.replace(/</g, '&lt;');
+                const safeTo = rawTo.replace(/</g, '&lt;');
+                const safeTime = String(m.time || "").replace(/</g, '&lt;');
+                const safeText = String(m.text || "").replace(/</g, '&lt;');
+                const replyAttr = rawFrom.replace(/'/g, "\\'");
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:8px 10px; margin-bottom:6px; background:${isMine ? 'rgba(30, 58, 138, 0.35)' : '#111827'}; border:1px solid ${isMine ? '#3b82f6' : '#374151'}; border-radius:6px;">
+                        <div style="font-size:13px; flex:1;">
+                            <div style="margin-bottom:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <strong style="color:${isMine ? '#93c5fd' : '#4ade80'};">${safeFrom}</strong>
+                                <span style="color:#64748b; font-size:11px;">➔ ${safeTo}</span>
+                                <span style="color:#9ca3af; font-size:11px; margin-left:auto;">${safeTime}</span>
+                            </div>
+                            <div style="color:#f3f4f6;">${safeText}</div>
+                        </div>
+                        <div style="display:flex; gap:5px; flex-shrink:0;">
+                            ${!isMine ? `<button class="titan-btn" style="padding:5px 9px; min-height:30px; font-size:11px; background:#1d4ed8;" onclick="titanOpenComposeSds('${replyAttr}')">↩ Svara</button>` : ''}
+                            <button class="titan-btn" style="padding:5px 9px; min-height:30px; font-size:11px; background:#1e293b;" onclick="titanAckDeleteSds(${idx})">✔ Kvittera</button>
+                        </div>
+                    </div>
+                `;
+            }).join('')
+            : '<div style="color:#9ca3af; font-size:13px; padding:10px 0;">Inga meddelanden i SDS-inkorgen.</div>';
+
+        const html = `
+            <div style="grid-column: span 3; display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="titan-btn titan-btn-action" style="flex:1; justify-content:center;" onclick="titanOpenComposeSds()">
+                    ✉️ Skriv nytt SDS
+                </button>
+                <button class="titan-btn titan-btn-mission" style="justify-content:center;" onclick="triggerDemoHrAlarm()">
+                    🚨 Simulera HR-larm
+                </button>
+                <button class="titan-btn titan-btn-grey" style="justify-content:center;" onclick="titanClearAllSds()">
+                    🗑 Rensa lästa (${msgs.length})
+                </button>
+            </div>
+            <div id="titanSdsLogScroll" style="grid-column: span 3; background:#1f2937; padding:14px; border-radius:8px; border:1px solid #374151; max-height:285px; overflow-y:auto;">
+                <div style="font-weight:bold; font-size:13px; color:#93c5fd; margin-bottom:8px;">SDS / Meddelandelogg – Kronologisk (${msgs.length} st):</div>
+                ${msgsHtml}
+            </div>
+        `;
+        openTitanOverlay("✉️ SDS-Inkorg & Utskick", html);
+        const scrollEl = document.getElementById('titanSdsLogScroll');
+        if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+    };
+
+    window.titanAckDeleteSds = function(idx) {
+        if (typeof sdsInbox !== 'undefined' && sdsInbox.length > 0 && idx >= 0 && idx < sdsInbox.length) {
+            sdsInbox.splice(idx, 1);
+            soundKeypress();
+            updateScreenDisplay();
+            titanOpenInbox();
+        } else if (window.titanSdsMessages && idx >= 0 && idx < window.titanSdsMessages.length) {
+            window.titanSdsMessages.splice(idx, 1);
+            soundKeypress();
+            titanOpenInbox();
+        }
+    };
+
+    window.titanClearAllSds = function() {
+        if (typeof sdsInbox !== 'undefined') sdsInbox.length = 0;
+        if (window.titanSdsMessages) window.titanSdsMessages.length = 0;
+        soundKeypress();
+        updateScreenDisplay();
+        titanOpenInbox();
+        showTempMsg("SDS-inkorg rensad", 1500);
+    };
+
+    window.titanOpenComposeSds = function(prefillTarget = "") {
+        const cleanPrefill = String(prefillTarget || "").replace(/\s*\(.*\)$/, '').trim();
+        const units = typeof getCombinedUnitsList === 'function' ? getCombinedUnitsList() : [];
+        const unitOptions = units
+            .filter(u => u.tactical !== window.MY_TACTICAL)
+            .map(u => `<option value="${u.tactical}">${u.tactical}${u.alias ? ' (' + u.alias + ')' : ''}</option>`)
+            .join('');
+        const html = `
+            <div style="grid-column: span 3; background:#1f2937; padding:16px; border-radius:8px; border:1px solid #374151; display:flex; flex-direction:column; gap:10px;">
+                <div style="font-size:14px; font-weight:bold; color:#93c5fd;">${cleanPrefill ? '↩ Svara till ' + cleanPrefill.replace(/</g, '&lt;') : 'Skicka textmeddelande (SDS)'}</div>
+                <label style="font-size:12px; color:#cbd5e1;">Mottagare:</label>
+                <select id="titanSdsTargetSelect" class="titan-addr-input" style="padding:9px;">
+                    <option value="ALL">Alla enheter & RLC (ALL)</option>
+                    <option value="RLC">RLC Ledningscentral</option>
+                    ${unitOptions}
+                </select>
+                <input type="text" id="titanSdsCustomTarget" class="titan-addr-input" style="padding:9px; font-size:13px;" value="${cleanPrefill.replace(/"/g, '&quot;')}" placeholder="Eller ange anropsnr / RLC / ISSI manuellt (valfritt)" autocomplete="off" />
+                <label style="font-size:12px; color:#cbd5e1;">Meddelande:</label>
+                <textarea id="titanSdsMessageInput" class="titan-addr-input" rows="3" placeholder="Skriv SDS-meddelande här..."></textarea>
+                <div style="display:flex; gap:10px; margin-top:4px;">
+                    <button class="titan-btn titan-btn-action" style="flex:1; justify-content:center;" onclick="titanSubmitComposeSds()">📤 Skicka SDS</button>
+                    <button class="titan-btn titan-btn-grey" style="justify-content:center;" onclick="titanOpenInbox()">← Tillbaka</button>
+                </div>
+            </div>
+        `;
+        openTitanOverlay("✉️ Skriv nytt SDS", html);
+        setTimeout(() => document.getElementById('titanSdsMessageInput')?.focus(), 50);
+    };
+
+    window.titanSubmitComposeSds = function() {
+        const customTo = (document.getElementById('titanSdsCustomTarget')?.value || "").trim();
+        const selectTo = document.getElementById('titanSdsTargetSelect')?.value || "ALL";
+        const target = customTo || selectTo;
+        const txt = (document.getElementById('titanSdsMessageInput')?.value || "").trim();
+        if (!txt) {
+            soundError();
+            showTempMsg("Skriv ett meddelande först", 1500);
+            return;
+        }
+        if (window.canReachRlcNetwork && !window.canReachRlcNetwork()) {
+            soundError();
+            showTempMsg("❌ Kan ej skicka SDS i DMO utan Gateway", 2000);
+            return;
+        }
+        const sdsTarget = target.toUpperCase().startsWith("RLC") ? "ALL" : target;
+        if (window.dbSendSds) window.dbSendSds(sdsTarget, txt);
+        const sentObj = {
+            from: window.MY_TACTICAL || "Mig",
+            to: target,
+            text: txt,
+            time: getTime()
+        };
+        if (typeof sdsInbox !== 'undefined') sdsInbox.push(sentObj);
+        if (window.titanSdsMessages) window.titanSdsMessages.push(sentObj);
+        appendRlcLog(`✉️ SDS från ${window.MY_TACTICAL} ➔ ${target}: "${txt}"`);
+        soundStatusDelivered();
+        updateScreenDisplay();
+        titanOpenInbox();
+        showTempMsg(`✔ SDS sänt till ${target}`, 1800);
+        if (window.showTitanToast) showTitanToast(`✔ SDS sänt till ${target}`, 2000);
+    };
+
+    window._handledHrDispatchIds = window._handledHrDispatchIds || new Set();
+
+    // Funktion för att ta emot eller simulera HR-larm
+    window.receiveTitanHrAlarm = async function(title, details, lat, lng, locationLabel, playAlertSound = true, preserveMission = false, hrMeta = null) {
+        if (hrMeta && hrMeta.id) {
+            if (window._handledHrDispatchIds.has(hrMeta.id)) return;
+            window._handledHrDispatchIds.add(hrMeta.id);
+        }
+        closeTitanOverlay();
+        const nu = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        if (!preserveMission) {
+            titanActiveHrMission = {
+                id: hrMeta?.id || ("HR-" + new Date().getFullYear() + "-" + String(Math.floor(1000 + Math.random() * 9000))),
+                prio: hrMeta?.prio || 1,
+                code: hrMeta?.code || "0000 HR-uppdrag",
+                title: title || "HR-uppdrag tilldelat",
+                details: details || "Se karta för position.",
+                summary: hrMeta?.summary || details || "Inkommet HR-uppdrag från RLC.",
+                lat,
+                lng,
+                address: locationLabel || "Uppdragsplats",
+                caller: hrMeta?.caller || "RLC Öst / SOS",
+                tg: hrMeta?.tg || "Insats 1",
+                units: hrMeta?.units || window.MY_TACTICAL || "33-9000",
+                receivedAt: nu,
+                log: [
+                    { time: nu, unit: hrMeta?.caller || "RLC ÖST", msg: hrMeta?.summary || details || title || "Uppdrag utlarmat till patrull." }
+                ]
+            };
+        }
+        document.getElementById('titanHrText').innerText = title || "HR-uppdrag tilldelat";
+        document.getElementById('titanHrDetails').innerText = details || "Se karta för position.";
+        document.getElementById('titanHrTime').innerText = nu;
+        document.getElementById('titanHrBanner').classList.add('active');
+
+        if (playAlertSound) {
+            if (typeof soundPttGrant === 'function') soundPttGrant();
+            setTimeout(() => { if (typeof soundStatusDelivered === 'function') soundStatusDelivered(); }, 180);
+        }
+
+        if (lat && lng) {
+            await calculateAndDrawTitanRoute(lat, lng, locationLabel || title, true);
+        }
+    };
+
+    window.triggerDemoHrAlarm = function() {
+        receiveTitanHrAlarm(
+            "Trafikolycka - Personbil",
+            "E4 Norrgående vid Trafikplats Norrköping Norra. Insatskanal tilldelad.",
+            58.6135, 16.1780, "E4 / Trafikplats Norrköping N", true
+        );
+    };
+
+    window.switchTitanToMissionTalkgroup = function() {
+        const wantedTg = (titanActiveHrMission?.tg || "").trim();
+        if (!wantedTg || typeof getAllTalkgroupsFlat !== 'function') return null;
+        const allTgs = getAllTalkgroupsFlat();
+        const wantedLower = wantedTg.toLowerCase();
+        const wantedNorm = wantedLower.replace(/\s+/g, '');
+        let hit = allTgs.find(t => t.tg.name && t.tg.name.toLowerCase() === wantedLower);
+        if (!hit) {
+            hit = allTgs.find(t => t.tg.name && (
+                t.tg.name.toLowerCase().includes(wantedLower) ||
+                wantedLower.includes(t.tg.name.toLowerCase()) ||
+                t.tg.name.toLowerCase().replace(/\s+/g, '').includes(wantedNorm)
+            ));
+        }
+        if (!hit) return null;
+        previousSelection = { ...activeSelection };
+        activeSelection = {
+            isScanList: false,
+            scanListObj: null,
+            tgObj: hit.tg,
+            folderName: hit.folder
+        };
+        if (window.syncPresenceNow) window.syncPresenceNow();
+        updateScreenDisplay();
+        updateTitanDisplay();
+        return hit.tg.name;
+    };
+
+    window.acceptTitanHrAlarm = function() {
+        document.getElementById('titanHrBanner').classList.remove('active');
+        if (window.sendStatusToRlc) window.sendStatusToRlc("Påbörjat uppdrag");
+        const switchedTgName = window.switchTitanToMissionTalkgroup();
+        if (window.appendTitanHrLog) {
+            appendTitanHrLog(
+                window.MY_TACTICAL || '33-9000',
+                switchedTgName
+                    ? `Uppdrag kvitterat • Talgrupp bytt till ${switchedTgName}. Påbörjar körning.`
+                    : 'Kvitterat HR-larm och påbörjat körning.'
+            );
+        }
+        const ackText = switchedTgName
+            ? `Uppdrag kvitterat • Talgrupp bytt till ${switchedTgName}`
+            : "Uppdrag kvitterat – Påbörjar körning mot platsen";
+        showTempMsg(ackText, 2800);
+        if (window.showTitanToast) showTitanToast(`✔ ${ackText}`, 3000);
+        if (titanActiveHrMission) {
+            startTitanDriveSimulation(titanActiveHrMission.address);
+        }
+    };
+
+    window.acknowledgeHrMissionFromReader = function() {
+        document.getElementById('titanHrBanner')?.classList.remove('active');
+        if (window.sendStatusToRlc) window.sendStatusToRlc("Påbörjat uppdrag");
+        const switchedTgName = window.switchTitanToMissionTalkgroup();
+        if (window.appendTitanHrLog) {
+            appendTitanHrLog(
+                window.MY_TACTICAL || '33-9000',
+                switchedTgName
+                    ? `Uppdrag kvitterat • Talgrupp bytt till ${switchedTgName}`
+                    : 'Uppdrag kvitterat'
+            );
+        }
+        const ackText = switchedTgName
+            ? `Uppdrag kvitterat • Talgrupp bytt till ${switchedTgName}`
+            : "Uppdrag kvitterat";
+        showTempMsg(ackText, 2600);
+        if (window.showTitanToast) showTitanToast(`✔ ${ackText}`, 2800);
+        if (typeof openTitanHrModule === 'function') openTitanHrModule();
+    };
+
+    window.dismissTitanHrAlarm = function() {
+        document.getElementById('titanHrBanner').classList.remove('active');
+    };
+
+    let titanCurrentPos = [58.5877, 16.1924]; // Startposition: Norrköping C
+    let titanRouteLayer = null;
+    let titanDestMarker = null;
+    let titanDriveInterval = null;
+    let titanCurrentRouteCoords = [];
+    let titanActiveHrMission = null;
+    let titanAddrDebounceTimer = null;
+    let titanAddrCallback = null;
+    let titanLastDriveSyncAt = 0;
+
+    // Öppna adressrutan med live-autosuggest
+    window.openTitanAddressSearch = function(title, initialQuery, onSelectCallback) {
+        titanAddrCallback = onSelectCallback;
+        document.getElementById('titanAddrModalTitle').innerText = title;
+        const input = document.getElementById('titanAddrInput');
+        const list = document.getElementById('titanAddrSuggestions');
+        input.value = initialQuery || "";
+        list.innerHTML = `<div style="color:#9ca3af; font-size:12px; padding:4px;">Skriv minst 3 tecken för adressförslag...</div>`;
+        document.getElementById('titanAddrModal').classList.add('active');
+        setTimeout(() => {
+            input.focus();
+            if (input.value.trim().length >= 3) onTitanAddressInput(input.value);
+        }, 50);
+    };
+
+    window.closeTitanAddressSearch = function() {
+        document.getElementById('titanAddrModal').classList.remove('active');
+        clearTimeout(titanAddrDebounceTimer);
+    };
+
+    // Söker live i OpenStreetMap Nominatim medan användaren skriver och smalnar av träffarna
+    window.onTitanAddressInput = function(query) {
+        const list = document.getElementById('titanAddrSuggestions');
+        const q = query.trim();
+        clearTimeout(titanAddrDebounceTimer);
+
+        if (q.length < 3) {
+            list.innerHTML = `<div style="color:#9ca3af; font-size:12px; padding:4px;">Fortsätt skriva för att se träffar...</div>`;
+            return;
+        }
+
+        list.innerHTML = `<div style="color:#93c5fd; font-size:12px; padding:4px;">🔍 Söker efter "${q.replace(/</g, '&lt;')}"...</div>`;
+
+        titanAddrDebounceTimer = setTimeout(async () => {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=se&addressdetails=1&limit=5&q=${encodeURIComponent(q)}`;
+                const res = await fetch(url, { headers: { 'Accept-Language': 'sv' } });
+                const results = await res.json();
+
+                // Om användaren hunnit skriva vidare medan anropet pågick, avbryt äldre rendering
+                if (document.getElementById('titanAddrInput').value.trim() !== q) return;
+
+                if (!results || results.length === 0) {
+                    list.innerHTML = `<div style="color:#fca5a5; font-size:12px; padding:4px;">Inga adresser matchade "${q.replace(/</g, '&lt;')}".</div>`;
+                    return;
+                }
+
+                list.innerHTML = "";
+                results.forEach(item => {
+                    const shortLabel = item.display_name.split(',').slice(0, 3).join(',');
+                    const btn = document.createElement('button');
+                    btn.className = 'titan-addr-item';
+                    btn.innerHTML = '📍 <strong></strong>';
+                    btn.querySelector('strong').textContent = shortLabel;
+                    btn.onclick = () => {
+                        closeTitanAddressSearch();
+                        if (titanAddrCallback) {
+                            titanAddrCallback({
+                                lat: parseFloat(item.lat),
+                                lng: parseFloat(item.lon),
+                                displayName: shortLabel
+                            });
+                        }
+                    };
+                    list.appendChild(btn);
+                });
+            } catch (e) {
+                list.innerHTML = `<div style="color:#fca5a5; font-size:12px; padding:4px;">Kunde inte hämta adressförslag just nu.</div>`;
+            }
+        }, 300);
+    };
+
+    // Hämta verklig bilrutt via OSRM och rita på TITAN-kartan
+    window.calculateAndDrawTitanRoute = async function(destLat, destLng, destLabel, isEmergency = false) {
+        if (!titanMap) initTitanMap();
+        stopTitanDriveSimulation();
+
+        if (titanRouteLayer) { titanMap.removeLayer(titanRouteLayer); titanRouteLayer = null; }
+        if (titanDestMarker) { titanMap.removeLayer(titanDestMarker); titanDestMarker = null; }
+        if (titanRouteLine) { titanMap.removeLayer(titanRouteLine); titanRouteLine = null; }
+        if (titanHrMarker) { titanMap.removeLayer(titanHrMarker); titanHrMarker = null; }
+
+        const [startLat, startLng] = titanCurrentPos;
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+
+        try {
+            const res = await fetch(osrmUrl);
+            const data = await res.json();
+            if (!data.routes || data.routes.length === 0) {
+                showTempMsg("Kunde inte beräkna bilväg till adressen", 2500);
+                return;
+            }
+
+            const route = data.routes[0];
+            titanCurrentRouteCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+            const distKm = (route.distance / 1000).toFixed(1);
+            const durMin = Math.max(1, Math.round(route.duration / 60));
+
+            titanRouteLayer = L.polyline(titanCurrentRouteCoords, {
+                color: isEmergency ? '#ef4444' : '#3b82f6',
+                weight: 6,
+                opacity: 0.9
+            }).addTo(titanMap);
+
+            titanDestMarker = L.marker([destLat, destLng]).addTo(titanMap)
+                .bindPopup(`<b>${destLabel}</b><br>${distKm} km • ca ${durMin} min`)
+                .openPopup();
+
+            titanMap.fitBounds(titanRouteLayer.getBounds(), { padding: [45, 45] });
+
+            const locEl = document.getElementById('titanLocationName');
+            if (locEl) {
+                locEl.innerHTML = `${destLabel}<br><small style="color:#93c5fd;">${distKm} km • ca ${durMin} min (Klicka här för att köra)</small>`;
+                locEl.style.cursor = 'pointer';
+                locEl.style.pointerEvents = 'auto';
+                locEl.onclick = () => startTitanDriveSimulation(destLabel);
+            }
+            showTempMsg(`Rutt klar: ${distKm} km (${durMin} min)`, 2500);
+        } catch (err) {
+            showTempMsg("Nätverksfel vid ruttberäkning", 2500);
+        }
+    };
+
+    function syncTitanVehicleGps(pos, labelText, forcePresenceWrite = false) {
+        if (!pos || pos.length < 2) return;
+        window.MY_LAT = pos[0];
+        window.MY_LNG = pos[1];
+        if (labelText) window.MY_LOCATION_NAME = labelText;
+        if (window.broadcastLocalHrBridge) {
+            window.broadcastLocalHrBridge({
+                bridgeType: 'PATROL_GPS_UPDATE',
+                tactical: window.MY_TACTICAL,
+                lat: pos[0],
+                lng: pos[1],
+                locationName: labelText || window.MY_LOCATION_NAME || ''
+            });
+        }
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+        const now = Date.now();
+        if (forcePresenceWrite || (now - titanLastDriveSyncAt >= 1050)) {
+            titanLastDriveSyncAt = now;
+            if (window.syncPresenceNow) window.syncPresenceNow();
+        }
+    }
+
+    // Simulera att patrullbilen kör längs den beräknade rutten
+    window.startTitanDriveSimulation = function(destLabel) {
+        if (!titanCurrentRouteCoords || titanCurrentRouteCoords.length < 2) {
+            showTempMsg("Ingen aktiv rutt att köra", 1500);
+            return;
+        }
+        stopTitanDriveSimulation();
+        let stepIndex = 0;
+        const stepStride = Math.max(1, Math.floor(titanCurrentRouteCoords.length / 40));
+        showTempMsg(`Kör mot ${destLabel}...`, 2000);
+        syncTitanVehicleGps(titanCurrentPos, `På väg: ${destLabel}`, true);
+
+        titanDriveInterval = setInterval(() => {
+            stepIndex += stepStride;
+            if (stepIndex >= titanCurrentRouteCoords.length - 1) {
+                const finalPos = titanCurrentRouteCoords[titanCurrentRouteCoords.length - 1];
+                titanCurrentPos = finalPos;
+                if (titanMarker) titanMarker.setLatLng(finalPos);
+                if (titanMap) titanMap.panTo(finalPos);
+                stopTitanDriveSimulation();
+                syncTitanVehicleGps(finalPos, destLabel, true);
+                const locEl = document.getElementById('titanLocationName');
+                if (locEl) {
+                    locEl.innerText = `Framme: ${destLabel}`;
+                    locEl.style.cursor = 'default';
+                    locEl.onclick = null;
+                }
+                showTempMsg(`Framme vid ${destLabel}!`, 3000);
+                return;
+            }
+            const nextPos = titanCurrentRouteCoords[stepIndex];
+            titanCurrentPos = nextPos;
+            if (titanMarker) titanMarker.setLatLng(nextPos);
+            if (titanMap) titanMap.panTo(nextPos);
+            syncTitanVehicleGps(nextPos, `På väg: ${destLabel}`, false);
+        }, 350);
+    };
+
+    window.stopTitanDriveSimulation = function() {
+        if (titanDriveInterval) {
+            clearInterval(titanDriveInterval);
+            titanDriveInterval = null;
+        }
+    };
+
+    // Portöppning (DTMF / SDS-öppningssignal)
+    window.titanOpenGateControl = function() {
+        const gates = [
+            { name: "Norrköping Garage Infart", code: "*11#", icon: "🚗" },
+            { name: "Norrköping Garage Utfart", code: "*12#", icon: "🚙" },
+            { name: "Arrestintag / Sluss", code: "*21#", icon: "🔐" },
+            { name: "Bom Grind Syd", code: "*31#", icon: "🚧" }
+        ];
+        const html = gates.map(g => `
+            <button class="titan-btn" style="flex-direction:column; align-items:flex-start; gap:4px;" onclick="titanTriggerGate('${g.name}', '${g.code}')">
+                <span style="font-size:18px;">${g.icon}</span>
+                <span>${g.name}</span>
+                <small style="color:#93c5fd; font-weight:normal;">DTMF ${g.code}</small>
+            </button>
+        `).join('');
+        openTitanOverlay("🔓 Portöppning & Bommar", html);
+    };
+
+    let titanToastTimer = null;
+    window.showTitanToast = function(msg, ms = 2200) {
+        const el = document.getElementById('titanToast');
+        if (!el) return;
+        el.innerText = msg;
+        el.classList.add('active');
+        clearTimeout(titanToastTimer);
+        titanToastTimer = setTimeout(() => {
+            el.classList.remove('active');
+        }, ms);
+    };
+
+    function playGateDtmfSequence(code) {
+        const dtmfMap = {
+            '1': [697, 1209], '2': [697, 1336], '3': [697, 1477],
+            '4': [770, 1209], '5': [770, 1336], '6': [770, 1477],
+            '7': [852, 1209], '8': [852, 1336], '9': [852, 1477],
+            '*': [941, 1209], '0': [941, 1336], '#': [941, 1477]
+        };
+        if (typeof playTone !== 'function') return;
+        const chars = String(code || "*11#").split('');
+        chars.forEach((ch, idx) => {
+            const pair = dtmfMap[ch];
+            if (!pair) return;
+            setTimeout(() => {
+                playTone(pair[0], 'sine', 0.09, 0.09);
+                playTone(pair[1], 'sine', 0.09, 0.09);
+            }, idx * 115);
+        });
+    }
+
+    window.titanTriggerGate = function(gateName, dtmfCode) {
+        closeTitanOverlay();
+        playGateDtmfSequence(dtmfCode);
+        setTimeout(() => {
+            if (typeof soundStatusDelivered === 'function') soundStatusDelivered();
+        }, 480);
+        if (window.dbSendSds && (!window.canReachRlcNetwork || window.canReachRlcNetwork())) {
+            window.dbSendSds("ALL", `[DTMF ${dtmfCode}] Portöppning: ${gateName}`);
+        }
+        appendRlcLog(`🔓 ${window.MY_TACTICAL} sände portöppning (${dtmfCode}) till ${gateName}`);
+        showTempMsg(`🔓 Öppningssignal sänd till ${gateName}`, 2400);
+        showTitanToast(`🔓 Öppningssignal sänd till ${gateName}`, 2600);
+    };
+
+    // Högerpanelens "Mer"-meny: Ljus & Siren, Fordons-PA, Skärmlås (Rengöring), Tvinga synk
+    window.titanEmergencyMode = 0; // 0 = Av, 1 = Blåljus (Cruise), 2 = Blåljus + Siren (Prio 1)
+    window.titanAudioInVehicle = window.titanAudioInVehicle || false; // false = HBC3, true = Fordonshögtalare
+    window.titanAudioOutput = window.titanAudioInVehicle ? 'vehicle' : 'handset';
+    let titanCleanLockTimer = null;
+
+    function updateTitanEmergencyTopbarUI() {
+        const pill = document.getElementById('titanEmergencyPill');
+        if (!pill) return;
+        pill.className = 'titan-emerg-pill';
+        if (window.titanEmergencyMode === 1) {
+            pill.classList.add('cruise');
+            pill.innerText = '🔵 BLÅLJUS (CRUISE)';
+        } else if (window.titanEmergencyMode === 2) {
+            pill.classList.add('prio1');
+            pill.innerText = '🚨 BLÅLJUS + SIREN (PRIO 1)';
+        } else {
+            pill.innerText = '';
+        }
+    }
+
+    window.titanCycleEmergencyLights = function(forceMode = null) {
+        window.titanEmergencyMode = (forceMode !== null) ? forceMode : ((window.titanEmergencyMode + 1) % 3);
+        updateTitanEmergencyTopbarUI();
+        if (typeof soundKeypress === 'function') soundKeypress();
+        const labels = ["Av", "Blåljus (Cruise)", "Blåljus + Siren (Prio 1)"];
+        showTempMsg(`🚨 Ljus & Siren: ${labels[window.titanEmergencyMode]}`, 2000);
+        showTitanToast(`🚨 Ljus & Siren: ${labels[window.titanEmergencyMode]}`, 2000);
+        if (document.getElementById('titanOverlay')?.classList.contains('active')) {
+            titanOpenRightMoreMenu();
+        }
+    };
+
+    window.toggleTitanAudioOutput = function() {
+        window.titanAudioInVehicle = !window.titanAudioInVehicle;
+        window.titanAudioOutput = window.titanAudioInVehicle ? 'vehicle' : 'handset';
+        const modeLabel = window.titanAudioInVehicle ? "🔊 Fordonshögtalare" : "📞 HBC3 Handenhet";
+
+        const lbl = document.getElementById('titanAudioOutLabel');
+        const icon = document.getElementById('titanAudioOutIcon');
+        if (window.titanAudioInVehicle) {
+            if (lbl) lbl.innerText = '📢 Fordonshögtalare';
+            if (icon) icon.innerText = '📢';
+        } else {
+            if (lbl) lbl.innerText = '🎧 HBC3 Handenhet';
+            if (icon) icon.innerText = '🔊';
+        }
+
+        // Uppdatera ljudindikator i TITANs topplist
+        const topTgBox = document.querySelector('.titan-top-tg');
+        if (topTgBox) {
+            let audioBadge = document.getElementById('titanAudioOutputBadge');
+            if (!audioBadge) {
+                audioBadge = document.createElement('span');
+                audioBadge.id = 'titanAudioOutputBadge';
+                audioBadge.style.cssText = 'font-size:11px; background:#1e3a8a; color:#93c5fd; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:bold;';
+                topTgBox.appendChild(audioBadge);
+            }
+            audioBadge.innerText = window.titanAudioInVehicle ? "FORDON" : "HBC3";
+        }
+
+        if (typeof soundPttGrant === 'function') soundPttGrant();
+        else if (typeof soundKeypress === 'function') soundKeypress();
+
+        if (typeof updateScreenDisplay === 'function') updateScreenDisplay();
+        if (typeof showTempMsg === 'function') {
+            showTempMsg(`Ljudutgång: ${modeLabel}`, 2000);
+        }
+        if (typeof showTitanToast === 'function') {
+            showTitanToast(`Ljudutgång: ${modeLabel}`, 2000);
+        }
+        if (document.getElementById('titanOverlay')?.classList.contains('active') &&
+            document.getElementById('titanOverlayTitle')?.innerText?.includes('Snabbmeny')) {
+            titanOpenRightMoreMenu();
+        }
+    };
+    window.titanToggleAudioOutput = window.toggleTitanAudioOutput;
+
+    window.titanStartCleanLock = function() {
+        closeTitanOverlay();
+        const lockEl = document.getElementById('titanCleanLock');
+        const countEl = document.getElementById('titanCleanCountdown');
+        if (!lockEl || !countEl) return;
+        let secs = 10;
+        countEl.innerText = `${secs} s`;
+        lockEl.classList.add('active');
+        clearInterval(titanCleanLockTimer);
+        titanCleanLockTimer = setInterval(() => {
+            secs--;
+            if (secs <= 0) {
+                clearInterval(titanCleanLockTimer);
+                lockEl.classList.remove('active');
+                showTempMsg("🔓 Skärmlås avslutat", 1500);
+                showTitanToast("🔓 Skärmlås avslutat", 1800);
+            } else {
+                countEl.innerText = `${secs} s`;
+            }
+        }, 1000);
+    };
+
+    window.titanForceSyncRlc = async function() {
+        closeTitanOverlay();
+        syncTitanVehicleGps(titanCurrentPos, document.getElementById('titanLocationName')?.innerText || "Norrköping C", true);
+        if (window.syncPresenceNow) await window.syncPresenceNow();
+        if (window.refreshRlcDashboard) window.refreshRlcDashboard();
+        updateTitanDisplay();
+        if (typeof soundStatusDelivered === 'function') soundStatusDelivered();
+        showTempMsg("🔄 Position, talgrupp & status synkad med RLC", 2000);
+        showTitanToast("🔄 Position, talgrupp & status synkad med RLC", 2200);
+    };
+
+    window.titanOpenRightMoreMenu = function() {
+        const lightLabels = ["Av", "Blåljus (Cruise)", "Blåljus + Siren (Prio 1)"];
+        const lightBtnClass = window.titanEmergencyMode === 2 ? 'titan-btn-action' : (window.titanEmergencyMode === 1 ? 'titan-btn-mission' : '');
+        const audioLabel = window.titanAudioInVehicle ? 'Fordonshögtalare' : 'HBC3 Handenhet';
+        const html = `
+            <button class="titan-btn ${lightBtnClass}" style="grid-column: span 3; justify-content:space-between;" onclick="titanCycleEmergencyLights()">
+                <span>🚨 Ljus & Siren (Utryckningsläge)</span>
+                <strong style="color:#93c5fd;">${lightLabels[window.titanEmergencyMode]}</strong>
+            </button>
+            <button class="titan-btn" style="grid-column: span 3; justify-content:space-between;" onclick="toggleTitanAudioOutput()">
+                <span>🔊 Ljudutgång (Handenhet / Fordon)</span>
+                <strong style="color:#4ade80;">${audioLabel}</strong>
+            </button>
+            <button class="titan-btn" style="grid-column: span 3; justify-content:space-between;" onclick="titanStartCleanLock()">
+                <span>🧼 Skärmlås (Rengöring 10 s)</span>
+                <span style="color:#9ca3af; font-size:12px;">Låser pekskärm</span>
+            </button>
+            <button class="titan-btn titan-btn-mission" style="grid-column: span 3; justify-content:center;" onclick="titanForceSyncRlc()">
+                🔄 Tvinga synk med RLC (Position, TG & Status)
+            </button>
+        `;
+        openTitanOverlay("▤ Taktisk Snabbmeny", html);
+    };
+
+    window.createCustomHrMission = function() {
+        closeTitanOverlay();
+        openTitanAddressSearch("🚨 Skapa HR-larm – Sök brottsplats", "", async (geo) => {
+            const nowTime = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+            const customId = "HR-" + new Date().getFullYear() + "-" + String(Math.floor(1000 + Math.random() * 9000));
+            titanActiveHrMission = {
+                id: customId,
+                prio: 1,
+                code: "0000 Manuellt HR-uppdrag",
+                title: "Prio 1 – Pågående händelse",
+                address: geo.displayName,
+                lat: geo.lat,
+                lng: geo.lng,
+                caller: "RLC Öst",
+                tg: "Insats 1",
+                units: window.MY_TACTICAL || "33-9000",
+                summary: `Manuellt skapat HR-uppdrag på ${geo.displayName}. Insatskanal tilldelad.`,
+                details: `Adress: ${geo.displayName}. Insatskanal tilldelad.`,
+                receivedAt: nowTime,
+                log: [
+                    { time: nowTime, unit: "RLC ÖST", msg: `Manuellt HR-uppdrag skapat för ${geo.displayName}.` }
+                ]
+            };
+            await receiveTitanHrAlarm(
+                `[${customId}] Prio 1 – Pågående händelse`,
+                `Adress: ${geo.displayName}. Insatskanal tilldelad.`,
+                geo.lat,
+                geo.lng,
+                geo.displayName,
+                true,
+                true
+            );
+        });
+    };
+
+    let titanCurrentLayout = 'split'; // 'split' | 'left-full' | 'right-full'
+    let titanMapNightMode = true;
+
+    window.toggleTitanMapMenu = function() {
+        const pop = document.getElementById('titanMapPopover');
+        if (pop) pop.classList.toggle('active');
+    };
+
+    window.titanMapAction = function(action) {
+        const pop = document.getElementById('titanMapPopover');
+        if (pop) pop.classList.remove('active');
+        if (!titanMap) return;
+
+        if (action === 'center') {
+            titanMap.setView(titanCurrentPos, 15);
+            showTempMsg("Karta centrerad på patrull", 1500);
+        } else if (action === 'zoomin') {
+            titanMap.zoomIn();
+        } else if (action === 'zoomout') {
+            titanMap.zoomOut();
+        } else if (action === 'theme') {
+            titanMapNightMode = !titanMapNightMode;
+            const pane = document.querySelector('#titanMapContainer .leaflet-tile-pane');
+            if (pane) {
+                pane.style.filter = titanMapNightMode
+                    ? 'invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)'
+                    : 'none';
+            }
+            showTempMsg(titanMapNightMode ? "Nattkarta aktiverad" : "Dagkarta aktiverad", 1500);
+        } else if (action === 'clearroute') {
+            stopTitanDriveSimulation();
+            if (titanRouteLayer) { titanMap.removeLayer(titanRouteLayer); titanRouteLayer = null; }
+            if (titanDestMarker) { titanMap.removeLayer(titanDestMarker); titanDestMarker = null; }
+            titanMap.eachLayer(layer => {
+                if (layer instanceof L.Polyline && !(layer instanceof L.CircleMarker)) {
+                    titanMap.removeLayer(layer);
+                }
+            });
+            if (titanHrMarker) {
+                titanMap.removeLayer(titanHrMarker);
+                titanHrMarker = null;
+            }
+            titanRouteLine = null;
+            titanCurrentRouteCoords = [];
+            const locEl = document.getElementById('titanLocationName');
+            if (locEl) {
+                locEl.innerText = "Norrköping C (GPS Aktiv)";
+                locEl.style.cursor = 'default';
+                locEl.onclick = null;
+            }
+            showTempMsg("Rutt rensad från kartan", 1500);
+        }
+    };
+
+    window.titanSetLayout = function(mode) {
+        document.getElementById('titanFreeMapView')?.classList.remove('active');
+        const split = document.querySelector('.titan-split');
+        if (!split) return;
+        if (titanCurrentLayout === mode) {
+            titanCurrentLayout = 'split';
+        } else {
+            titanCurrentLayout = mode;
+        }
+        split.classList.remove('mode-split', 'mode-left-full', 'mode-right-full');
+        split.classList.add('mode-' + titanCurrentLayout);
+        if (titanMap) setTimeout(() => titanMap.invalidateSize(), 150);
+    };
+
+    let titanFreeMap = null;
+    let titanFreeStreetLayer = null;
+    let titanFreeSatLayer = null;
+    let titanFreePatrolMarker = null;
+    let titanFreeHrMarker = null;
+    let titanFreeRouteLine = null;
+    let titanFreeDrawTool = null; // 'breakpoint' | 'roadblock' | 'line' | null
+    let titanFreeCustomLayers = [];
+    let titanFreeActiveLineCoords = [];
+    let titanFreeActivePolyline = null;
+
+    function updateFreeMapToolButtons() {
+        document.getElementById('btnFreeMapToolBreakpoint')?.classList.toggle('active-tool', titanFreeDrawTool === 'breakpoint');
+        document.getElementById('btnFreeMapToolRoadblock')?.classList.toggle('active-tool', titanFreeDrawTool === 'roadblock');
+        document.getElementById('btnFreeMapToolLine')?.classList.toggle('active-tool', titanFreeDrawTool === 'line');
+        const mapEl = document.getElementById('titanFreeMapContainer');
+        if (mapEl) mapEl.style.cursor = titanFreeDrawTool ? 'crosshair' : '';
+    }
+
+    window.setTitanFreeMapDrawTool = function(tool) {
+        if (titanFreeDrawTool === tool) {
+            titanFreeDrawTool = null;
+            titanFreeActiveLineCoords = [];
+            titanFreeActivePolyline = null;
+        } else {
+            titanFreeDrawTool = tool;
+            if (tool === 'line') {
+                titanFreeActiveLineCoords = [];
+                titanFreeActivePolyline = null;
+                showTitanToast("✏️ Klicka på kartan för att rita flyktväg / linje", 2400);
+            } else if (tool === 'breakpoint') {
+                showTitanToast("📍 Klicka på kartan för att sätta Brytpunkt", 2200);
+            } else if (tool === 'roadblock') {
+                showTitanToast("🚧 Klicka på kartan för att sätta Avspärrning", 2200);
+            }
+        }
+        updateFreeMapToolButtons();
+    };
+
+    window.clearTitanFreeMapAnnotations = function() {
+        if (titanFreeMap) {
+            titanFreeCustomLayers.forEach(layer => {
+                try { titanFreeMap.removeLayer(layer); } catch (e) {}
+            });
+        }
+        titanFreeCustomLayers = [];
+        titanFreeActiveLineCoords = [];
+        titanFreeActivePolyline = null;
+        titanFreeDrawTool = null;
+        updateFreeMapToolButtons();
+        if (typeof soundKeypress === 'function') soundKeypress();
+        showTitanToast("🗑️ Alla taktiska markeringar & linjer rensade", 2000);
+    };
+
+    window.openTitanFreeMap = function() {
+        const view = document.getElementById('titanFreeMapView');
+        if (!view) return;
+        view.classList.add('active');
+
+        if (!titanFreeMap && typeof L !== 'undefined') {
+            titanFreeMap = L.map('titanFreeMapContainer', { zoomControl: true }).setView(titanCurrentPos, 15);
+
+            titanFreeStreetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(titanFreeMap);
+
+            // Helt gratis satellit-/flygfoto-lager via Esri World Imagery (kräver ingen API-nyckel)
+            titanFreeSatLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri'
+            });
+
+            titanFreeMap.on('click', (e) => {
+                if (!titanFreeDrawTool) return;
+                const { lat, lng } = e.latlng;
+                const timeNow = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+
+                if (titanFreeDrawTool === 'breakpoint') {
+                    const icon = L.divIcon({
+                        className: '',
+                        html: '<div style="background:#16a34a; color:#fff; border:2px solid #bbf7d0; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.6);">📍 Brytpunkt</div>',
+                        iconSize: [96, 24],
+                        iconAnchor: [48, 12]
+                    });
+                    const m = L.marker([lat, lng], { icon }).addTo(titanFreeMap)
+                        .bindPopup(`<b>📍 Brytpunkt</b><br>Satt ${timeNow}`);
+                    titanFreeCustomLayers.push(m);
+                    if (typeof soundKeypress === 'function') soundKeypress();
+                    if (window.appendTitanHrLog) appendTitanHrLog(window.MY_TACTICAL || '33-9000', `Taktisk markering: Brytpunkt utplacerad på karta.`);
+                    showTitanToast("📍 Brytpunkt placerad", 1600);
+                } else if (titanFreeDrawTool === 'roadblock') {
+                    const icon = L.divIcon({
+                        className: '',
+                        html: '<div style="background:#ea580c; color:#fff; border:2px solid #fed7aa; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,0.6);">🚧 Avspärrning</div>',
+                        iconSize: [110, 24],
+                        iconAnchor: [55, 12]
+                    });
+                    const m = L.marker([lat, lng], { icon }).addTo(titanFreeMap)
+                        .bindPopup(`<b>🚧 Avspärrning / Postering</b><br>Satt ${timeNow}`);
+                    titanFreeCustomLayers.push(m);
+                    if (typeof soundKeypress === 'function') soundKeypress();
+                    if (window.appendTitanHrLog) appendTitanHrLog(window.MY_TACTICAL || '33-9000', `Taktisk markering: Avspärrning / Postering utplacerad.`);
+                    showTitanToast("🚧 Avspärrning / Postering placerad", 1600);
+                } else if (titanFreeDrawTool === 'line') {
+                    titanFreeActiveLineCoords.push([lat, lng]);
+                    const dot = L.circleMarker([lat, lng], {
+                        radius: 4, fillColor: '#facc15', color: '#000', weight: 1, fillOpacity: 1
+                    }).addTo(titanFreeMap);
+                    titanFreeCustomLayers.push(dot);
+                    if (!titanFreeActivePolyline) {
+                        titanFreeActivePolyline = L.polyline(titanFreeActiveLineCoords, {
+                            color: '#facc15', weight: 4, dashArray: '8, 6', opacity: 0.95
+                        }).addTo(titanFreeMap);
+                        titanFreeCustomLayers.push(titanFreeActivePolyline);
+                    } else {
+                        titanFreeActivePolyline.setLatLngs(titanFreeActiveLineCoords);
+                    }
+                    if (typeof soundKeypress === 'function') soundKeypress();
+                }
+            });
+        }
+
+        setTimeout(() => {
+            if (!titanFreeMap) return;
+            titanFreeMap.invalidateSize();
+
+            // Uppdatera markörer utan att tvinga kameran under körning
+            if (titanFreePatrolMarker) titanFreeMap.removeLayer(titanFreePatrolMarker);
+            titanFreePatrolMarker = L.circleMarker(titanCurrentPos, {
+                radius: 9, fillColor: "#3b82f6", color: "#ffffff", weight: 2, fillOpacity: 0.95
+            }).addTo(titanFreeMap).bindPopup("🚓 Egen patrull");
+
+            if (titanFreeHrMarker) { titanFreeMap.removeLayer(titanFreeHrMarker); titanFreeHrMarker = null; }
+            if (titanFreeRouteLine) { titanFreeMap.removeLayer(titanFreeRouteLine); titanFreeRouteLine = null; }
+
+            if (titanCurrentRouteCoords && titanCurrentRouteCoords.length > 1) {
+                titanFreeRouteLine = L.polyline(titanCurrentRouteCoords, {
+                    color: titanActiveHrMission ? '#ef4444' : '#3b82f6',
+                    weight: 4, dashArray: '6, 6', opacity: 0.85
+                }).addTo(titanFreeMap);
+            }
+
+            if (titanActiveHrMission && titanActiveHrMission.lat && titanActiveHrMission.lng) {
+                titanFreeHrMarker = L.marker([titanActiveHrMission.lat, titanActiveHrMission.lng])
+                    .addTo(titanFreeMap)
+                    .bindPopup(`<b>🚨 ${titanActiveHrMission.title}</b><br>${titanActiveHrMission.address}`)
+                    .openPopup();
+                titanFreeMap.setView([titanActiveHrMission.lat, titanActiveHrMission.lng], 16);
+            } else {
+                titanFreeMap.setView(titanCurrentPos, 15);
+            }
+        }, 100);
+    };
+
+    window.closeTitanFreeMap = function() {
+        document.getElementById('titanFreeMapView')?.classList.remove('active');
+        document.getElementById('tNavKarta')?.classList.remove('active');
+        document.getElementById('tNavHR')?.classList.add('active');
+        document.getElementById('tNavRakel')?.classList.add('active');
+        if (titanMap) setTimeout(() => titanMap.invalidateSize(), 100);
+    };
+
+    window.setTitanFreeMapLayer = function(type) {
+        if (!titanFreeMap) return;
+        document.getElementById('btnFreeMapStreet')?.classList.toggle('active-layer', type === 'street');
+        document.getElementById('btnFreeMapSat')?.classList.toggle('active-layer', type === 'satellite');
+
+        if (type === 'satellite') {
+            if (titanFreeMap.hasLayer(titanFreeStreetLayer)) titanFreeMap.removeLayer(titanFreeStreetLayer);
+            if (!titanFreeMap.hasLayer(titanFreeSatLayer)) titanFreeSatLayer.addTo(titanFreeMap);
+        } else {
+            if (titanFreeMap.hasLayer(titanFreeSatLayer)) titanFreeMap.removeLayer(titanFreeSatLayer);
+            if (!titanFreeMap.hasLayer(titanFreeStreetLayer)) titanFreeStreetLayer.addTo(titanFreeMap);
+        }
+    };
+
+    window.focusFreeMapOnHr = function() {
+        if (!titanFreeMap) return;
+        if (titanActiveHrMission && titanActiveHrMission.lat) {
+            titanFreeMap.setView([titanActiveHrMission.lat, titanActiveHrMission.lng], 17);
+        } else {
+            showTempMsg("Inget aktivt HR-uppdrag att fokusera på", 1800);
+        }
+    };
+
+    window.focusFreeMapOnPatrol = function() {
+        if (!titanFreeMap) return;
+        if (titanFreePatrolMarker) titanFreePatrolMarker.setLatLng(titanCurrentPos);
+        titanFreeMap.setView(titanCurrentPos, 16);
+    };
+
+    const TITAN_HR_SCENARIOS = [
+        {
+            id: "HR-2026-8841",
+            prio: 1,
+            code: "0102 Trafikolycka personskada",
+            title: "Trafikolycka – Frontalkrock två personbilar",
+            address: "Lindövägen 45, Norrköping",
+            lat: 58.5948,
+            lng: 16.2185,
+            caller: "SOS Alarm / Inringare på plats (070-123 45 67)",
+            tg: "Insats 1",
+            units: "33-9000 (Egen), 33-9110, Rtj 251-1010, Amb 33-9510",
+            summary: "Två personbilar kolliderat i korsningen vid Lindövägen. Airbag utlöst i båda fordonen. En förare klagar på nacksmärtor, blockerar körfält riktning mot city.",
+            log: [
+                { time: "11:02", unit: "RLC ÖST", msg: "Ärende skapat via SOS 112. Prio 1 utlarmad." },
+                { time: "11:03", unit: "SOS", msg: "Inringare uppger att båda bilarna står kvar på vägbanan. Rökutveckling från motorhuv men ingen öppen låga." },
+                { time: "11:04", unit: "RLC ÖST", msg: "Rtj och ambulans på väg. Insatskanal tilldelad. Kontrollera nykterhet och dirigera trafik." }
+            ]
+        },
+        {
+            id: "HR-2026-8842",
+            prio: 1,
+            code: "0401 Pågående inbrott",
+            title: "Pågående inbrott i företagslokal (Larm + Vittne)",
+            address: "Ingelsta Shopping, Norrköping",
+            lat: 58.6152,
+            lng: 16.1682,
+            caller: "Securitas Larmcentral / Väktare på plats",
+            tg: "Insats 2",
+            units: "33-9000 (Egen), 33-9120, Hundpatrull 33-9810",
+            summary: "Krossad glasruta på baksidan mot lastkajen. Väktare har sett två mörkklädda personer med ryggsäckar springa mot skogspartiet norr om parkeringen.",
+            log: [
+                { time: "11:10", unit: "RLC ÖST", msg: "Inbrottslarm sektion 4 (Lastkaj). Väktare bekräftar fysiskt inbrott." },
+                { time: "11:11", unit: "VÄKTARE", msg: "Två gärningspersoner lämnade platsen till fots norrut. Mörka luvtröjor, en bar på en röd kofot." },
+                { time: "11:12", unit: "RLC ÖST", msg: "Hundpatrull 33-9810 ansluter för spårupptag. Säkra yttre flyktvägar via kartan." }
+            ]
+        },
+        {
+            id: "HR-2026-8843",
+            prio: 1,
+            code: "0305 Misshandel utomhus",
+            title: "Pågående bråk / Misshandel vid resecentrum",
+            address: "Norra Promenaden 90, Norrköping",
+            lat: 58.5965,
+            lng: 16.1835,
+            caller: "Ordningsvakt Resecentrum",
+            tg: "Insats 1",
+            units: "33-9000 (Egen), 33-9130",
+            summary: "Ordningsvakt har ingripit mot tre personer som slagit en man på perrong 1. En person fasthållen av OV, två har avvikit mot Folkparken.",
+            log: [
+                { time: "11:15", unit: "RLC ÖST", msg: "Samtal från OV på Resecentrum. Behöver biträde omgående." },
+                { time: "11:16", unit: "RLC ÖST", msg: "Målsägande blöder från näsan men är vaken och talbar. Ingen ambulans begärd i nuläget." },
+                { time: "11:17", unit: "RLC ÖST", msg: "Signalement på avvikna: 1) Grön jacka, keps. 2) Svart dunjacka, vita skor." }
+            ]
+        },
+        {
+            id: "HR-2026-8844",
+            prio: 2,
+            code: "0204 Rattfylleri / Vårdslöshet",
+            title: "Misstänkt rattfylleri – vinglig färd E4",
+            address: "E4 Trafikplats Norrköping Norra",
+            lat: 58.6188,
+            lng: 16.1745,
+            caller: "Medtrafikant (bakomvarande bil)",
+            tg: "PO1 MPU",
+            units: "33-9000 (Egen)",
+            summary: "Silverfärgad Volvo V70 (reg.nr XYT 419) kör i 50–110 km/h och vinglar över mittlinjen på E4 södergående mot Norrköping Norra.",
+            log: [
+                { time: "11:20", unit: "RLC ÖST", msg: "Inringare ligger 100 meter bakom aktuell bil med varningsblinkers på." },
+                { time: "11:21", unit: "RLC ÖST", msg: "Fordonet passerar nu avfart 122 (Norrköping N). Upprätta förföljande / stopp." }
+            ]
+        },
+        {
+            id: "HR-2026-8845",
+            prio: 1,
+            code: "0901 Försvunnen person (LSO/Polis)",
+            title: "Försvunnen äldre man med demens",
+            address: "Himmelstalundsvägen 15, Norrköping",
+            lat: 58.5892,
+            lng: 16.1558,
+            caller: "Anhörig (Dotter)",
+            tg: "Insats 3",
+            units: "33-9000 (Egen), 33-9140, UAS/Drönare 33-9920",
+            summary: "Man, 82 år, lämnade bostaden för ca 45 min sedan utan ytterjacka. Bär blå rutig skjorta och grå mjukisbyxor. Har tidigare sökt sig ner mot Motala ström.",
+            log: [
+                { time: "11:25", unit: "RLC ÖST", msg: "Prio 1 eftersök pga kyla och närhet till vattendrag." },
+                { time: "11:26", unit: "RLC ÖST", msg: "Använd flygfoto i kartvyn för att kontrollera gångstigar och strandkant runt Himmelstalund." }
+            ]
+        }
+    ];
+
+    // Ladda in ett simulerat HR-uppdrag i TITAN (som om RLC skickat det)
+    window.dispatchSimulatedHrToTitan = async function(scenarioId) {
+        const sc = TITAN_HR_SCENARIOS.find(s => s.id === scenarioId);
+        if (!sc) return;
+
+        const nowTime = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        titanActiveHrMission = {
+            ...sc,
+            receivedAt: nowTime,
+            log: [...sc.log, { time: nowTime, unit: "TITAN", msg: "Uppdrag mottaget i fordonsterminal." }]
+        };
+
+        // Trigga den röda Prio-bannern och rita ut bilrutten på navigationskartan
+        await receiveTitanHrAlarm(
+            `[${sc.id}] ${sc.title}`,
+            `${sc.address} • Insatskanal: ${sc.tg}`,
+            sc.lat,
+            sc.lng,
+            sc.address,
+            true,
+            true
+        );
+    };
+
+    // Lägg till en ny händelserad i den aktiva HR-loggen (t.ex. vid statusbyte)
+    window.appendTitanHrLog = function(unit, msg) {
+        if (!titanActiveHrMission) return;
+        if (!Array.isArray(titanActiveHrMission.log)) titanActiveHrMission.log = [];
+        const nowTime = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        titanActiveHrMission.log.push({ time: nowTime, unit, msg });
+    };
+
+    // Uppdatera HR-fliken i titanBottomNav(tab) så att man kan både välja övningsscenarier och läsa hela HR-rapporten
+    window.openTitanHrModule = function() {
+        document.querySelectorAll('.titan-bottom-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tNavHR')?.classList.add('active');
+
+        const scenarioButtonsHtml = TITAN_HR_SCENARIOS.map(sc => `
+            <button class="titan-hr-scenario-btn" onclick="dispatchSimulatedHrToTitan('${sc.id}')">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="titan-hr-prio-badge ${sc.prio === 1 ? 'prio-1' : 'prio-2'}">PRIO ${sc.prio}</span>
+                    <span style="font-size:11px; color:#9ca3af;">${sc.id}</span>
+                </div>
+                <strong style="font-size:13px;">${sc.title}</strong>
+                <span style="font-size:11px; color:#93c5fd;">📍 ${sc.address}</span>
+            </button>
+        `).join('');
+
+        let readerHtml = "";
+        if (!titanActiveHrMission) {
+            readerHtml = `
+                <div style="margin:auto; text-align:center; color:#9ca3af; max-width:360px;">
+                    <div style="font-size:36px; margin-bottom:10px;">📋</div>
+                    <strong style="color:#fff; font-size:16px;">Ingen aktiv Händelserapport</strong>
+                    <p style="font-size:13px; margin-top:6px;">Välj ett av övningsscenarierna till vänster (eller skapa en egen adress) för att simulera ett inkommande HR från RLC.</p>
+                </div>
+            `;
+        } else {
+            const m = titanActiveHrMission;
+            const logsHtml = (m.log || []).map(l => `
+                <div class="titan-hr-log-entry">
+                    <span style="color:#60a5fa; font-weight:bold;">[${l.time}] ${l.unit}:</span>
+                    <span style="color:#e2e8f0;">${l.msg}</span>
+                </div>
+            `).join('');
+
+            readerHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                    <div>
+                        <span class="titan-hr-prio-badge ${m.prio === 1 ? 'prio-1' : 'prio-2'}">PRIO ${m.prio || 1} • ${m.code || 'HÄNDELSE'}</span>
+                        <h3 style="margin:6px 0 2px 0; font-size:17px; color:#fff;">${m.title}</h3>
+                        <div style="color:#93c5fd; font-size:13px; font-weight:bold;">📍 ${m.address}</div>
+                    </div>
+                    <span style="font-family:monospace; color:#9ca3af; font-size:12px;">${m.id || 'HR-AKTIV'}</span>
+                </div>
+
+                <div class="titan-hr-meta-grid">
+                    <div><span style="color:#9ca3af;">Uppgiftslämnare:</span><br><strong>${m.caller || 'RLC / SOS'}</strong></div>
+                    <div><span style="color:#9ca3af;">Tilldelad talgrupp:</span><br><strong>${m.tg || 'Insats 1'}</strong></div>
+                    <div style="grid-column: span 2;"><span style="color:#9ca3af;">Resurser på ärendet:</span><br><strong>${m.units || '33-9000'}</strong></div>
+                    <div style="grid-column: span 2; border-top:1px solid #374151; padding-top:6px;">
+                        <span style="color:#9ca3af;">Sammanfattning:</span><br>
+                        <span style="color:#f3f4f6;">${m.summary || m.details}</span>
+                    </div>
+                </div>
+
+                <div style="font-size:12px; font-weight:bold; color:#9ca3af;">HÄNDELSELOGG (RLC / PATRULL):</div>
+                <div class="titan-hr-log-box">${logsHtml}</div>
+
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;">
+                    <button class="titan-btn titan-btn-mission" style="padding:10px 14px; font-size:13px;" onclick="acknowledgeHrMissionFromReader()">✔ Kvittera & Byt TG</button>
+                    <button class="titan-btn titan-btn-action" style="padding:10px 14px; font-size:13px;" onclick="closeTitanOverlay(); startTitanDriveSimulation(titanActiveHrMission.address);">🚓 Kör rutt (Nav)</button>
+                    <button class="titan-btn" style="padding:10px 14px; font-size:13px;" onclick="closeTitanOverlay(); openTitanFreeMap();">🛰️ Öppna i Karta / Flygfoto</button>
+                    <button class="titan-btn" style="padding:10px 14px; font-size:13px;" onclick="appendTitanHrLog(window.MY_TACTICAL || '33-9000', 'Status: Framme på plats'); selectTitanStatus('Framme på plats'); openTitanHrModule();">📍 Framme</button>
+                    <button class="titan-btn" style="padding:10px 14px; font-size:13px;" onclick="appendTitanHrLog(window.MY_TACTICAL || '33-9000', 'Status: Avslutat uppdrag'); selectTitanStatus('Avslutat uppdrag'); openTitanHrModule();">✔ Avsluta</button>
+                </div>
+            `;
+        }
+
+        const fullHtml = `
+            <div class="titan-hr-layout" style="grid-column: span 3;">
+                <div class="titan-hr-sidebar">
+                    <div style="font-size:12px; font-weight:bold; color:#9ca3af; letter-spacing:0.5px;">SIMULERADE HR-UPPDRAG</div>
+                    ${scenarioButtonsHtml}
+                    <button class="titan-btn" style="margin-top:auto; padding:10px; font-size:12px; justify-content:center;" onclick="createCustomHrMission()">➕ Egen adress (Sök)</button>
+                </div>
+                <div class="titan-hr-reader">${readerHtml}</div>
+            </div>
+        `;
+        openTitanOverlay("📋 HR – Händelserapport & Övningsscenarier", fullHtml);
+    };
+
+    window.titanBottomNav = function(tab) {
+        closeTitanOverlay();
+        const pop = document.getElementById('titanMapPopover');
+        if (pop) pop.classList.remove('active');
+
+        if (tab !== 'karta') {
+            closeTitanFreeMap();
+        }
+
+        document.querySelectorAll('.titan-bottom-btn').forEach(b => b.classList.remove('active'));
+
+        if (tab === 'hem' || tab === 'rakel') {
+            closeTitanFreeMap();
+            titanSetLayout('split');
+            document.getElementById('tNavHR')?.classList.add('active');
+            document.getElementById('tNavRakel')?.classList.add('active');
+        } else if (tab === 'karta') {
+            document.getElementById('tNavKarta')?.classList.add('active');
+            openTitanFreeMap();
+        } else if (tab === 'navigation') {
+            closeTitanFreeMap();
+            titanSetLayout('split');
+            document.getElementById('tNavNavigation')?.classList.add('active');
+            openTitanAddressSearch("🧭 Navigation – Sök destination", "", async (geo) => {
+                await calculateAndDrawTitanRoute(geo.lat, geo.lng, geo.displayName, false);
+            });
+        } else if (tab === 'hr') {
+            openTitanHrModule();
+        } else if (tab === 'kamera') {
+            document.getElementById('tNavKamera')?.classList.add('active');
+            const html = `
+                <div style="grid-column: span 3; background:#090d16; padding:16px; border-radius:8px; border:1px solid #374151; text-align:center;">
+                    <div style="font-size:15px; font-weight:bold; color:#38bdf8; margin-bottom:8px;">📹 ANPR / Fordonskamera (Framåt)</div>
+                    <div style="background:#111827; border:1px dashed #4b5563; padding:24px; border-radius:8px; margin-bottom:12px;">
+                        <div style="font-size:13px; color:#9ca3af;">Senaste avlästa registreringsskylt:</div>
+                        <div style="display:inline-block; background:#fff; color:#000; font-family:monospace; font-size:24px; font-weight:bold; padding:4px 16px; border-radius:4px; border:2px solid #1d4ed8; margin-top:6px;">S MLB 482</div>
+                        <div style="font-size:12px; color:#4ade80; margin-top:6px;">✔ Ingen anmärkning i vägtrafikregistret</div>
+                    </div>
+                    <button class="titan-btn" style="margin:0 auto;" onclick="closeTitanOverlay()">Stäng kameravy</button>
+                </div>
+            `;
+            openTitanOverlay("📹 Fordonskamera & ANPR", html);
+        } else if (tab === 'meny') {
+            document.getElementById('tNavMeny')?.classList.add('active');
+            const html = `
+                <button class="titan-btn" style="justify-content:center;" onclick="closeTitanOverlay(); document.getElementById('titanBlackout').style.display='block';">🌙 Skärmsläckning (Blackout)</button>
+                <button class="titan-btn" style="justify-content:center;" onclick="titanMapAction('theme'); closeTitanOverlay();">🌓 Dag / Natt-läge</button>
+                <button class="titan-btn" style="justify-content:center;" onclick="titanSetLayout('split'); closeTitanOverlay();">◫ Återställ Split-vy</button>
+                <button class="titan-btn" style="justify-content:center;" onclick="toggleTitanViewMode()">📱 Byt till handhållen SC21</button>
+            `;
+            openTitanOverlay("⋯ Systemmeny TITAN", html);
+        }
     };
 </script>
 </body>
