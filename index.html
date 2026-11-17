@@ -10,6 +10,9 @@
     <meta name="theme-color" content="#002855">
     <link rel="manifest" href="manifest.json">
     <title>Sepura SC21 - Rakel Utbildningssimulator & RLC</title>
+    <meta name="description" content="Interaktiv Rakel Sepura SC21 handterminal, SRG3900 Gateway, TITAN-platta och RLC-ledningscentral.">
+    <meta property="og:title" content="Sepura SC21 - Rakel Utbildningssimulator & RLC">
+    <meta property="og:description" content="Interaktiv Rakel Sepura SC21 handterminal, SRG3900 Gateway, TITAN-platta och RLC-ledningscentral.">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -764,12 +767,6 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
 
 <!-- FIREBASE MULTIPLAYER & REALTIME SYNC -->
 <script type="module">
-    window.GEMINI_API_KEY = "";
-    try {
-        const savedKey = localStorage.getItem('rakel_gemini_api_key');
-        if (savedKey) window.GEMINI_API_KEY = savedKey;
-    } catch (e) {}
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -1168,7 +1165,6 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
         <span class="device-badge" id="myCallsignBadge" onclick="showCallsignToast()">🆔 --</span>
         <button class="top-btn" id="onlineUnitsBtn" onclick="toggleOnlineUnitsModal()">👥 1</button>
         <button class="top-btn" id="pwaInstallBtn" onclick="installPwaApp()" style="background:linear-gradient(to bottom,#16a085,#117864);border-color:#76d7c4;">📲 App</button>
-        <button class="top-btn" id="apiKeyBtn" onclick="promptApiKey()">🔑</button>
         <button class="top-btn" onclick="toggleLathund()">📘 Manual</button>
         <button class="top-btn" onclick="hardResetApp()" style="background:#e74c3c;border-color:#c0392b;">♻️ Rensa</button>
     </div>
@@ -2619,32 +2615,25 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
         }
     }
 
-    async function callGemini25FlashJson(apiKey, payload) {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-        const response = await fetchWithRetry(apiUrl, {
+    async function callServerAiRlc(requestBody) {
+        const response = await fetchWithRetry('/api/ai-rlc', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(requestBody)
         }, 2);
 
         if (!response || !response.ok) {
-            let errDetail = response ? `HTTP ${response.status}` : "Inget svar från Gemini API";
+            let errDetail = response ? `HTTP ${response.status}` : "Inget svar från servern";
             try {
                 const errBody = await response.json();
-                if (errBody?.error?.message) {
-                    errDetail = `${errBody.error.message} (HTTP ${response.status})`;
+                if (errBody?.error) {
+                    errDetail = errBody.error;
                 }
             } catch (e) {}
             throw new Error(errDetail);
         }
 
-        const result = await response.json();
-        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) {
-            throw new Error("Tomt svar från Gemini (inga candidates)");
-        }
-        const cleanedJson = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-        return JSON.parse(cleanedJson);
+        return await response.json();
     }
 
     async function speakSwedish(text, callback, senderLabel, customTgLabel, options = {}) {
@@ -2783,12 +2772,6 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
             return;
         }
 
-        const apiKey = (window.GEMINI_API_KEY || "").trim();
-        if (!apiKey) {
-            reportAiError(new Error("Ingen Gemini API-nyckel angiven (klicka på 🔑)"));
-            return;
-        }
-
         isAiProcessingVoice = true;
         try {
             const formattedMyTactical = window.formatPatrolCallsignPairs(window.MY_TACTICAL || "33-9000");
@@ -2808,22 +2791,11 @@ Regler:
 1. Skriv ALLTID ut patrullnummer med två siffror i taget med mellanslag (t.ex. "97-54 20").
 2. Svara kortfattat och realistiskt på svenska med patrullens anropsnummer och aktuella plats.`;
 
-                const payload = {
-                    contents: [{ role: "user", parts: [{ text: `RLC ${activeRlcCode} sände: "${cleanText}". Svara som anropad enhet i JSON.` }] }],
-                    systemInstruction: { parts: [{ text: rlcConsoleSysInstruction }] },
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                responderCallsign: { type: "STRING" },
-                                spokenResponse: { type: "STRING" }
-                            },
-                            required: ["responderCallsign", "spokenResponse"]
-                        }
-                    }
-                };
-                const parsed = await callGemini25FlashJson(apiKey, payload);
+                const parsed = await callServerAiRlc({
+                    kind: "rlc_console_text",
+                    userPrompt: `RLC ${activeRlcCode} sände: "${cleanText}". Svara som anropad enhet i JSON.`,
+                    systemInstruction: rlcConsoleSysInstruction
+                });
                 appendRlcLog(`🎙️ RLC ${activeRlcCode} (${activeTg}): "${cleanText}"`);
                 if (parsed.spokenResponse) {
                     const senderTag = parsed.responderCallsign || window.formatPatrolCallsignPairs(simUnits[0].tactical);
@@ -2853,26 +2825,11 @@ Regler för radiokommunikation:
                 ? `Patrullen ${window.MY_TACTICAL} (${formattedMyTactical}) har just skickat en digital Anropsbegäran till RLC på talgrupp "${activeTg}". Svara patrullen med röst över radion (t.ex. "${formattedMyTactical}, RLC Öst, varsågod och kom").`
                 : `Patrullen ${formattedMyTactical} sände via radio på ${activeTg}: "${cleanText}". Svara i JSON-format.`;
 
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            shouldReply: { type: "BOOLEAN" },
-                            responderLabel: { type: "STRING" },
-                            spokenResponse: { type: "STRING" },
-                            sdsFollowUp: { type: "STRING" },
-                            newStatus: { type: "STRING" }
-                        },
-                        required: ["shouldReply", "spokenResponse"]
-                    }
-                }
-            };
-
-            const parsed = await callGemini25FlashJson(apiKey, payload);
+            const parsed = await callServerAiRlc({
+                kind: options.isCallRequest ? "call_request" : "patrol_text",
+                userPrompt,
+                systemInstruction
+            });
             parsed.transcript = options.isCallRequest ? "[Anropsbegäran]" : cleanText;
             if (options.isCallRequest) {
                 hasPendingCallRequest = false;
@@ -2914,11 +2871,6 @@ Regler för radiokommunikation:
     window.processAiRlcVoiceTurn = async function(wavDataUrl, tgName, isFromRlcConsole = false) {
         if (!window.aiRlcEnabled || isAiProcessingVoice) return;
         if (!isFromRlcConsole && !window.canReachRlcNetwork()) return;
-        const apiKey = (window.GEMINI_API_KEY || "").trim();
-        if (!apiKey) {
-            reportAiError(new Error("Ingen Gemini API-nyckel angiven (klicka på 🔑)"));
-            return;
-        }
 
         const base64Audio = wavDataUrl.includes(',') ? wavDataUrl.split(',')[1] : wavDataUrl;
         if (!base64Audio || base64Audio.length < 600) return;
@@ -2942,30 +2894,13 @@ Regler:
 2. När en patrull blir uppropad av RLC ska patrullen svara med sitt anropsnummer och sin aktuella geografiska gata/plats.
 3. Om sändningen sker på en RAPS-kanal ska enheten inleda med funktion + anropsnummer.`;
 
-                const payload = {
-                    contents: [{
-                        role: "user",
-                        parts: [
-                            { text: "Lyssna på RLC-operatörens anrop och svara som den tilltalade patrullen/enheten med geografisk plats i JSON." },
-                            { inlineData: { mimeType: "audio/wav", data: base64Audio } }
-                        ]
-                    }],
-                    systemInstruction: { parts: [{ text: rlcConsoleSysInstruction }] },
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: {
-                            type: "OBJECT",
-                            properties: {
-                                transcript: { type: "STRING" },
-                                responderCallsign: { type: "STRING" },
-                                spokenResponse: { type: "STRING" }
-                            },
-                            required: ["transcript", "responderCallsign", "spokenResponse"]
-                        }
-                    }
-                };
-
-                const parsed = await callGemini25FlashJson(apiKey, payload);
+                const parsed = await callServerAiRlc({
+                    kind: "rlc_console_audio",
+                    userPrompt: "Lyssna på RLC-operatörens anrop och svara som den tilltalade patrullen/enheten med geografisk plats i JSON.",
+                    systemInstruction: rlcConsoleSysInstruction,
+                    audioBase64: base64Audio,
+                    mimeType: "audio/wav"
+                });
                 if (parsed.transcript) {
                     console.log("Uppfattat tal:", parsed.transcript);
                     appendRlcLog(`🎙️ RLC ${activeRlcCode} (${tgName}): "${parsed.transcript}"`);
@@ -2995,33 +2930,13 @@ Regler för radiokommunikation:
 5. Om patrullen begär slagning på person eller fordon, ge ett realistiskt svar i tal och lägg detaljerna i "sdsFollowUp".
 6. Om patrullen anmäler en ny status muntligt, sätt "newStatus" till en av: "Klar, ledig", "Påbörjat uppdrag", "Framme på plats", "Upptagen", "Disponibel", "16 Biträde önskas" (annars "").`;
 
-            const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: "Lyssna på patrullens radiosändning och svara enligt reglerna i JSON-format." },
-                        { inlineData: { mimeType: "audio/wav", data: base64Audio } }
-                    ]
-                }],
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            transcript: { type: "STRING" },
-                            shouldReply: { type: "BOOLEAN" },
-                            responderLabel: { type: "STRING" },
-                            spokenResponse: { type: "STRING" },
-                            sdsFollowUp: { type: "STRING" },
-                            newStatus: { type: "STRING" }
-                        },
-                        required: ["transcript", "shouldReply", "spokenResponse"]
-                    }
-                }
-            };
-
-            const parsed = await callGemini25FlashJson(apiKey, payload);
+            const parsed = await callServerAiRlc({
+                kind: "patrol_audio",
+                userPrompt: "Lyssna på patrullens radiosändning och svara enligt reglerna i JSON-format.",
+                systemInstruction,
+                audioBase64: base64Audio,
+                mimeType: "audio/wav"
+            });
             if (parsed.transcript) console.log("Uppfattat tal:", parsed.transcript);
             await handleParsedPatrolAiResponse(parsed, tgName, formattedMyTactical);
         } catch (err) {
@@ -5041,7 +4956,7 @@ Regler för radiokommunikation:
         if (!isRlcTx && awaitingChannelCheckinTg && awaitingChannelCheckinTg === targetTg) {
             clearTimeout(channelCheckinTimer);
             awaitingChannelCheckinTg = null;
-            if (!(window.GEMINI_API_KEY || "").trim()) {
+            if (!window.aiRlcEnabled) {
                 const formattedCall = window.formatPatrolCallsignPairs(window.MY_TACTICAL);
                 const reply = `${formattedCall} från ${activeRlcCode}, ni är noterade på ${targetTg}, kom.`;
                 setTimeout(() => {
@@ -5326,25 +5241,6 @@ Regler för radiokommunikation:
         if (window.refreshRlcDashboard) window.refreshRlcDashboard();
         updateScreenDisplay();
         showTempMsg(`📟 Status ändrad av <b>RLC ${rlcCodeStr}</b>:<br><b style="color:#005bb5;">${newStatus}</b>`, 2200);
-    };
-
-    window.promptApiKey = function() {
-        if (!window.requirePinUnlock()) return;
-        askInput("Ange Gemini API-nyckel (sparas för kvinnlig AI-molnröst):", window.GEMINI_API_KEY || "", (val) => {
-            if (val !== null) {
-                window.GEMINI_API_KEY = val.trim();
-                try { localStorage.setItem('rakel_gemini_api_key', window.GEMINI_API_KEY); } catch (e) {}
-                const btn = document.getElementById('apiKeyBtn');
-                if (window.GEMINI_API_KEY) {
-                    btn.innerText = "🔑 ✔";
-                    btn.classList.add('active-gw');
-                    showTempMsg("✔ API-nyckel sparad!<br><span style='font-size:11px;'>Kvinnlig AI-molnröst aktiverad</span>", 1800);
-                } else {
-                    btn.innerText = "🔑";
-                    btn.classList.remove('active-gw');
-                }
-            }
-        });
     };
 
     window.toggleVehiclePanel = function() {
@@ -6329,10 +6225,6 @@ Regler för radiokommunikation:
         updateBadgeAndToastText();
         updateScreenDisplay();
         window.refreshRlcDashboard();
-        if (window.GEMINI_API_KEY) {
-            const btn = document.getElementById('apiKeyBtn');
-            if (btn) { btn.innerText = "🔑 ✔"; btn.classList.add('active-gw'); }
-        }
         appendRlcLog("RLC 9-7 Sambandscentral redo. Medlyssnar samtliga talgrupper.");
         initRakelPwa();
     });
