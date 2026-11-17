@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express, { type Request, type Response } from "express";
-import { GoogleGenAI, ThinkingLevel, Type, type Part, type Schema } from "@google/genai";
+import { GoogleGenAI, Type, type Part, type Schema } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -104,25 +104,6 @@ function extractStatusAndMessage(err: unknown): { status: number; message: strin
   return { status: 500, message: rawMessage };
 }
 
-async function generateWithRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
-  const delays = [1000, 2500];
-  let lastError: unknown;
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      const { status } = extractStatusAndMessage(err);
-      if ((status === 429 || status === 503) && i < retries - 1) {
-        await new Promise((r) => setTimeout(r, delays[i]));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw lastError;
-}
-
 async function startServer() {
   const app = express();
   app.use(express.json({ limit: "15mb" }));
@@ -156,19 +137,39 @@ async function startServer() {
 
       const responseSchema = getResponseSchemaForKind(kind);
 
-      const result = await generateWithRetry(() =>
-        ai.models.generateContent({
-          model: MODEL_NAME,
-          contents: [{ role: "user", parts }],
-          config: {
-            ...(systemInstruction ? { systemInstruction } : {}),
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-            responseMimeType: "application/json",
-            responseSchema,
-            abortSignal: AbortSignal.timeout(25000),
-          },
-        })
-      );
+      const candidateModels: Array<{ model: string; timeoutMs: number }> = [
+        { model: MODEL_NAME, timeoutMs: 8000 },
+        { model: "gemini-4-hydrogen", timeoutMs: 15000 },
+        { model: "gemini-3.1-flash-lite", timeoutMs: 15000 },
+      ];
+      let result: Awaited<ReturnType<typeof ai.models.generateContent>> | null = null;
+      let lastErr: unknown = null;
+
+      for (const cfg of candidateModels) {
+        try {
+          result = await ai.models.generateContent({
+            model: cfg.model,
+            contents: [{ role: "user", parts }],
+            config: {
+              ...(systemInstruction ? { systemInstruction } : {}),
+              responseMimeType: "application/json",
+              responseSchema,
+              abortSignal: AbortSignal.timeout(cfg.timeoutMs),
+            },
+          });
+          break;
+        } catch (modelErr) {
+          lastErr = modelErr;
+          const { status } = extractStatusAndMessage(modelErr);
+          if (status === 400 || status === 401 || status === 403) {
+            throw modelErr;
+          }
+        }
+      }
+
+      if (!result) {
+        throw lastErr || new Error("Alla Gemini-modeller misslyckades eller tog för lång tid.");
+      }
 
       const rawText = (result.text ?? "").trim();
       if (!rawText) {
