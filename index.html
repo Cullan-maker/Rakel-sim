@@ -718,6 +718,46 @@
 .titan-hr-log-entry {
     border-left: 3px solid #3b82f6; padding-left: 10px; line-height: 1.4;
 }
+
+/* Valbara enhetslägen: Endast TITAN-platta eller Endast HBC3-mobil */
+body.device-mode-titan .top-bar,
+body.device-mode-hbc3 .top-bar {
+    display: none !important;
+}
+
+body.device-mode-titan .titan-dashboard {
+    top: 0 !important; padding: 0 !important; gap: 0 !important;
+}
+body.device-mode-titan .titan-tablet {
+    width: 100vw !important; height: 100vh !important; max-width: 100vw !important;
+    border-radius: 0 !important; border: none !important;
+}
+body.device-mode-titan .hbc3-handset {
+    display: none !important;
+}
+
+body.device-mode-hbc3 .titan-dashboard {
+    top: 0 !important; padding: 10px !important; background: #090b0e !important;
+}
+body.device-mode-hbc3 .titan-tablet {
+    display: none !important;
+}
+body.device-mode-hbc3 .hbc3-handset {
+    width: min(94vw, 380px) !important; height: 94vh !important; max-height: 780px !important;
+    margin: auto !important;
+}
+
+/* Diskret återställningsknapp i helskärmsläge */
+.titan-exit-solo-btn {
+    position: fixed; bottom: 8px; right: 8px; z-index: 9999;
+    background: rgba(17, 24, 39, 0.75); color: #9ca3af; border: 1px solid #374151;
+    border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; display: none;
+}
+body.device-mode-titan .titan-exit-solo-btn,
+body.device-mode-hbc3 .titan-exit-solo-btn {
+    display: block;
+}
+.titan-exit-solo-btn:hover { color: #fff; background: #2563eb; }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -921,6 +961,16 @@
                 }
             });
             window.liveConnectedUnits = filterAndDeduplicateUnits(raw);
+            for (const d of raw) {
+                if (d.pairPacket && d._docId !== auth?.currentUser?.uid && d.tactical === (window.MY_TACTICAL || "33-9000")) {
+                    if ((d.pairPacket.timestamp || 0) > (window._lastAppliedPairTs || 0)) {
+                        window._lastAppliedPairTs = d.pairPacket.timestamp;
+                        if (typeof window.applyIncomingTitanPairState === 'function') {
+                            window.applyIncomingTitanPairState(d.pairPacket);
+                        }
+                    }
+                }
+            }
             if (window.updateOnlinePillUI) window.updateOnlinePillUI();
             if (window.refreshRlcDashboard) window.refreshRlcDashboard();
         }, (err) => console.warn("Presence snapshot warning:", err));
@@ -992,6 +1042,7 @@
                         lat: window.MY_LAT || 55.6050,
                         lng: window.MY_LNG || 13.0038,
                         locationName: window.MY_LOCATION_NAME || "Storgatan, Malmö",
+                        pairPacket: window.titanLastPairPacket || null,
                         timestamp: Date.now()
                     });
                 } else {
@@ -7244,6 +7295,9 @@ Regler för radiokommunikation:
             document.getElementById('titanOverlayTitle')?.innerText?.includes('Snabbmeny')) {
             titanOpenRightMoreMenu();
         }
+        if (typeof titanDeviceMode !== 'undefined' && titanDeviceMode !== 'combined' && !window._suppressPairBroadcast && typeof window.broadcastTitanPairState === 'function') {
+            window.broadcastTitanPairState('AUDIO_SYNC');
+        }
     };
     window.titanToggleAudioOutput = window.toggleTitanAudioOutput;
 
@@ -7845,6 +7899,8 @@ Regler för radiokommunikation:
         } else if (tab === 'meny') {
             document.getElementById('tNavMeny')?.classList.add('active');
             const html = `
+                <button class="titan-btn" style="justify-content:center; border-color:#3b82f6;" onclick="closeTitanOverlay(); setTitanDeviceMode('titan');">📟 Endast TITAN-platta (Helskärm)</button>
+                <button class="titan-btn" style="justify-content:center; border-color:#f59e0b;" onclick="closeTitanOverlay(); setTitanDeviceMode('hbc3');">📱 Endast HBC3-mobil (Helskärm)</button>
                 <button class="titan-btn" style="justify-content:center;" onclick="closeTitanOverlay(); document.getElementById('titanBlackout').style.display='block';">🌙 Skärmsläckning (Blackout)</button>
                 <button class="titan-btn" style="justify-content:center;" onclick="titanMapAction('theme'); closeTitanOverlay();">🌓 Dag / Natt-läge</button>
                 <button class="titan-btn" style="justify-content:center;" onclick="titanSetLayout('split'); closeTitanOverlay();">◫ Återställ Split-vy</button>
@@ -7853,6 +7909,142 @@ Regler för radiokommunikation:
             openTitanOverlay("⋯ Systemmeny TITAN", html);
         }
     };
+
+    let titanDeviceMode = 'combined'; // 'combined' (standard) | 'titan' (endast platta) | 'hbc3' (endast mobil)
+    const titanPairChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('rakel_titan_pair_sync') : null;
+
+    window.setTitanDeviceMode = function(mode, requestFullscreen = true) {
+        titanDeviceMode = mode;
+        document.body.classList.remove('device-mode-titan', 'device-mode-hbc3');
+
+        // Säkerställ att TITAN-dashboarden är aktiv
+        const titanDash = document.getElementById('titanDashboard');
+        const sc21 = document.getElementById('scale-wrapper');
+        const sc21ScreenEl = document.getElementById('screen-container');
+        const rlcDash = document.getElementById('rlcDashboard');
+        const toggleBtn = document.getElementById('titanViewToggleBtn');
+        if (sc21ScreenEl && sc21ScreenEl.offsetWidth > 0 && sc21ScreenEl.offsetHeight > 0) {
+            window._sc21NativeWidth = sc21ScreenEl.offsetWidth;
+            window._sc21NativeHeight = sc21ScreenEl.offsetHeight;
+        }
+        if (titanDash && !titanDash.classList.contains('active')) {
+            titanDash.classList.add('active');
+            if (sc21) sc21.style.display = 'none';
+            if (rlcDash) rlcDash.classList.remove('active');
+            if (toggleBtn) {
+                toggleBtn.innerHTML = '📱 SC21-vy';
+                toggleBtn.classList.add('active-gw');
+            }
+        }
+
+        if (mode === 'titan') {
+            document.body.classList.add('device-mode-titan');
+            if (requestFullscreen && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+            if (typeof initTitanMap === 'function') setTimeout(() => { initTitanMap(); if (titanMap) titanMap.invalidateSize(); }, 180);
+            showTempMsg("Läge: Endast TITAN-platta (Helskärm)", 2000);
+        } else if (mode === 'hbc3') {
+            document.body.classList.add('device-mode-hbc3');
+            if (requestFullscreen && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+            showTempMsg("Läge: Endast HBC3-handenhet (Mobil)", 2000);
+        } else {
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            if (typeof initTitanMap === 'function') setTimeout(() => { initTitanMap(); if (titanMap) titanMap.invalidateSize(); }, 180);
+            showTempMsg("Standardvy: TITAN + HBC3", 1500);
+        }
+
+        if (typeof updateTitanDisplay === 'function') setTimeout(updateTitanDisplay, 120);
+    };
+
+    // Synka tillstånd mellan ihopparade enheter (samma anropsnummer MY_TACTICAL)
+    window.broadcastTitanPairState = function(eventType, payload = {}) {
+        const packet = {
+            tacticalId: window.MY_TACTICAL || "33-9000",
+            senderTabId: window._rakelTabId || "",
+            senderMode: titanDeviceMode,
+            eventType,
+            payload,
+            activeTg: typeof activeSelection !== 'undefined' ? activeSelection : null,
+            audioInVehicle: !!window.titanAudioInVehicle,
+            timestamp: Date.now()
+        };
+        // 1. Lokal flik-synk via BroadcastChannel
+        if (titanPairChannel) titanPairChannel.postMessage(packet);
+        // 2. Nätverkssynk via simulatorns befintliga presence-/multiplayer-kanal om tillgänglig
+        if (typeof window.syncPresenceNow === 'function') {
+            window.titanLastPairPacket = packet;
+            window.syncPresenceNow();
+        }
+    };
+
+    window.applyIncomingTitanPairState = function(packet) {
+        if (!packet || packet.tacticalId !== (window.MY_TACTICAL || "33-9000")) return;
+        if (packet.senderTabId && packet.senderTabId === window._rakelTabId) return;
+        if (packet.eventType === 'TG_SYNC' && packet.activeTg) {
+            window._lastSyncedPairTg = packet.activeTg?.tgObj?.index || "";
+            activeSelection = packet.activeTg;
+            if (activeSelection.tgObj && typeof currentMode !== 'undefined') {
+                currentMode = activeSelection.tgObj.isDmo ? "DMO" : "TMO";
+            }
+            if (typeof updateScreenDisplay === 'function') updateScreenDisplay();
+        } else if (packet.eventType === 'AUDIO_SYNC') {
+            window.titanAudioInVehicle = !!packet.audioInVehicle;
+            window.titanAudioOutput = window.titanAudioInVehicle ? 'vehicle' : 'handset';
+            const lbl = document.getElementById('titanAudioOutLabel');
+            const icon = document.getElementById('titanAudioOutIcon');
+            if (lbl) lbl.innerText = window.titanAudioInVehicle ? '📢 Fordonshögtalare' : '🎧 HBC3 Handenhet';
+            if (icon) icon.innerText = window.titanAudioInVehicle ? '📢' : '🔊';
+            const topTgBox = document.querySelector('.titan-top-tg');
+            if (topTgBox) {
+                let audioBadge = document.getElementById('titanAudioOutputBadge');
+                if (!audioBadge) {
+                    audioBadge = document.createElement('span');
+                    audioBadge.id = 'titanAudioOutputBadge';
+                    audioBadge.style.cssText = 'font-size:11px; background:#1e3a8a; color:#93c5fd; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:bold;';
+                    topTgBox.appendChild(audioBadge);
+                }
+                audioBadge.innerText = window.titanAudioInVehicle ? "FORDON" : "HBC3";
+            }
+            if (typeof updateScreenDisplay === 'function') updateScreenDisplay();
+        } else if (packet.eventType === 'REMOTE_KEY' && packet.payload?.fn) {
+            const fn = window[packet.payload.fn];
+            if (typeof fn === 'function') fn(...(packet.payload.args || []));
+        }
+    };
+
+    if (titanPairChannel) {
+        titanPairChannel.onmessage = (ev) => applyIncomingTitanPairState(ev.data);
+    }
+
+    // Koppla automatisk synk vid talgruppsbyte och ljudväxling
+    const origUpdateScreenForPair = typeof updateScreenDisplay === 'function' ? updateScreenDisplay : window.updateScreenDisplay;
+    if (typeof origUpdateScreenForPair === 'function') {
+        updateScreenDisplay = window.updateScreenDisplay = function() {
+            origUpdateScreenForPair.apply(this, arguments);
+            if (titanDeviceMode !== 'combined' && typeof activeSelection !== 'undefined') {
+                const tgKey = activeSelection?.tgObj?.index || "";
+                if (window._lastSyncedPairTg !== tgKey) {
+                    window._lastSyncedPairTg = tgKey;
+                    broadcastTitanPairState('TG_SYNC');
+                }
+            }
+        };
+    }
+
+    // Läs av ev. ?mode=titan eller ?mode=hbc3 vid uppstart
+    window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        const m = params.get('mode');
+        if (m === 'titan' || m === 'hbc3') {
+            setTimeout(() => setTitanDeviceMode(m, false), 300);
+        }
+    });
 </script>
+<button class="titan-exit-solo-btn" onclick="setTitanDeviceMode('combined')" title="Återgå till standardvy">◫ Standardvy</button>
 </body>
 </html>
