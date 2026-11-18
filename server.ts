@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express, { type Request, type Response } from "express";
-import { GoogleGenAI, Type, type Part, type Schema } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type, type Part, type Schema } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,7 +97,7 @@ async function synthesizeSwedishRadioSpeech(
           },
         },
       },
-      abortSignal: AbortSignal.timeout(12000),
+      abortSignal: AbortSignal.timeout(15000),
     },
   });
 
@@ -179,13 +179,16 @@ function getResponseSchemaForKind(kind: AiRlcRequestKind): Schema {
 }
 
 function extractStatusAndMessage(err: unknown): { status: number; message: string } {
-  const anyErr = err as { status?: number; code?: number; message?: string } | undefined;
+  const anyErr = err as { name?: string; status?: number; code?: number; message?: string } | undefined;
   const rawMessage = anyErr?.message || String(err || "Okänt serverfel");
+  if (anyErr?.name === "AbortError" || anyErr?.name === "TimeoutError" || /aborted|timeout/i.test(rawMessage)) {
+    return { status: 504, message: "AI-tjänsten tog för lång tid att svara (timeout). Försök igen." };
+  }
   const statusCandidate = Number(anyErr?.status || anyErr?.code);
   if (Number.isInteger(statusCandidate) && statusCandidate >= 400 && statusCandidate < 600) {
     return { status: statusCandidate, message: rawMessage };
   }
-  const match = rawMessage.match(/\b(400|401|403|404|429|500|502|503)\b/);
+  const match = rawMessage.match(/\b(400|401|403|404|429|500|502|503|504)\b/);
   if (match) {
     return { status: Number(match[1]), message: rawMessage };
   }
@@ -247,10 +250,10 @@ async function startServer() {
 
       const responseSchema = getResponseSchemaForKind(kind);
 
-      const candidateModels: Array<{ model: string; timeoutMs: number }> = [
-        { model: MODEL_NAME, timeoutMs: 8000 },
-        { model: "gemini-4-hydrogen", timeoutMs: 15000 },
-        { model: "gemini-3.1-flash-lite", timeoutMs: 15000 },
+      const candidateModels: Array<{ model: string; timeoutMs: number; thinkingLevel?: ThinkingLevel }> = [
+        { model: "gemini-3.1-flash-lite", timeoutMs: 18000, thinkingLevel: ThinkingLevel.MINIMAL },
+        { model: "gemini-4-hydrogen", timeoutMs: 18000, thinkingLevel: ThinkingLevel.LOW },
+        { model: MODEL_NAME, timeoutMs: 15000 },
       ];
       let result: Awaited<ReturnType<typeof ai.models.generateContent>> | null = null;
       let lastErr: unknown = null;
@@ -262,6 +265,7 @@ async function startServer() {
             contents: [{ role: "user", parts }],
             config: {
               ...(systemInstruction ? { systemInstruction } : {}),
+              ...(cfg.thinkingLevel ? { thinkingConfig: { thinkingLevel: cfg.thinkingLevel } } : {}),
               responseMimeType: "application/json",
               responseSchema,
               abortSignal: AbortSignal.timeout(cfg.timeoutMs),
@@ -270,7 +274,8 @@ async function startServer() {
           break;
         } catch (modelErr) {
           lastErr = modelErr;
-          const { status } = extractStatusAndMessage(modelErr);
+          const { status, message } = extractStatusAndMessage(modelErr);
+          console.warn(`Server /api/ai-rlc model ${cfg.model} fallback (${status}): ${message}`);
           if (status === 400 || status === 401 || status === 403) {
             throw modelErr;
           }
