@@ -640,6 +640,20 @@
     0% { background: rgba(220, 38, 38, 0.45); border-color: #ef4444; box-shadow: 0 0 14px rgba(239, 68, 68, 0.65); }
     100% { background: rgba(37, 99, 235, 0.45); border-color: #3b82f6; box-shadow: 0 0 14px rgba(59, 130, 246, 0.65); }
 }
+.titan-rx-pill {
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800;
+    letter-spacing: 0.4px; display: none; align-items: center; gap: 6px;
+    background: rgba(22, 163, 74, 0.35); border: 1px solid #4ade80; color: #dcfce7;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.55); white-space: nowrap;
+}
+.titan-rx-pill.active {
+    display: inline-flex;
+    animation: titanRxPulse 0.85s infinite alternate;
+}
+@keyframes titanRxPulse {
+    0% { background: rgba(22, 163, 74, 0.35); box-shadow: 0 0 8px rgba(34, 197, 94, 0.45); }
+    100% { background: rgba(22, 163, 74, 0.65); box-shadow: 0 0 14px rgba(74, 222, 128, 0.8); }
+}
 .titan-clean-lock {
     position: absolute; inset: 0; background: rgba(7, 11, 18, 0.92);
     z-index: 4500; display: none; flex-direction: column;
@@ -1359,6 +1373,7 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
                 <span style="font-size:10px; font-weight:normal; color:#9ca3af;">👤 u0000000</span>
             </div>
             <div id="titanEmergencyPill" class="titan-emerg-pill"></div>
+            <div id="titanRxIndicator" class="titan-rx-pill">🔊 RX: RLC</div>
             <div class="titan-top-clock">
                 <div id="titanClockTime" style="font-weight:bold;">13:37</div>
                 <div id="titanClockDate" style="font-size:12px; color:#9ca3af;">Mån 27 april</div>
@@ -2553,7 +2568,7 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
 
     window.testRlcSpeakerAudio = function() {
         unlockBrowserAudio();
-        speakSwedish("Ljudtest från 9-7 till 97-6510. Högtalare och medlyssning fungerar.", null, "RLC 9-7", rlcSelectedTxTg);
+        speakSwedish("Ljudtest från 9-7 till 97-6510. Högtalare och medlyssning fungerar.", null, "RLC 9-7", rlcSelectedTxTg, { useGeminiTts: true });
         appendRlcLog("🔊 Ljudtest utfört (uttal: nio sju / 97 65 10).");
     };
 
@@ -2615,14 +2630,135 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
         }
     }
 
+    // Om frontenden körs på GitHub Pages kan en separat Node.js-backend anges här, via ?backend=URL eller sparas lokalt
+    const DEFAULT_AI_BACKEND_URL = "";
+
+    function normalizeBackendBaseUrl(rawUrl) {
+        const trimmed = String(rawUrl || "").trim().replace(/\/+$/, "");
+        if (!trimmed) return "";
+        if (!/^https?:\/\//i.test(trimmed)) return "";
+        return trimmed.replace(/\/api\/ai-rlc$/i, "");
+    }
+
+    (function syncBackendUrlFromQuery() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const paramBackend = params.get('backend');
+            if (paramBackend !== null) {
+                if (paramBackend.trim() === '' || paramBackend.trim().toLowerCase() === 'reset') {
+                    localStorage.removeItem('rakel_ai_backend_url');
+                } else {
+                    const normalized = normalizeBackendBaseUrl(paramBackend);
+                    if (normalized) {
+                        localStorage.setItem('rakel_ai_backend_url', normalized);
+                    }
+                }
+            }
+        } catch (e) {}
+    })();
+
+    window.getAiRlcBackendBaseUrl = function() {
+        try {
+            const stored = normalizeBackendBaseUrl(localStorage.getItem('rakel_ai_backend_url'));
+            if (stored) return stored;
+        } catch (e) {}
+        return normalizeBackendBaseUrl(window.AI_RLC_BACKEND_URL || DEFAULT_AI_BACKEND_URL);
+    };
+
+    window.setAiRlcBackendUrl = function(rawUrl) {
+        const normalized = normalizeBackendBaseUrl(rawUrl);
+        try {
+            if (normalized) {
+                localStorage.setItem('rakel_ai_backend_url', normalized);
+            } else {
+                localStorage.removeItem('rakel_ai_backend_url');
+            }
+        } catch (e) {}
+        return normalized;
+    };
+
+    function getAiRlcEndpointUrl() {
+        const base = window.getAiRlcBackendBaseUrl();
+        return base ? `${base}/api/ai-rlc` : '/api/ai-rlc';
+    }
+
+    function getAiRlcTtsEndpointUrl() {
+        const base = window.getAiRlcBackendBaseUrl();
+        return base ? `${base}/api/ai-rlc-tts` : '/api/ai-rlc-tts';
+    }
+
+    window.aiRlcConversationHistory = window.aiRlcConversationHistory || [];
+
+    function pushAiRlcHistory(role, speaker, tgName, text) {
+        const clean = String(text || "").trim();
+        if (!clean) return;
+        window.aiRlcConversationHistory.push({
+            role,
+            speaker: speaker || role,
+            tg: tgName || "",
+            text: clean,
+            time: getTime()
+        });
+        if (window.aiRlcConversationHistory.length > 10) {
+            window.aiRlcConversationHistory = window.aiRlcConversationHistory.slice(-10);
+        }
+    }
+
+    function getActiveHrContextPrompt() {
+        try {
+            if (typeof titanActiveHrMission !== 'undefined' && titanActiveHrMission) {
+                const m = titanActiveHrMission;
+                return `Aktivt HR-uppdrag: [${m.id || 'HR'}] Prio ${m.priority || '?'} - "${m.title || 'Uppdrag'}" på adress "${m.address || window.MY_LOCATION_NAME || 'okänd'}", talgrupp "${m.tg || ''}", status: "${m.status || 'Pågående'}". Detaljer: ${m.details || m.desc || '-'}.`;
+            }
+        } catch (e) {}
+        return "Aktivt HR-uppdrag: Inget aktivt uppdrag tilldelat just nu.";
+    }
+
+    function getAiRlcHistoryPrompt() {
+        if (!Array.isArray(window.aiRlcConversationHistory) || window.aiRlcConversationHistory.length === 0) {
+            return "Tidigare radiotrafik i denna session: (Ingen tidigare trafik).";
+        }
+        const recent = window.aiRlcConversationHistory.slice(-8).map(
+            item => `[${item.time}] ${item.speaker} (${item.tg}): "${item.text}"`
+        ).join("\n");
+        return `Tidigare radiotrafik i denna session:\n${recent}`;
+    }
+
     async function callServerAiRlc(requestBody) {
-        const response = await fetchWithRetry('/api/ai-rlc', {
+        const endpointUrl = getAiRlcEndpointUrl();
+        const payload = {
+            includeAudio: true,
+            voiceName: "Kore",
+            ...requestBody
+        };
+        const response = await fetchWithRetry(endpointUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(payload)
         }, 2);
 
         if (!response || !response.ok) {
+            if (response && (response.status === 405 || (response.status === 404 && endpointUrl === '/api/ai-rlc'))) {
+                if (typeof askInput === 'function' && !window._backendPromptOpen) {
+                    window._backendPromptOpen = true;
+                    const currentBase = window.getAiRlcBackendBaseUrl();
+                    askInput(
+                        "🌐 GitHub Pages saknar Node-backend. Ange URL till din Node-server (t.ex. https://din-server.onrender.com):",
+                        currentBase || "https://",
+                        (val) => {
+                            window._backendPromptOpen = false;
+                            if (!val) return;
+                            const saved = window.setAiRlcBackendUrl(val);
+                            if (saved) {
+                                showTempMsg(`✅ Backend-URL sparad: ${saved}`, 2600);
+                            } else {
+                                showTempMsg("❌ Ogiltig URL (måste börja med https:// eller http://)", 3000);
+                            }
+                        }
+                    );
+                }
+                throw new Error(`HTTP ${response.status} — Statisk värd (t.ex. GitHub Pages) saknar /api/ai-rlc. Ange din Node-servers URL.`);
+            }
             let errDetail = response ? `HTTP ${response.status}` : "Inget svar från servern";
             try {
                 const errBody = await response.json();
@@ -2634,6 +2770,139 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
         }
 
         return await response.json();
+    }
+
+    function stopActiveGeminiRadioSource() {
+        if (window._activeRadioAudioSource) {
+            try {
+                window._activeRadioAudioSource.onended = null;
+                window._activeRadioAudioSource.stop();
+            } catch (e) {}
+            window._activeRadioAudioSource = null;
+        }
+        if (window._activeRadioSafetyTimer) {
+            clearTimeout(window._activeRadioSafetyTimer);
+            window._activeRadioSafetyTimer = null;
+        }
+    }
+
+    function decodeBase64ToUint8Array(base64Data) {
+        const cleanB64 = String(base64Data || "").includes(',')
+            ? String(base64Data).split(',')[1]
+            : String(base64Data || "");
+        const binaryString = atob(cleanB64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    function decodeRawPcm16ToAudioBuffer(bytes, mimeType) {
+        let sampleRate = 24000;
+        const rateMatch = String(mimeType || "").match(/rate=(\d+)/i);
+        if (rateMatch) {
+            const parsedRate = Number(rateMatch[1]);
+            if (parsedRate >= 8000 && parsedRate <= 96000) sampleRate = parsedRate;
+        }
+        const sampleCount = Math.floor(bytes.byteLength / 2);
+        const buffer = audioCtx.createBuffer(1, Math.max(1, sampleCount), sampleRate);
+        const channelData = buffer.getChannelData(0);
+        const view = new DataView(bytes.buffer, bytes.byteOffset, sampleCount * 2);
+        for (let i = 0; i < sampleCount; i++) {
+            channelData[i] = view.getInt16(i * 2, true) / 32768.0;
+        }
+        return buffer;
+    }
+
+    async function playGeminiRadioAudioBuffer(base64Data, mimeType, rlcActive, finishOnce) {
+        if (!base64Data) return false;
+        try {
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            const bytes = decodeBase64ToUint8Array(base64Data);
+            if (!bytes || bytes.length < 32) return false;
+
+            const isRiffWav = bytes.length > 44 &&
+                bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+            const isRawPcmMime = /audio\/l16|audio\/pcm/i.test(String(mimeType || ""));
+
+            let audioBuffer = null;
+            if (!isRawPcmMime && (isRiffWav || /audio\/(wav|mpeg|mp3|ogg|webm|aac)/i.test(String(mimeType || "")))) {
+                try {
+                    audioBuffer = await audioCtx.decodeAudioData(bytes.buffer.slice(0));
+                } catch (decodeErr) {
+                    if (isRiffWav) throw decodeErr;
+                }
+            }
+            if (!audioBuffer) {
+                audioBuffer = decodeRawPcm16ToAudioBuffer(bytes, mimeType);
+            }
+            if (!audioBuffer || audioBuffer.length === 0) return false;
+
+            stopActiveGeminiRadioSource();
+
+            const src = audioCtx.createBufferSource();
+            src.buffer = audioBuffer;
+
+            // Rakel/TETRA-bandpassfilter (begränsad röstbandbredd) + lätt kompressor
+            const bandpass = audioCtx.createBiquadFilter();
+            bandpass.type = 'bandpass';
+            bandpass.frequency.value = 1400;
+            bandpass.Q.value = 0.9;
+
+            const compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -18;
+            compressor.knee.value = 12;
+            compressor.ratio.value = 4;
+            compressor.attack.value = 0.003;
+            compressor.release.value = 0.15;
+
+            const gainNode = audioCtx.createGain();
+            const effVolLevel = rlcActive ? Math.max(volumeLevel, 8) : volumeLevel;
+            gainNode.gain.value = Math.max(0.25, Math.min(1.9, (effVolLevel / 6) * 1.45));
+
+            src.connect(bandpass);
+            bandpass.connect(compressor);
+            compressor.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            window._activeRadioAudioSource = src;
+            const durationMs = Math.max(800, Math.ceil(audioBuffer.duration * 1000));
+            window._activeRadioSafetyTimer = setTimeout(() => {
+                window._activeRadioAudioSource = null;
+                finishOnce();
+            }, durationMs + 700);
+
+            src.onended = () => {
+                if (window._activeRadioSafetyTimer) {
+                    clearTimeout(window._activeRadioSafetyTimer);
+                    window._activeRadioSafetyTimer = null;
+                }
+                if (window._activeRadioAudioSource === src) {
+                    window._activeRadioAudioSource = null;
+                }
+                finishOnce();
+            };
+
+            // Spela direkt efter korta start-klicket/squelchen (~120 ms)
+            setTimeout(() => {
+                try {
+                    isReceivingReal = true;
+                    setLed('right', 'green');
+                    setRlcRxUiState(true, receivingTgName, receivingSender);
+                    updateScreenDisplay();
+                    src.start(0);
+                } catch (startErr) {
+                    console.warn("AudioBufferSource start error:", startErr);
+                    finishOnce();
+                }
+            }, 120);
+
+            return true;
+        } catch (err) {
+            console.warn("Gemini radio audio playback error, falling back to speechSynthesis:", err);
+            return false;
+        }
     }
 
     async function speakSwedish(text, callback, senderLabel, customTgLabel, options = {}) {
@@ -2648,6 +2917,7 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
 
         isReceivingReal = true;
         setLed('right', 'green');
+        setRlcRxUiState(true, receivingTgName, receivingSender);
         updateScreenDisplay();
         if (canPlayAudio) {
             playRadioRxStartCue();
@@ -2660,6 +2930,7 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
                 finished = true;
                 isReceivingReal = false;
                 setLed('right', '');
+                setRlcRxUiState(false, receivingTgName, "");
                 if (canPlayAudio) {
                     playRadioRxEndCue();
                 } else {
@@ -2669,6 +2940,38 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
                 if (callback) callback();
             };
         })();
+
+        if (canPlayAudio) {
+            let audioBase64 = options.audioBase64 || null;
+            let audioMimeType = options.audioMimeType || "audio/wav";
+
+            if (!audioBase64 && options.useGeminiTts) {
+                try {
+                    const ttsRes = await fetchWithRetry(getAiRlcTtsEndpointUrl(), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: formattedSpeechText,
+                            voiceName: options.voiceName || "Kore"
+                        })
+                    }, 1);
+                    if (ttsRes && ttsRes.ok) {
+                        const ttsJson = await ttsRes.json();
+                        if (ttsJson?.audioBase64) {
+                            audioBase64 = ttsJson.audioBase64;
+                            audioMimeType = ttsJson.audioMimeType || "audio/wav";
+                        }
+                    }
+                } catch (ttsFetchErr) {
+                    console.warn("Gemini TTS endpoint fallback:", ttsFetchErr);
+                }
+            }
+
+            if (audioBase64) {
+                const played = await playGeminiRadioAudioBuffer(audioBase64, audioMimeType, rlcActive, finishOnce);
+                if (played) return;
+            }
+        }
 
         if ('speechSynthesis' in window && canPlayAudio) {
             try {
@@ -2704,6 +3007,7 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
                 utterance.onstart = () => {
                     isReceivingReal = true;
                     setLed('right', 'green');
+                    setRlcRxUiState(true, receivingTgName, receivingSender);
                     updateScreenDisplay();
                 };
                 utterance.onend = () => {
@@ -2741,6 +3045,7 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
     async function handleParsedPatrolAiResponse(parsed, tgName, formattedMyTactical) {
         if (parsed.transcript) {
             appendRlcLog(`🎤 ${formattedMyTactical} (${tgName}): "${parsed.transcript}"`);
+            pushAiRlcHistory("Patrull", formattedMyTactical, tgName, parsed.transcript);
         }
         if (parsed.newStatus && statusMenuOptions.includes(parsed.newStatus)) {
             radioStatus = parsed.newStatus;
@@ -2752,7 +3057,11 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
         if ((parsed.shouldReply !== false) && parsed.spokenResponse) {
             const senderName = parsed.responderLabel || `RLC ${activeRlcCode}`;
             appendRlcLog(`🎧 ${senderName} (${tgName}): "${parsed.spokenResponse}"`);
-            await speakSwedish(parsed.spokenResponse, null, senderName, tgName);
+            pushAiRlcHistory("RLC", senderName, tgName, parsed.spokenResponse);
+            await speakSwedish(parsed.spokenResponse, null, senderName, tgName, {
+                audioBase64: parsed.audioBase64 || null,
+                audioMimeType: parsed.audioMimeType || "audio/wav"
+            });
         }
         if (parsed.sdsFollowUp && parsed.sdsFollowUp.trim() !== "") {
             sdsInbox.push({ from: `RLC ${activeRlcCode}`, text: parsed.sdsFollowUp.trim(), time: getTime() });
@@ -2777,6 +3086,8 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
             const formattedMyTactical = window.formatPatrolCallsignPairs(window.MY_TACTICAL || "33-9000");
             const activeTg = tgName || window.getActiveTxTalkgroupName();
             const isRapsChannel = activeTg.toUpperCase().includes("RAPS");
+            const activeHrContext = getActiveHrContextPrompt();
+            const historyContext = getAiRlcHistoryPrompt();
 
             if (options.isFromRlcConsole) {
                 const simUnits = (window.simulatedPatrols && window.simulatedPatrols.length > 0)
@@ -2787,9 +3098,11 @@ body.device-mode-hbc3 .titan-exit-solo-btn {
                 const rlcConsoleSysInstruction = `Du simulerar polispatruller (samt räddningstjänst "räddning 24-10 80" och ambulans "ambulans 34-57 76" om kanalen är RAPS) som lyssnar på talgruppen "${activeTg}".
 Operatören på RLC ${activeRlcCode} sände precis: "${cleanText}".
 Tillgängliga patruller i området: ${unitsContext}.
+${activeHrContext}
+${historyContext}
 Regler:
 1. Skriv ALLTID ut patrullnummer med två siffror i taget med mellanslag (t.ex. "97-54 20").
-2. Svara kortfattat och realistiskt på svenska med patrullens anropsnummer och aktuella plats.`;
+2. Svara kortfattat och realistiskt på tydlig, saklig svenska enligt svensk polisradio-disciplin med patrullens anropsnummer och aktuella plats.`;
 
                 const parsed = await callServerAiRlc({
                     kind: "rlc_console_text",
@@ -2797,10 +3110,15 @@ Regler:
                     systemInstruction: rlcConsoleSysInstruction
                 });
                 appendRlcLog(`🎙️ RLC ${activeRlcCode} (${activeTg}): "${cleanText}"`);
+                pushAiRlcHistory("RLC", `RLC ${activeRlcCode}`, activeTg, cleanText);
                 if (parsed.spokenResponse) {
                     const senderTag = parsed.responderCallsign || window.formatPatrolCallsignPairs(simUnits[0].tactical);
                     appendRlcLog(`🚔 ${senderTag} (${activeTg}): "${parsed.spokenResponse}"`);
-                    await speakSwedish(parsed.spokenResponse, null, senderTag, activeTg);
+                    pushAiRlcHistory("Patrull", senderTag, activeTg, parsed.spokenResponse);
+                    await speakSwedish(parsed.spokenResponse, null, senderTag, activeTg, {
+                        audioBase64: parsed.audioBase64 || null,
+                        audioMimeType: parsed.audioMimeType || "audio/wav"
+                    });
                 }
                 return;
             }
@@ -2813,9 +3131,11 @@ Regler:
             const systemInstruction = `Du är operatör vid Polisen Regionledningscentral RLC Öst / RLC "${activeRlcCode}" (uttalas siffra för siffra, t.ex. "nio sju").
 Du lyssnar på talgruppen "${activeTg}".
 Patrullen som sänder har anropsnummer "${window.MY_TACTICAL}" (uttalas "${formattedMyTactical}")${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''}, befinner sig vid "${window.MY_LOCATION_NAME || 'Storgatan'}" och har status "${radioStatus}".
+${activeHrContext}
+${historyContext}
 
 Regler för radiokommunikation:
-1. Svara alltid kort, tydligt och realistiskt på svenska i polisradiostil.
+1. Svara alltid på tydlig, saklig svenska enligt svensk polisradio-disciplin (kort, lugnt och koncist).
 2. Nämn mottagaren före sändaren, t.ex. "${formattedMyTactical} från RLC ${activeRlcCode}, ..." eller "${formattedMyTactical}, RLC Öst, ...".
 3. ${isRapsChannel ? 'Eftersom detta är en RAPS-samverkanskanal (Räddning, Ambulans, Polis): Om patrullen anropar ambulans eller räddningstjänst, svara i rollen som den anropade enheten.' : 'Svara som RLC-operatör.'}
 4. Om patrullen begär slagning på person eller fordon, ge ett realistiskt svar i tal och lägg detaljerna i "sdsFollowUp".
@@ -2879,6 +3199,8 @@ Regler för radiokommunikation:
         try {
             const formattedMyTactical = window.formatPatrolCallsignPairs(window.MY_TACTICAL);
             const isRapsChannel = tgName.toUpperCase().includes("RAPS");
+            const activeHrContext = getActiveHrContextPrompt();
+            const historyContext = getAiRlcHistoryPrompt();
 
             if (isFromRlcConsole) {
                 const simUnits = (window.simulatedPatrols && window.simulatedPatrols.length > 0)
@@ -2889,9 +3211,11 @@ Regler för radiokommunikation:
                 const rlcConsoleSysInstruction = `Du simulerar polispatruller (samt räddningstjänst "räddning 24-10 80" och ambulans "ambulans 34-57 76" om kanalen är RAPS) som lyssnar på talgruppen "${tgName}".
 Operatören på RLC ${activeRlcCode} har precis sänt ett röstmeddelande.
 Tillgängliga patruller i området: ${unitsContext}.
+${activeHrContext}
+${historyContext}
 Regler:
 1. Skriv ALLTID ut patrullnummer med två siffror i taget med mellanslag (t.ex. "97-54 20" eller "34-57 76").
-2. När en patrull blir uppropad av RLC ska patrullen svara med sitt anropsnummer och sin aktuella geografiska gata/plats.
+2. När en patrull blir uppropad av RLC ska patrullen svara kortfattat på tydlig, saklig svenska enligt svensk polisradio-disciplin med sitt anropsnummer och sin aktuella geografiska gata/plats.
 3. Om sändningen sker på en RAPS-kanal ska enheten inleda med funktion + anropsnummer.`;
 
                 const parsed = await callServerAiRlc({
@@ -2904,11 +3228,16 @@ Regler:
                 if (parsed.transcript) {
                     console.log("Uppfattat tal:", parsed.transcript);
                     appendRlcLog(`🎙️ RLC ${activeRlcCode} (${tgName}): "${parsed.transcript}"`);
+                    pushAiRlcHistory("RLC", `RLC ${activeRlcCode}`, tgName, parsed.transcript);
                 }
                 if (parsed.spokenResponse) {
                     const senderTag = parsed.responderCallsign || window.formatPatrolCallsignPairs(simUnits[0].tactical);
                     appendRlcLog(`🚔 ${senderTag} (${tgName}): "${parsed.spokenResponse}"`);
-                    await speakSwedish(parsed.spokenResponse, null, senderTag, tgName);
+                    pushAiRlcHistory("Patrull", senderTag, tgName, parsed.spokenResponse);
+                    await speakSwedish(parsed.spokenResponse, null, senderTag, tgName, {
+                        audioBase64: parsed.audioBase64 || null,
+                        audioMimeType: parsed.audioMimeType || "audio/wav"
+                    });
                 }
                 return;
             }
@@ -2921,9 +3250,11 @@ Regler:
             const systemInstruction = `Du är operatör vid Polisen Regionledningscentral RLC Öst / RLC "${activeRlcCode}" (uttalas siffra för siffra, t.ex. "nio sju").
 Du lyssnar på talgruppen "${tgName}".
 Patrullen som sänder har anropsnummer "${formattedMyTactical}"${window.MY_ALIAS ? ' (' + window.MY_ALIAS + ')' : ''}, befinner sig vid "${window.MY_LOCATION_NAME || 'Storgatan'}" och har status "${radioStatus}".
+${activeHrContext}
+${historyContext}
 
 Regler för radiokommunikation:
-1. ALLA patrullnummer ska skrivas och läsas med två siffror åt gången, t.ex. "${formattedMyTactical}, kom".
+1. ALLA patrullnummer ska skrivas och läsas med två siffror åt gången, t.ex. "${formattedMyTactical}, kom". Svara alltid på tydlig, saklig svenska enligt svensk polisradio-disciplin.
 2. Riktningsregeln: Nämn alltid mottagaren före sändaren, t.ex. "${formattedMyTactical} från ${activeRlcCode}, kom."
 3. Om patrullen anmäler sig på en insats- eller samverkanskanal, svara direkt och bekräfta att de är noterade på kanalen.
 4. ${isRapsChannel ? 'Eftersom detta är en RAPS-samverkanskanal: Om patrullen anropar ambulans eller räddningstjänst, svara i rollen som den anropade enheten!' : 'Svara som RLC ' + activeRlcCode + '.'}
@@ -3398,7 +3729,7 @@ Regler för radiokommunikation:
         if (isPttActive) {
             statusBannerHtml = `<div style="background:#cc0000;color:#fff;font-size:11px;font-weight:bold;padding:2px 5px;border-radius:2px;margin-top:2px;">🎤 Sänder: ${tgName}</div>`;
         } else if (isReceivingReal) {
-            statusBannerHtml = `<div style="background:#27ae60;color:#fff;font-size:11px;font-weight:bold;padding:2px 5px;border-radius:2px;margin-top:2px;">🔊 Mottar: ${receivingSender} (${receivingTgName})</div>`;
+            statusBannerHtml = `<div style="background:#27ae60;color:#fff;font-size:11px;font-weight:bold;padding:2px 5px;border-radius:2px;margin-top:2px;">🔊 RX: ${receivingSender} (${receivingTgName})</div>`;
         }
 
         display.innerHTML = `
@@ -6506,6 +6837,16 @@ Regler för radiokommunikation:
         }
         const issiEl = document.getElementById('titanIssiNumber');
         if (issiEl) issiEl.innerText = window.MY_TACTICAL || "33-9000";
+
+        const rxIndEl = document.getElementById('titanRxIndicator');
+        if (rxIndEl) {
+            if (isReceivingReal) {
+                rxIndEl.innerText = `🔊 RX: ${receivingSender || 'RLC'}`;
+                rxIndEl.classList.add('active');
+            } else {
+                rxIndEl.classList.remove('active');
+            }
+        }
 
         const nu = new Date();
         const tid = nu.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });

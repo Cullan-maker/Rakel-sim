@@ -10,6 +10,8 @@ const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 3000);
 const MODEL_NAME = "gemini-3.8-flash";
+const TTS_MODEL_NAME = "gemini-3.8-flash-lite-tts";
+const DEFAULT_TTS_VOICE = "Kore";
 
 type AiRlcRequestKind =
   | "patrol_text"
@@ -24,15 +26,101 @@ interface AiRlcRequestBody {
   systemInstruction?: string;
   audioBase64?: string;
   mimeType?: string;
+  includeAudio?: boolean;
+  voiceName?: string;
 }
 
-function getGeminiClient(): GoogleGenAI {
+const DIGIT_WORDS_SV: Record<string, string> = {
+  "0": "noll",
+  "1": "ett",
+  "2": "två",
+  "3": "tre",
+  "4": "fyra",
+  "5": "fem",
+  "6": "sex",
+  "7": "sju",
+  "8": "åtta",
+  "9": "nio",
+};
+
+function formatTwoDigitPairSvServer(pairStr: string): string {
+  if (!pairStr || pairStr.length !== 2) return pairStr;
+  if (pairStr[0] === "0") {
+    return `noll ${DIGIT_WORDS_SV[pairStr[1]] || pairStr[1]}`;
+  }
+  return pairStr;
+}
+
+function formatSwedishRadioSpeechServer(rawText: string): string {
+  if (!rawText) return "";
+  let txt = String(rawText);
+  txt = txt.replace(/\b9-([0-9])\b/g, (_m, d) => `nio ${DIGIT_WORDS_SV[d] || d}`);
+  txt = txt.replace(/\b(\d{2})-(\d{2})\s*(\d{2})\b/g, (_m, p1, p2, p3) => {
+    return `${formatTwoDigitPairSvServer(p1)} ${formatTwoDigitPairSvServer(p2)} ${formatTwoDigitPairSvServer(p3)}`;
+  });
+  txt = txt.replace(/\b(97|34|24)(\d{2})(\d{2})\b/g, (_m, p1, p2, p3) => {
+    return `${formatTwoDigitPairSvServer(p1)} ${formatTwoDigitPairSvServer(p2)} ${formatTwoDigitPairSvServer(p3)}`;
+  });
+  return txt;
+}
+
+async function synthesizeSwedishRadioSpeech(
+  ai: GoogleGenAI,
+  text: string,
+  voiceName = DEFAULT_TTS_VOICE
+): Promise<{ audioBase64: string; audioMimeType: string } | null> {
+  const spokenText = formatSwedishRadioSpeechServer(text).trim();
+  if (!spokenText) return null;
+
+  const ttsResult = await ai.models.generateContent({
+    model: TTS_MODEL_NAME,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: spokenText,
+            speechMetadata: {
+              style:
+                "Lugn, saklig och tydlig svensk polisradiooperatör som talar på svenska över Rakel-radio med kort, professionell radiodisciplin.",
+            },
+          },
+        ],
+      },
+    ],
+    config: {
+      responseModalities: ["AUDIO"],
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: voiceName || DEFAULT_TTS_VOICE,
+          },
+        },
+      },
+      abortSignal: AbortSignal.timeout(12000),
+    },
+  });
+
+  const parts = ttsResult.candidates?.[0]?.content?.parts || [];
+  for (const part of parts) {
+    if (part.inlineData?.data) {
+      return {
+        audioBase64: part.inlineData.data,
+        audioMimeType: part.inlineData.mimeType || "audio/wav",
+      };
+    }
+  }
+  return null;
+}
+
+function getGeminiClient(apiVersion?: string): GoogleGenAI {
   const apiKey = (process.env.GEMINI_API_KEY || "").trim();
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY är inte konfigurerad på servern.");
   }
   return new GoogleGenAI({
     apiKey,
+    ...(apiVersion ? { apiVersion } : {}),
     httpOptions: {
       headers: {
         "User-Agent": "aistudio-build",
@@ -108,6 +196,28 @@ async function startServer() {
   const app = express();
   app.use(express.json({ limit: "15mb" }));
 
+  const allowedOriginsEnv = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  app.use("/api", (req: Request, res: Response, next) => {
+    const reqOrigin = req.headers.origin;
+    if (allowedOriginsEnv.length === 0 || allowedOriginsEnv.includes("*")) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    } else if (reqOrigin && allowedOriginsEnv.includes(reqOrigin)) {
+      res.setHeader("Access-Control-Allow-Origin", reqOrigin);
+      res.setHeader("Vary", "Origin");
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
+
   app.get("/api/health", (_req: Request, res: Response) => {
     res.json({ ok: true });
   });
@@ -179,10 +289,65 @@ async function startServer() {
 
       const cleanedJson = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
       const parsed = JSON.parse(cleanedJson);
-      res.json(parsed);
+
+      let audioBase64: string | null = null;
+      let audioMimeType: string | null = null;
+      if (
+        body.includeAudio !== false &&
+        parsed?.shouldReply !== false &&
+        typeof parsed?.spokenResponse === "string" &&
+        parsed.spokenResponse.trim().length > 0
+      ) {
+        try {
+          const ttsAi = getGeminiClient("v1beta");
+          const ttsAudio = await synthesizeSwedishRadioSpeech(
+            ttsAi,
+            parsed.spokenResponse,
+            typeof body.voiceName === "string" && body.voiceName.trim() ? body.voiceName.trim() : DEFAULT_TTS_VOICE
+          );
+          if (ttsAudio) {
+            audioBase64 = ttsAudio.audioBase64;
+            audioMimeType = ttsAudio.audioMimeType;
+          }
+        } catch (ttsErr) {
+          console.warn("Server /api/ai-rlc TTS fallback to browser speechSynthesis:", ttsErr);
+        }
+      }
+
+      res.json({
+        ...parsed,
+        audioBase64,
+        audioMimeType,
+      });
     } catch (err) {
       const { status, message } = extractStatusAndMessage(err);
       console.error("Server /api/ai-rlc error:", err);
+      res.status(status).json({ error: message });
+    }
+  });
+
+  app.post("/api/ai-rlc-tts", async (req: Request, res: Response) => {
+    try {
+      const body = (req.body || {}) as { text?: string; voiceName?: string };
+      const text = typeof body.text === "string" ? body.text.trim() : "";
+      if (!text) {
+        res.status(400).json({ error: "Saknar text i TTS-anropet." });
+        return;
+      }
+      const ttsAi = getGeminiClient("v1beta");
+      const ttsAudio = await synthesizeSwedishRadioSpeech(
+        ttsAi,
+        text,
+        typeof body.voiceName === "string" && body.voiceName.trim() ? body.voiceName.trim() : DEFAULT_TTS_VOICE
+      );
+      if (!ttsAudio) {
+        res.status(502).json({ error: "Kunde inte generera ljud från Gemini TTS." });
+        return;
+      }
+      res.json(ttsAudio);
+    } catch (err) {
+      const { status, message } = extractStatusAndMessage(err);
+      console.error("Server /api/ai-rlc-tts error:", err);
       res.status(status).json({ error: message });
     }
   });
